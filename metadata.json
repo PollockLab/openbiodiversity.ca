@@ -1,0 +1,6 @@
+{
+  "name": "OpenBiodiversity Canada",
+  "description": "Canada-centric spatial biodiversity layer explorer and Blitz the Gap 2026 engagement portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

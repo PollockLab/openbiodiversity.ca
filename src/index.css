@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --color-sage-50: #f1f7f1;
+  --color-sage-100: #d1e7d1;
+  --color-sage-200: #b8d8b8;
+  --color-sage-500: #2d5a27;
+  --color-sage-600: #24491f;
+  --color-sage-700: #1e3d1a;
+  --color-sage-800: #142811;
+  --color-sage-950: #0a1409;
+
+  --color-wood-50: #fdfdfb;
+  --color-wood-100: #f7f7f4;
+  --color-wood-250: #e2e8f0;
+  --color-wood-500: #496a40;
+  --color-wood-600: #3b5035;
+  --color-wood-900: #1a2e1a;
+  
+  --color-accent-amber: #eab308;
+  --color-accent-crimson: #be123c;
+}
+
+/* Base custom styles to reinforce the clean minimal botanic look */
+body {
+  font-family: var(--font-sans);
+  background-color: #fdfdfb;
+  color: #1a2e1a;
+  overflow-x: hidden;
+}
+
+.map-container {
+  background: radial-gradient(circle at 50% 50%, #d1e7d1 0%, #b8d8b8 100%);
+  position: relative;
+  border: 1px solid #c0d6c0;
+}
+
+.nav-active {
+  border-bottom: 2px solid #2d5a27;
+  color: #2d5a27;
+  font-weight: 600;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(45, 90, 39, 0.1);
+}
+
+.btn-primary {
+  background-color: #2d5a27;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: #1e3d1a;
+}
+
+.card-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Custom scrollbars for data panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #c0d6c0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2d5a27;
+}
+
