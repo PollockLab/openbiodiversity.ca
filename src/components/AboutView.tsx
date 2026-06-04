@@ -7,11 +7,8 @@ export default function AboutView() {
       
       {/* Intro Header */}
       <section className="text-center space-y-4">
-        <span className="bg-sage-50 text-sage-600 border border-sage-100 text-xs px-3.5 py-1.5 rounded-full font-bold uppercase tracking-wider font-mono">
-          Research Mandate Booklet
-        </span>
         <h1 className="font-display font-semibold text-3xl sm:text-4xl text-wood-950 tracking-tight">
-          About openbiodiversity.ca & the Quantitative Biodiversity Lab, McGill University
+          About openbiodiversity.ca
         </h1>
         <p className="text-base text-gray-500 max-w-2xl mx-auto leading-relaxed font-sans">
           Providing transparent, reproducible spatial indices to coordinate national responses to rapid climate and human-footprint change.
@@ -22,7 +19,7 @@ export default function AboutView() {
       <section className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 space-y-6 card-shadow">
         <div>
           <h2 className="font-display font-semibold text-xl text-wood-900">
-            Our Scientific Vision
+            Scientific Vision
           </h2>
           <p className="text-xs sm:text-sm text-gray-500 leading-relaxed mt-2 font-sans">
             We are in the era of big data, big models and big threats. Every day we understand more about the biodiversity on the planet, and every day this biodiversity becomes more threatened. How do we best use this accumulating biodiversity knowledge to understand and predict biodiversity change?
@@ -48,45 +45,94 @@ export default function AboutView() {
         </div>
       </section>
 
-      {/* Team Expertise Columns */}
-      <section className="space-y-4">
-        <h3 className="font-display font-semibold text-xl text-wood-900 flex items-center gap-1.5 justify-center">
-          <Users className="w-5 h-5 text-sage-500" /> Research Team Contributors
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-gray-100 p-5 rounded-2xl card-shadow text-center space-y-2">
-            <h4 className="font-semibold text-wood-950 font-display">Principal Investigator</h4>
-            <span className="text-[10px] font-mono text-sage-600 bg-sage-50/50 px-2 py-0.5 rounded font-bold uppercase border border-sage-100">Principal Investigator</span>
-            <p className="text-[11px] text-gray-500 font-sans">Expertise in macroecology, systematic conservation planning, and global biodiversity synthesis.</p>
+      {/* Who We Are & Team Section */}
+      <section className="space-y-6">
+        <div className="text-center">
+          <h3 className="font-display font-semibold text-xl text-wood-950 flex items-center gap-2 justify-center">
+            <Users className="w-5 h-5 text-sage-600" /> Who We Are
+          </h3>
+          <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto leading-relaxed">
+            Leading scientific macroecology, spatial modeling, and conservation analysis backends.
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-8 card-shadow">
+          {/* Logo element for the Quantitative Biodiversity Lab */}
+          <div className="flex flex-col sm:flex-row items-center gap-5 bg-sage-50/40 p-5 rounded-2xl border border-sage-100/50">
+            <div className="w-16 h-16 bg-white border border-gray-100 rounded-2xl shadow-3xs flex flex-col items-center justify-center shrink-0">
+              <span className="font-mono text-[10px] font-bold text-gray-400 leading-none">QUANT</span>
+              <span className="font-display text-sm font-extrabold text-sage-600 leading-none mt-1">BIODIV</span>
+              <span className="font-mono text-[8px] text-gray-450 leading-none mt-1 uppercase tracking-widest">LAB</span>
+            </div>
+            <div className="text-center sm:text-left space-y-1">
+              <h4 className="font-display font-semibold text-sm text-wood-950">Quantitative Biodiversity Lab</h4>
+              <p className="text-xs text-gray-500 leading-relaxed font-sans">
+                A modern scientific unit focused on computing heavy spatial models, analyzing geographical biases, and generating actionable conservation indices.
+              </p>
+            </div>
           </div>
-          <div className="bg-white border border-gray-100 p-5 rounded-2xl card-shadow text-center space-y-2">
-            <h4 className="font-semibold text-wood-950 font-display">Guillaume</h4>
-            <span className="text-[10px] font-mono text-sage-600 bg-sage-50/50 px-2 py-0.5 rounded font-bold uppercase border border-sage-100">Lead spatial modeler</span>
-            <p className="text-[11px] text-gray-500 font-sans">Specialist in national-scale GBIF density analysis, bias-weight grids, and cloud raster systems.</p>
-          </div>
-          <div className="bg-white border border-gray-100 p-5 rounded-2xl card-shadow text-center space-y-2">
-            <h4 className="font-semibold text-wood-950 font-display">Noah</h4>
-            <span className="text-[10px] font-mono text-sage-600 bg-sage-50/50 px-2 py-0.5 rounded font-bold uppercase border border-sage-100">Clipping algorithms developer</span>
-            <p className="text-[11px] text-gray-500 font-sans">Architect of the occupancy-envelope bounds algorithm restricting classic overfilled range polygons.</p>
+
+          {/* Six placeholder portrait circles with title placeholder names and roles */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 pt-2">
+            {[
+              { name: "Dr. Laura Pollock", role: "Principal Investigator", tag: "LP" },
+              { name: "Guillaume", role: "Lead Spatial Modeler", tag: "G" },
+              { name: "Noah", role: "Clipping Developer", tag: "N" },
+              { name: "Researcher 4", role: "Model Analyst", tag: "R4" },
+              { name: "Researcher 5", role: "Systems Engineer", tag: "R5" },
+              { name: "Researcher 6", role: "Field Lead", tag: "R6" }
+            ].map((member, i) => (
+              <div key={member.name} className="flex flex-col items-center text-center space-y-2">
+                <div className="relative w-16 h-16 rounded-full bg-gray-50 border border-gray-150 flex items-center justify-center text-wood-700 hover:border-sage-400 transition-colors shadow-3xs">
+                  <span className="font-display font-semibold text-xs text-gray-500">
+                    {member.tag}
+                  </span>
+                  <span className="absolute bottom-0 right-0 w-4.5 h-4.5 bg-sage-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] text-white font-bold font-mono">
+                    {i + 1}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  <h5 className="font-display font-semibold text-xs text-wood-950 leading-tight">{member.name}</h5>
+                  <p className="text-[10px] text-gray-400 font-sans leading-tight">{member.role}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Academic Support References */}
-      <section className="bg-gray-50 rounded-2xl p-6 border border-gray-150 flex flex-col sm:flex-row justify-between items-center gap-6">
-        <div className="space-y-1.5 text-center sm:text-left">
-          <h4 className="font-semibold text-wood-950 text-sm">Want to inspect the raw research publications?</h4>
-          <p className="text-xs text-gray-500 font-sans">All data compilation criteria and correction scripts are published across peer-reviewed journals.</p>
+      {/* Our Partners Section */}
+      <section className="space-y-6">
+        <div className="text-center">
+          <h3 className="font-display font-semibold text-xl text-wood-950 flex items-center gap-2 justify-center">
+            <Compass className="w-5 h-5 text-sage-600" /> Our Partners
+          </h3>
+          <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto leading-relaxed">
+            Collaborating with leading academic bodies, government agencies, and citizen projects.
+          </p>
         </div>
-        <a 
-          href="https://kbacanada.org/" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="bg-white hover:bg-gray-50 border border-gray-200 text-wood-700 font-semibold text-xs px-4.5 py-2.5 rounded-xl transition-all card-shadow inline-flex items-center gap-1.5"
-        >
-          View Scientific Repos <ArrowUpRight className="w-4 h-4 text-wood-500" />
-        </a>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-6.5 md:p-8 card-shadow grid grid-cols-2 md:grid-cols-5 gap-6">
+          {[
+            { tag: "MU", name: "McGill University", type: "Academic Lead" },
+            { tag: "KBA", name: "Key Biodiversity Areas", type: "National Coalition" },
+            { tag: "BCP", name: "BC Protected Parks", type: "Provincial Agency" },
+            { tag: "WCS", name: "Wildlife Conservation", type: "Global Society" },
+            { tag: "iNAT", name: "iNaturalist Canada", type: "Scientific Network" }
+          ].map((partner, i) => (
+            <div key={partner.name} className="flex flex-col items-center text-center space-y-2 animate-fadeIn">
+              <div className="w-14 h-14 rounded-full bg-gray-50 border border-gray-150 flex items-center justify-center text-wood-800 shadow-3xs hover:border-sage-400 transition-colors">
+                <span className="font-mono text-xs font-bold text-gray-550">{partner.tag}</span>
+              </div>
+              <div className="space-y-0.5">
+                <h5 className="font-display font-semibold text-xs text-wood-950 leading-tight">{partner.name}</h5>
+                <p className="text-[10px] text-gray-400 font-sans leading-tight">{partner.type}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
+
 
     </div>
   );

@@ -1,3 +1,1 @@
-# openbiodiversity.ca
-Website to present open biodiversity layers and host Blitz the Gap.
-
+Website for new platform to visualize and download biodiversity layers and host Blitz the Gap.

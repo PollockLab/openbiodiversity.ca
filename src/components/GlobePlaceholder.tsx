@@ -9,6 +9,9 @@ interface GlobePlaceholderProps {
   biasCorrected?: boolean;
   showUncertainty?: boolean;
   selectedCaseStudyId?: 'general' | 'kbas' | 'bc-parks' | 'newfoundland';
+  onTaxonGroupChange?: (group: string) => void;
+  onBiasCorrectedChange?: (val: boolean) => void;
+  onShowUncertaintyChange?: (val: boolean) => void;
 }
 
 export default function GlobePlaceholder({
@@ -19,6 +22,9 @@ export default function GlobePlaceholder({
   biasCorrected = true,
   showUncertainty = false,
   selectedCaseStudyId = 'general',
+  onTaxonGroupChange,
+  onBiasCorrectedChange,
+  onShowUncertaintyChange,
 }: GlobePlaceholderProps) {
   const [zoom, setZoom] = useState<number>(3);
   const [rotation, setRotation] = useState<number>(-95); // centered on Canada longitude
@@ -168,7 +174,43 @@ export default function GlobePlaceholder({
   return (
     <div className="flex flex-col bg-white border border-sage-200 rounded-2xl overflow-hidden shadow-sm">
       {/* Map Control bar */}
-      <div className="bg-sage-50/70 border-b border-sage-100 py-3 px-5 flex flex-wrap justify-end items-center gap-3">
+      <div className="bg-sage-50/70 border-b border-sage-100 py-2.5 px-5 flex flex-wrap justify-between items-center gap-3">
+        {mode === 'sdm-explorer' && onBiasCorrectedChange && onShowUncertaintyChange ? (
+          <div className="flex items-center gap-1.5 font-sans">
+            <span className="text-xs font-semibold text-gray-650">Model Presentation:</span>
+            <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-sage-200">
+              <button
+                onClick={() => onBiasCorrectedChange(!biasCorrected)}
+                className={`px-2.5 py-1 text-xs rounded-md transition-all cursor-pointer ${biasCorrected ? 'bg-sage-500 text-white font-medium shadow-sm' : 'text-wood-650 hover:text-wood-950 hover:bg-gray-50'}`}
+              >
+                {biasCorrected ? 'Bias-Corrected' : 'Raw Model'}
+              </button>
+              <button
+                onClick={() => onShowUncertaintyChange(!showUncertainty)}
+                className={`px-2.5 py-1 text-xs rounded-md transition-all cursor-pointer ${showUncertainty ? 'bg-fuchsia-600 text-white font-medium shadow-sm' : 'text-wood-650 hover:text-wood-950 hover:bg-gray-50'}`}
+              >
+                {showUncertainty ? 'Uncertainty Active' : 'Uncertainty Hidden'}
+              </button>
+            </div>
+          </div>
+        ) : mode === 'blitz-gap' && selectedCaseStudyId === 'general' && onTaxonGroupChange ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-650 font-sans">Group:</span>
+            <select
+              value={activeTaxonGroup}
+              onChange={(e) => onTaxonGroupChange(e.target.value)}
+              className="bg-white border border-sage-200 hover:border-sage-300 text-wood-950 text-xs px-2.5 py-1.5 rounded-lg font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-sage-500"
+            >
+              {['All', 'Fungi', 'Plants', 'Insects', 'Birds', 'Mammals', 'Amphibians', 'Reptiles'].map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div />
+        )}
         
         {/* Toggle layers controls */}
         <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-sage-200">
@@ -194,7 +236,7 @@ export default function GlobePlaceholder({
       </div>
 
       {/* Main visualization frame */}
-      <div className="relative flex-1 min-h-[420px] bg-slate-900 select-none overflow-hidden" ref={mapContainerRef} onMouseMove={handleMouseMove}>
+      <div className="relative flex-1 min-h-[600px] bg-slate-900 select-none overflow-hidden" ref={mapContainerRef} onMouseMove={handleMouseMove}>
         {/* Canvas visual grid and background matching selected base maps */}
         <div className={`absolute inset-0 transition-opacity duration-500 ${mapType === 'satellite' ? 'bg-radial from-[#1e3a24] via-[#0b171c] to-[#04090d]' : mapType === 'terrain' ? 'bg-gradient-to-b from-[#e3eede] via-[#cfd9cc] to-[#b4beaf]' : 'bg-[#eef4f0]'}`}>
           {/* Faux grid cells to outline map coordinates lines */}
@@ -291,22 +333,7 @@ export default function GlobePlaceholder({
             </div>
           </div>
 
-          {/* Hover coordinate panel */}
-          {hoveredCoords && (
-            <div className="absolute bottom-4 left-4 bg-wood-900/90 text-white p-3 rounded-xl border border-wood-700 shadow-md max-w-xs font-mono text-xs flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 text-sage-200 font-bold border-b border-wood-700 pb-1 mb-1">
-                <Navigation className="w-3 h-3 text-sage-400 rotate-45" /> Live Cell Probe
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-stone-400">Coord:</span>
-                <span>{hoveredCoords.lat}, {hoveredCoords.lng}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-stone-400">Value:</span>
-                <span className="text-sage-300 font-semibold">{hoveredCoords.value}</span>
-              </div>
-            </div>
-          )}
+          {/* Hover coordinate panel removed from overlay to match user requests */}
         </div>
       </div>
 
@@ -377,9 +404,18 @@ export default function GlobePlaceholder({
             )}
           </div>
 
-          <div className="flex items-center gap-4 text-wood-500 text-[11px] font-mono">
-            <span>Projection: WGS-84 Web-Globe</span>
-            <span>Resolution: ~1km Pixel</span>
+          <div className="flex flex-wrap items-center gap-3.5 text-[11px] font-mono text-gray-500">
+            <div className="bg-white/80 border border-gray-200 rounded-lg px-2.5 py-1 text-xs">
+              {hoveredCoords ? (
+                <span>Cell Probe: <span className="text-wood-950 font-semibold">{hoveredCoords.lat}, {hoveredCoords.lng}</span> &bull; <span className="text-sage-600 font-bold">{hoveredCoords.value}</span></span>
+              ) : (
+                <span className="text-gray-400">Cell Probe: Hover over map</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2.5 border-l border-gray-200/60 pl-3">
+              <span>Proj: WGS-84</span>
+              <span>Res: ~1km Pixel</span>
+            </div>
           </div>
         </div>
       </div>
