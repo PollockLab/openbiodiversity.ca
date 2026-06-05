@@ -7,3 +7,4 @@
 npm run deploy
 ```
 This will update gh-pages automatically, no need to push to there.
+Site will update to new deployment in a few minutes.
