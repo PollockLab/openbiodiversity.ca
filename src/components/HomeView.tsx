@@ -21,7 +21,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
           </h1>
           
           <p className="mt-6 text-sm sm:text-base text-gray-500 leading-relaxed max-w-2xl font-sans">
-            Welcome to <strong className="text-wood-900 font-semibold font-display">openbiodiversity.ca</strong>, a highly accessible scientific resource developed to host responsive, 1km-resolution spatial biodiversity models. Supported by the research of the Quantitative Biodiversity Lab, McGill University, we synthesize millions of raw species observations into actionable plans for environmental stewards and conservation professionals.
+            Welcome to <strong className="text-wood-900 font-semibold font-display">openbiodiversity.ca</strong>, an open platform for spatial biodiversity layers supported by the research of the <a href="https://qbiodiversity.org/">Quantitative Biodiversity Lab</a> at McGill University.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-4">
@@ -35,7 +35,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
               onClick={() => setActiveTab('sdm-explorer')}
               className="bg-white hover:bg-gray-50 text-gray-600 font-medium text-xs uppercase tracking-widest px-6 py-3.5 rounded-full border border-gray-200 transition-all inline-flex items-center gap-2 cursor-pointer"
             >
-              Explore 500+ Species Models
+              Explore 500+ Species Distributions
             </button>
           </div>
         </div>
@@ -45,11 +45,8 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
       <section className="space-y-6">
         <div className="max-w-2xl">
           <h2 className="font-display font-semibold text-2xl text-wood-900 tracking-tight">
-            Three Core Components of Our Framework
+             What We Offer 
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Combining rigorous geospatial modeling with gamified community science.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -63,14 +60,14 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
                 10 Useful Layers for Conservation
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed font-sans">
-                Our synthesized grid composites map Human Footprint Index, continuous canopy heights, peatland depths, and protected CPC boundaries. Hand-picked criteria layers for high-efficiency zone selection.
+                Ten most important spatial layers for modern conservation planning in Canada, developed in collaboration with <a href="https://wcscanada.org/">WCS Canada</a>. 
               </p>
             </div>
             <button
               onClick={() => setActiveTab('useful-layers')}
               className="mt-6 text-xs text-sage-500 font-semibold inline-flex items-center gap-1 hover:text-sage-700 cursor-pointer text-left"
             >
-              Visualise 10 Useful Layers <ChevronRight className="w-3.5 h-3.5" />
+              See 10 Useful Layers <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -81,17 +78,17 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
                 <Globe className="w-6 h-6" />
               </div>
               <h3 className="font-display font-semibold text-base text-wood-900">
-                Hundreds of Verified SDMs
+                Species Distributions 
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed font-sans">
-                Explore ~500 1km-resolution terrestrial vertebrate Species Distribution Models across butterflies, plants, and structural trees. Supports toggle features for bias-corrected and raw ensemble datasets.
+                Explore hundreds of Species Distribution Models for the terrestrial vertebrates, butterflies, plants, and trees of Canada. 
               </p>
             </div>
             <button
               onClick={() => setActiveTab('sdm-explorer')}
               className="mt-6 text-xs text-sage-500 font-semibold inline-flex items-center gap-1 hover:text-sage-700 cursor-pointer text-left"
             >
-              Analyze Species Models <ChevronRight className="w-3.5 h-3.5" />
+              View Distributions <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -105,14 +102,14 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
                 Blitz the Gap 2026
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed font-sans">
-                Our active summer campaign gamifying volunteer submissions on iNaturalist. Help us conquer blank grid squares on the map using our explorer, taxonomic, and VOI metrics tracking metrics.
+                Help us improve our models by participating in a Candada-wide citizen science initiative aiming to fill gaps in our knowledge of biodiversity!
               </p>
             </div>
             <button
               onClick={() => setActiveTab('blitz-gap')}
               className="mt-6 text-xs text-sage-500 font-semibold inline-flex items-center gap-1 hover:text-sage-700 cursor-pointer text-left"
             >
-              Join 2026 Campaign <ChevronRight className="w-3.5 h-3.5" />
+              How to Contribute <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -126,7 +123,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
               Canada's Biodiversity Data
             </h2>
             <p className="text-sm text-gray-500 mt-1 max-w-xl">
-              Probe Canada's observation density grids. Use the map tools to switch base layers and examine coordinate properties.
+             Explore our current observations of the country's wildlife.
             </p>
           </div>
         </div>
