@@ -60,7 +60,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
                 10 Useful Layers for Conservation
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed font-sans">
-                Ten most important spatial layers for modern conservation planning in Canada, developed in collaboration with <a href="https://wcscanada.org/">WCS Canada</a>. 
+                The ten most important spatial layers for modern conservation planning in Canada, developed in collaboration with <a href="https://wcscanada.org/">WCS Canada</a>. 
               </p>
             </div>
             <button
