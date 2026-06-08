@@ -28,7 +28,7 @@ export default function UsefulLayersView() {
           10 Useful Layers for Conservation in Canada
         </h1>
         <p className="text-sm text-gray-500 mt-1 max-w-3xl leading-relaxed font-sans">
-          Key layers to inform conservation planning and guide land use decisions. These layers were identified with the aim of providing useful and transparent data, accessible and applicable Canada-wide. They do not stand to replace local knowledge or detailed regional datasets, but rather to provide a groundwork from which more specific assessments can be take shape. 
+          Key layers to inform conservation planning and guide land use decisions. These layers were identified with the aim of providing useful and transparent data, accessible and applicable Canada-wide. They do not stand to replace local knowledge or detailed regional datasets, but rather to provide a groundwork from which more specific assessments can take shape. 
         </p>
       </section>
 
