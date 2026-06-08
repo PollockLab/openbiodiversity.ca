@@ -21,7 +21,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
           </h1>
           
           <p className="mt-6 text-sm sm:text-base text-gray-500 leading-relaxed max-w-2xl font-sans">
-            Welcome to <strong className="text-wood-900 font-semibold font-display">openbiodiversity.ca</strong>, an open platform for spatial biodiversity layers supported by the research of the <a href="https://qbiodiversity.org/">Quantitative Biodiversity Lab</a> at McGill University.
+            Welcome to <strong className="text-wood-900 font-semibold font-display">openbiodiversity.ca</strong>, an open platform for spatial biodiversity data supported by the research of the <a href="https://qbiodiversity.org/">Quantitative Biodiversity Lab</a> at McGill University.
           </p>
         </div>
       </section>
