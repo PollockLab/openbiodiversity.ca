@@ -31,17 +31,17 @@ export default function Footer({ setActiveTab }: FooterProps) {
           {/* Quick Tabs Columns */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-wood-900 mb-3">
-              Data & Challenges
+              Explore 
             </h4>
             <ul className="space-y-1.5 text-xs text-gray-600">
               <li>
                 <button onClick={() => setActiveTab('useful-layers')} className="hover:text-sage-500 transition-colors cursor-pointer">
-                  10 Useful Conservation Layers
+                  10 Useful Layers for Conservation
                 </button>
               </li>
               <li>
                 <button onClick={() => setActiveTab('sdm-explorer')} className="hover:text-sage-500 transition-colors cursor-pointer">
-                  Terrestrial Vertebrate SDMs
+                  Species Distributions
                 </button>
               </li>
               <li>
@@ -51,7 +51,7 @@ export default function Footer({ setActiveTab }: FooterProps) {
               </li>
               <li>
                 <button onClick={() => setActiveTab('about')} className="hover:text-sage-500 transition-colors cursor-pointer">
-                  About Group Expertise
+                  About
                 </button>
               </li>
             </ul>
