@@ -25,10 +25,10 @@ export default function UsefulLayersView() {
       {/* Intro Header */}
       <section className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 card-shadow">
         <h1 className="font-display font-semibold text-2xl sm:text-3xl text-wood-900 tracking-tight">
-          10 Useful Layers for Conservation Planning in Canada
+          10 Useful Layers for Conservation in Canada
         </h1>
         <p className="text-sm text-gray-500 mt-1 max-w-3xl leading-relaxed font-sans">
-          Our team synthesized raw national data assets into 10 key spatial reference maps. These layers cover critical parameters of biodiversity science, and are curated specifically for conservation professionals coordinating land-use prioritizations towards Canada's 30x30 targets.
+          Key layers to inform conservation planning and guide land use decisions. These layers were identified with the aim of providing useful and transparent data, accessible and applicable Canada-wide. They do not stand to replace local knowledge or detailed regional datasets, but rather to provide a groundwork from which more specific assessments can be take shape. 
         </p>
       </section>
 
@@ -38,7 +38,7 @@ export default function UsefulLayersView() {
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-4 card-shadow">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
-              <Filter className="w-3.5 h-3.5 text-sage-500" /> Filter Criteria Categories
+              <Filter className="w-3.5 h-3.5 text-sage-500" /> Filter Categories
             </div>
             
             {/* Horizontal scroll select tabs for categories */}
