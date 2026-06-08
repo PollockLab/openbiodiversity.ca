@@ -23,21 +23,6 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
           <p className="mt-6 text-sm sm:text-base text-gray-500 leading-relaxed max-w-2xl font-sans">
             Welcome to <strong className="text-wood-900 font-semibold font-display">openbiodiversity.ca</strong>, an open platform for spatial biodiversity layers supported by the research of the <a href="https://qbiodiversity.org/">Quantitative Biodiversity Lab</a> at McGill University.
           </p>
-
-          <div className="mt-8 flex flex-wrap gap-4">
-            <button
-              onClick={() => setActiveTab('blitz-gap')}
-              className="btn-primary hover:bg-sage-600 font-medium text-xs uppercase tracking-widest px-6 py-3.5 rounded-full transition-all shadow-sm flex items-center gap-2 cursor-pointer"
-            >
-              Blitz the Gap 2026 <ArrowRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setActiveTab('sdm-explorer')}
-              className="bg-white hover:bg-gray-50 text-gray-600 font-medium text-xs uppercase tracking-widest px-6 py-3.5 rounded-full border border-gray-200 transition-all inline-flex items-center gap-2 cursor-pointer"
-            >
-              Explore 500+ Species Distributions
-            </button>
-          </div>
         </div>
       </section>
 
