@@ -37,7 +37,7 @@ export default function BlitzGapView() {
           </div>
           <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-center font-sans">
             <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.speciesReaching100Observations}</span>
-            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Species reaching 100 observations</span>
+            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Species reaching 100 observations on iNat</span>
           </div>
         </div>
       </section>
@@ -91,7 +91,7 @@ export default function BlitzGapView() {
             >
               <div className="flex items-center gap-2 text-sm sm:text-base">
                 <Compass className="w-4.5 h-4.5 text-sage-600" />
-                <span>Project Description & Field Guidance &bull; {activeStudy.title}</span>
+                <span>Project Description &bull; {activeStudy.title}</span>
               </div>
               <div>
                 {isDescriptionOpen ? (
@@ -135,13 +135,13 @@ export default function BlitzGapView() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 leading-relaxed font-sans text-xs">
-                    <h5 className="font-semibold text-wood-900 font-display text-xs mb-1">Historic Context Background</h5>
+                    <h5 className="font-semibold text-wood-900 font-display text-xs mb-1">Background</h5>
                     <p className="text-gray-550 leading-relaxed font-sans mt-1">{activeStudy.background}</p>
                   </div>
                   
                   <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 leading-relaxed font-sans text-xs">
                     <h5 className="font-semibold text-wood-900 flex items-center gap-1 font-display text-xs mb-1">
-                      <MapPin className="w-3.5 h-3.5 text-sage-500" /> Surveyor Field Guidance
+                      <MapPin className="w-3.5 h-3.5 text-sage-500" /> Field Guidance
                     </h5>
                     <p className="text-gray-550 leading-relaxed font-sans mt-1">{activeStudy.guidance}</p>
                   </div>

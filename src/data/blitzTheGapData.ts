@@ -3,10 +3,10 @@ import { CaseStudy, LeaderboardEntry } from '../types';
 export const btgCaseStudies: CaseStudy[] = [
   {
     id: 'general',
-    title: 'General "Where to Go" Gap Map',
-    description: 'Our primary guiding tool highlighting national data gaps. Explore Canada-wide density of citizen science records overlaid on trails and road infrastructure.',
+    title: 'General Gap Map',
+    description: 'Our primary guiding tool highlighting national data gaps. Explore Canada-wide density of biodiversity records overlaid on trails and roads.',
     background: 'Despite millions of records on iNaturalist, observations are concentrated heavily along roads, parks, and major cities. Over 90% of Canada\'s vast natural ecosystems remain virtually unsurveyed.',
-    guidance: 'Zoom in to find the areas within 5-50km of your location that are shaded in red (zero observations relative to high expected richness). Plan your hiking or paddling routes through these regions to maximize scientific contribution.',
+    guidance: 'Zoom in to find the areas near you that have the least observation density. Plan your hiking or paddling routes through these regions to maximize your scientific contribution.',
     metrics: {
       explorer: 'Calculates points based on visiting squares with 0 historical records. Every empty grid cell you observations-fill becomes your conquered territory!',
       taxonomic: 'Gives special bonuses for submitting files of under-surveyed taxa (fungi, bryophytes, non-flying insects) in those grid cells.',
@@ -20,10 +20,10 @@ export const btgCaseStudies: CaseStudy[] = [
   },
   {
     id: 'kbas',
-    title: 'Key Biodiversity Areas (KBAs) Case Study',
-    description: 'Targeted survey overlay for candidate and established KBAs in Canada. Features KBA polygon boundaries and the specialized "MayBA" campaign layer.',
-    background: 'Key Biodiversity Areas are sites of global importance for preserving species and habitats. However, many candidate KBAs lack the comprehensive physical records required to achieve official global designation.',
-    guidance: 'Focus your planning on areas inside KBA boundaries with low record density. In May/June (the peak of spring nesting and bloom), participate in the MayBA blitz to capture early-season ephemeral plant occurrences.',
+    title: 'Key Biodiversity Areas (KBAs)',
+    description: 'View KBA boundaries across the country as well as candidate areas to become KBAs ("MayBAs").',
+    background: 'Key Biodiversity Areas are sites of global importance for preserving species and habitats. However, many candidate KBAs lack the data required to achieve official designation.',
+    guidance: 'Focus your iNaturalist sampling in areas and species groups inside KBA and MayBA boundaries with low record density. In May/June (the peak of spring nesting and bloom), participate in the MayBA blitz to capture early-season ephemeral plant occurrences.',
     metrics: {
       explorer: 'Fills physical grid cells inside priority candidate KBAs. Complete full coverage of the candidate polygon.',
       taxonomic: 'Targets triggering species (the rare species that justify the KBA). Finding a triggering species doubles your entire expedition score!',
