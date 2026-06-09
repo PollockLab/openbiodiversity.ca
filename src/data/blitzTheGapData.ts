@@ -85,9 +85,8 @@ export const btgLeaderboard: LeaderboardEntry[] = [
 ];
 
 export const staticBtg2025Milestone = {
-  totalRecordsFilled: '189,450',
-  uniqueEmptyCellsConquered: '4,105',
-  newSpeciesAddedToCanadaMaps: '184',
-  activeGridClimbers: '1,240',
-  impactBrief: 'During Blitz the Gap 2025, naturalists across the country filled data gaps in over 4,000 grid cells that had never recorded a single species on iNaturalist. This has directly improved bias-corrected SDM training accuracy for 42 threatened boreal species!'
+  uniqueEmptyCellsConquered: '50,000km2',
+  speciesWithFirstObservation: '551',
+  speciesReaching100Observations: '589',
+  impactBrief: 'During Blitz the Gap 2025, naturalists across the country filled data gaps in over 50,000 1km grid cells that had never recorded a single species on iNaturalist, improving our ability to model Canada's species.' 
 };

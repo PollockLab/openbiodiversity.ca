@@ -26,22 +26,18 @@ export default function BlitzGapView() {
           </h3>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-center font-sans">
-            <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.totalRecordsFilled}</span>
-            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">iNat Records</span>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-center font-sans">
             <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.uniqueEmptyCellsConquered}</span>
-            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Empty Cells Conquered</span>
+            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Area Sampled for the 1st time on iNat</span>
           </div>
           <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-center font-sans">
-            <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.newSpeciesAddedToCanadaMaps}</span>
-            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Species Logged 1st Time</span>
+            <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.speciesWithFirstObservation}</span>
+            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Species Logged 1st Time on iNat</span>
           </div>
           <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-center font-sans">
-            <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.activeGridClimbers}</span>
-            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Naturalists Enrolled</span>
+            <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.speciesReaching100Observations}</span>
+            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Species reaching 100 observations</span>
           </div>
         </div>
       </section>
