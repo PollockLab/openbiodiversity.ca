@@ -76,11 +76,11 @@ export default function AboutView() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 pt-2">
             {[
               { name: "Dr. Laura Pollock", role: "Principal Investigator", tag: "LP" },
-              { name: "Guillaume", role: "Lead Spatial Modeler", tag: "G" },
-              { name: "Noah", role: "Clipping Developer", tag: "N" },
-              { name: "Researcher 4", role: "Model Analyst", tag: "R4" },
-              { name: "Researcher 5", role: "Systems Engineer", tag: "R5" },
-              { name: "Researcher 6", role: "Field Lead", tag: "R6" }
+              { name: "Katherine Hébert", role: "Postdoctoral Researcher", tag: "R6" },
+              { name: "Guillaume Larocque", role: "Lead Spatial Modeler", tag: "G" },
+              { name: "Noah Wightman", role: "Clipping Developer", tag: "N" },
+              { name: "Ryan Hull", role: "Research Assistant", tag: "R4" },
+              { name: "Maho Horikawa", role: "Research Assistant", tag: "R5" }
             ].map((member, i) => (
               <div key={member.name} className="flex flex-col items-center text-center space-y-2">
                 <div className="relative w-16 h-16 rounded-full bg-gray-50 border border-gray-150 flex items-center justify-center text-wood-700 hover:border-sage-400 transition-colors shadow-3xs">

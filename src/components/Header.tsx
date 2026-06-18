@@ -11,16 +11,16 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
 
   const navItems = [
     { id: 'home', label: 'Explore Home', icon: Compass },
+    { id: 'blitz-gap', label: 'Blitz the Gap 2026', icon: HelpCircle },
     { id: 'useful-layers', label: '10 Spatial Layers', icon: Globe },
     { id: 'sdm-explorer', label: 'SDMs (500+)', icon: MapPinned },
-    { id: 'blitz-gap', label: 'Blitz the Gap 2026', icon: HelpCircle },
     { id: 'about', label: 'About', icon: Info },
     { id: 'contact', label: 'Contact', icon: Mail }
   ];
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-sage-100 shadow-2xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           
           {/* Logo Brand Representation - Redrawn as high contrast vector SVG replicating the hand-sketched user logo */}

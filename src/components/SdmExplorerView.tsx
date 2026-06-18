@@ -7,6 +7,7 @@ export default function SdmExplorerView() {
   const [selectedSdmId, setSelectedSdmId] = useState<string>('sdm-caribou');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeGroupFilter, setActiveGroupFilter] = useState<string>('All');
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   
   // Custom Toggles
   const [biasCorrected, setBiasCorrected] = useState<boolean>(true);
@@ -45,26 +46,41 @@ export default function SdmExplorerView() {
         </div>
       </section>
 
-      {/* Taxon filter, text search, and species dropdown selector strip directly above the map */}
-      <section className="bg-white border border-gray-100 rounded-2xl p-5 card-shadow space-y-4">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 font-sans text-xs">
+      {/* Outside click handler for combobox */}
+      {isDropdownOpen && (
+        <div 
+          className="fixed inset-0 z-10 cursor-default" 
+          onClick={() => {
+            setIsDropdownOpen(false);
+            setSearchQuery('');
+          }}
+        />
+      )}
+
+      {/* Taxon filter and single species search combobox */}
+      <section className="bg-white border border-gray-150 rounded-2xl p-5 card-shadow space-y-4 relative z-20">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-end">
           
           {/* Taxon categories filter buttons */}
-          <div className="space-y-1.5 md:flex-1">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block font-mono mb-1.5">1. Filter Taxon Group</span>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-1.5 md:col-span-8 font-sans text-xs">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block font-mono mb-1.5">Filter Taxon Group</span>
+            <div className="flex flex-wrap gap-1.55">
               {groups.map((grp) => (
                 <button
                   key={grp}
                   onClick={() => {
                     setActiveGroupFilter(grp);
-                    // Update dropdown selection if existing species doesn't belong to the new group
+                    // Update selection if existing species doesn't belong to the new group
                     const matching = sdmSpeciesList.filter(s => grp === 'All' ? true : s.taxonGroup === grp);
                     if (matching.length > 0 && !matching.some(m => m.id === selectedSdmId)) {
                       setSelectedSdmId(matching[0].id);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold select-none transition-all cursor-pointer ${activeGroupFilter === grp ? 'bg-sage-500 text-white font-medium shadow-3xs' : 'bg-gray-55 hover:bg-gray-100 text-gray-600 border border-transparent'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold select-none transition-all cursor-pointer ${
+                    activeGroupFilter === grp 
+                      ? 'bg-sage-500 text-white font-medium shadow-3xs' 
+                      : 'bg-gray-55 hover:bg-gray-100 text-gray-600 border border-transparent'
+                  }`}
                 >
                   {grp}
                 </button>
@@ -72,55 +88,56 @@ export default function SdmExplorerView() {
             </div>
           </div>
 
-          {/* Search Query Name bar */}
-          <div className="space-y-1.5 w-full md:w-64">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block font-mono mb-1.5">2. Search Name</span>
+          {/* Search Species Combobox */}
+          <div className="space-y-1.5 md:col-span-4 relative font-sans text-xs">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block font-mono">Search Species</span>
+              {filteredSpecies.length > 0 && (
+                <span className="text-[10px] font-mono text-gray-400">
+                  {filteredSpecies.length} matches
+                </span>
+              )}
+            </div>
             <div className="relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
+              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
               <input
                 type="text"
-                placeholder="Type name query..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  const val = e.target.value;
-                  const matches = sdmSpeciesList.filter((s) => {
-                    const matchesGroup = activeGroupFilter === 'All' ? true : s.taxonGroup === activeGroupFilter;
-                    const matchesSearch = s.commonName.toLowerCase().includes(val.toLowerCase()) || 
-                                          s.scientificName.toLowerCase().includes(val.toLowerCase());
-                    return matchesGroup && matchesSearch;
-                  });
-                  if (matches.length > 0 && !matches.some(m => m.id === selectedSdmId)) {
-                    setSelectedSdmId(matches[0].id);
-                  }
+                placeholder="Search species..."
+                value={isDropdownOpen ? searchQuery : selectedSpecies?.commonName || ''}
+                onFocus={() => {
+                  setSearchQuery('');
+                  setIsDropdownOpen(true);
                 }}
-                className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-250 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-sage-500 text-wood-700"
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9.5 pr-8 py-2.5 bg-gray-55 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-sage-500 focus:bg-white text-wood-950 shadow-3xs"
               />
-            </div>
-          </div>
-
-          {/* Matches dropselector list */}
-          <div className="space-y-1.5 w-full md:w-72">
-            <div className="flex justify-between items-center mb-1.5">
-              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block font-mono">3. Select Species Model</span>
-              <span className="font-mono bg-sage-50 text-sage-650 border border-sage-100 px-2 py-0.5 rounded-full text-[9px] font-bold">
-                {filteredSpecies.length} Matches
-              </span>
-            </div>
-            <select
-              value={selectedSdmId}
-              onChange={(e) => setSelectedSdmId(e.target.value)}
-              className="w-full bg-white border border-gray-255 text-wood-950 text-xs px-3 py-2.5 rounded-xl font-semibold cursor-pointer focus:outline-none focus:ring-1 focus:ring-sage-500"
-            >
-              {filteredSpecies.map((spec) => (
-                <option key={spec.id} value={spec.id}>
-                  {spec.commonName} ({spec.scientificName})
-                </option>
-              ))}
-              {filteredSpecies.length === 0 && (
-                <option value="">No matching species found</option>
+              <ChevronDown className={`w-4 h-4 text-gray-400 absolute right-3 top-3 pointer-events-none transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              
+              {/* Dropdown list */}
+              {isDropdownOpen && (
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-150 rounded-xl shadow-xl max-h-60 overflow-y-auto z-30 divide-y divide-gray-100">
+                  {filteredSpecies.map((spec) => (
+                    <button
+                      key={spec.id}
+                      onClick={() => {
+                        setSelectedSdmId(spec.id);
+                        setSearchQuery('');
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-sage-50/40 text-xs font-sans transition-all flex flex-col gap-0.5 cursor-pointer border-none"
+                    >
+                      <span className="font-semibold text-wood-950">{spec.commonName}</span>
+                      <span className="text-[10px] text-gray-400 italic font-mono">{spec.scientificName} &bull; {spec.taxonGroup}</span>
+                    </button>
+                  ))}
+                  {filteredSpecies.length === 0 && (
+                    <div className="p-4 text-center text-xs text-gray-400 italic">
+                      No matching species found
+                    </div>
+                  )}
+                </div>
               )}
-            </select>
+            </div>
           </div>
 
         </div>

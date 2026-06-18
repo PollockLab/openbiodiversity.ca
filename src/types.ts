@@ -9,6 +9,7 @@ export interface BiodiversityLayer {
   category: 'Conservation' | 'Climate' | 'Habitat' | 'Human Footprint';
   description: string;
   significance: string;
+  source: string;
   resolution: string;
   coverage: string;
   format: string;

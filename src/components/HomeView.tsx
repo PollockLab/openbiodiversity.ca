@@ -35,7 +35,28 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Pillar 1 */}
+          {/* Pillar 1: Blitz the Gap 2026 (Now First) */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 card-shadow flex flex-col justify-between hover:border-sage-200 transition-all duration-200">
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-sage-50 text-sage-500 rounded-xl flex items-center justify-center font-bold">
+                <Award className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-semibold text-base text-wood-900">
+                Blitz the Gap 2026
+              </h3>
+              <p className="text-xs text-gray-500 leading-relaxed font-sans">
+                Help us improve our models by participating in a Canada-wide citizen science initiative aiming to fill gaps in our knowledge of biodiversity!
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveTab('blitz-gap')}
+              className="mt-6 text-xs bg-sage-500 hover:bg-sage-600 text-white font-semibold py-3 px-4 rounded-xl inline-flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all duration-250 cursor-pointer text-center w-full"
+            >
+              How to Contribute <ArrowRight className="w-4 h-4 animate-pulse" />
+            </button>
+          </div>
+
+          {/* Pillar 2: 10 Useful Layers for Conservation (Now Second) */}
           <div className="bg-white border border-gray-100 rounded-2xl p-6 card-shadow flex flex-col justify-between hover:border-sage-200 transition-all duration-200">
             <div className="space-y-4">
               <div className="w-12 h-12 bg-sage-50 text-sage-500 rounded-xl flex items-center justify-center font-bold">
@@ -45,7 +66,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
                 10 Useful Layers for Conservation
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed font-sans">
-                The ten most important spatial layers for modern conservation planning in Canada, developed in collaboration with <a href="https://wcscanada.org/">WCS Canada</a>. 
+                The ten most important spatial layers for modern conservation planning in Canada, developed in collaboration with <a href="https://wcscanada.org/" className="text-sage-600 hover:underline">WCS Canada</a>. 
               </p>
             </div>
             <button
@@ -56,7 +77,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
             </button>
           </div>
 
-          {/* Pillar 2 */}
+          {/* Pillar 3: Species Distributions (Now Third) */}
           <div className="bg-white border border-gray-100 rounded-2xl p-6 card-shadow flex flex-col justify-between hover:border-sage-200 transition-all duration-200">
             <div className="space-y-4">
               <div className="w-12 h-12 bg-sage-50 text-sage-500 rounded-xl flex items-center justify-center font-bold">
@@ -74,27 +95,6 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
               className="mt-6 text-xs text-sage-500 font-semibold inline-flex items-center gap-1 hover:text-sage-700 cursor-pointer text-left"
             >
               View Distributions <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Pillar 3 */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 card-shadow flex flex-col justify-between hover:border-sage-200 transition-all duration-200">
-            <div className="space-y-4">
-              <div className="w-12 h-12 bg-sage-50 text-sage-500 rounded-xl flex items-center justify-center font-bold">
-                <Award className="w-6 h-6" />
-              </div>
-              <h3 className="font-display font-semibold text-base text-wood-900">
-                Blitz the Gap 2026
-              </h3>
-              <p className="text-xs text-gray-500 leading-relaxed font-sans">
-                Help us improve our models by participating in a Candada-wide citizen science initiative aiming to fill gaps in our knowledge of biodiversity!
-              </p>
-            </div>
-            <button
-              onClick={() => setActiveTab('blitz-gap')}
-              className="mt-6 text-xs text-sage-500 font-semibold inline-flex items-center gap-1 hover:text-sage-700 cursor-pointer text-left"
-            >
-              How to Contribute <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

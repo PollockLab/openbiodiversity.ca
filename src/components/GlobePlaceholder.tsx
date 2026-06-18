@@ -4,6 +4,8 @@ import { Globe, Map as MapIcon, Layers, Eye, Shield, Compass, Navigation, Refres
 interface GlobePlaceholderProps {
   mode: 'useful-layers' | 'sdm-explorer' | 'blitz-gap';
   selectedLayerId?: string; // for useful layers
+  selectedLayerIds?: string[]; // Multiple layer IDs support
+  layerOpacities?: Record<string, number>; // Individual opacity layers support
   selectedSdmId?: string; // for SDMs
   activeTaxonGroup?: string; // e.g. Mammal, Bird, etc.
   biasCorrected?: boolean;
@@ -17,6 +19,8 @@ interface GlobePlaceholderProps {
 export default function GlobePlaceholder({
   mode,
   selectedLayerId = 'layer-1',
+  selectedLayerIds = ['layer-1'],
+  layerOpacities = {},
   selectedSdmId,
   activeTaxonGroup = 'All',
   biasCorrected = true,
@@ -50,7 +54,7 @@ export default function GlobePlaceholder({
     };
 
     // Determine density intensity based on active parameters
-    const seed = `${mode}-${selectedLayerId}-${selectedSdmId}-${activeTaxonGroup}-${selectedCaseStudyId}`;
+    const seed = `${mode}-${selectedLayerIds ? selectedLayerIds.join(',') : selectedLayerId}-${selectedSdmId}-${activeTaxonGroup}-${selectedCaseStudyId}`;
     const strengthMultiplier = seedRandom(seed);
 
     for (let i = 0; i < 45; i++) {
@@ -171,6 +175,33 @@ export default function GlobePlaceholder({
     }
   };
 
+  const getCellColorForLayer = (cell: any, lId: string) => {
+    switch (lId) {
+      case 'layer-1': 
+        return cell.val > 70 ? 'bg-purple-700 border border-purple-400' : cell.val > 40 ? 'bg-amber-600' : 'bg-emerald-600';
+      case 'layer-2': 
+        return cell.val > 80 ? 'bg-emerald-800 border border-emerald-400' : cell.val > 40 ? 'bg-lime-500' : 'bg-yellow-300';
+      case 'layer-3': 
+        return cell.val > 60 ? 'bg-cyan-500' : 'bg-blue-300';
+      case 'layer-4': 
+        return 'bg-amber-500 border-2 border-amber-500';
+      case 'layer-5': 
+        return cell.val > 60 ? 'bg-amber-950' : 'bg-amber-800';
+      case 'layer-6': 
+        return 'bg-emerald-600 border border-emerald-400';
+      case 'layer-7': 
+        return cell.val > 50 ? 'bg-emerald-950/90' : 'hidden';
+      case 'layer-8': 
+        return cell.val > 70 ? 'bg-emerald-700' : cell.val > 40 ? 'bg-emerald-500' : 'bg-emerald-300';
+      case 'layer-9': 
+        return cell.val > 65 ? 'bg-red-500' : 'hidden';
+      case 'layer-10': 
+        return 'bg-cyan-600 border-b border-cyan-300';
+      default:
+        return 'bg-sage-500';
+    }
+  };
+
   return (
     <div className="flex flex-col bg-white border border-sage-200 rounded-2xl overflow-hidden shadow-sm">
       {/* Map Control bar */}
@@ -264,28 +295,57 @@ export default function GlobePlaceholder({
 
           {/* GridCells representing data overlays */}
           <div className="absolute inset-0">
-            {gridCells.map((cell, idx) => (
-              <div
-                key={idx}
-                className={`absolute w-7 h-7 rounded-md transition-all duration-300 flex items-center justify-center ${getCellColor(cell)}`}
-                style={{
-                  left: `${cell.x}%`,
-                  top: `${cell.y}%`,
-                  transform: `translate(-50%, -50%) scale(${zoom / 3})`,
-                }}
-              >
-                {/* Specific features markings */}
-                {mode === 'blitz-gap' && cell.gap && (
-                  <div className="w-2 h-2 rounded-full bg-red-600 animate-ping absolute" />
-                )}
-                {mode === 'blitz-gap' && selectedCaseStudyId === 'bc-parks' && cell.park && (
-                  <Shield className="w-3 h-3 text-emerald-900" />
-                )}
-                {mode === 'sdm-explorer' && cell.val > 75 && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-sage-200" />
-                )}
-              </div>
-            ))}
+            {mode === 'useful-layers' ? (
+              selectedLayerIds.map((layerId) => {
+                const layerOpacityPercent = layerOpacities[layerId] !== undefined ? layerOpacities[layerId] : opacity;
+                return (
+                  <div 
+                    key={layerId} 
+                    style={{ opacity: layerOpacityPercent / 100 }} 
+                    className="absolute inset-0 pointer-events-none"
+                  >
+                    {gridCells.map((cell, idx) => {
+                      const colorClass = getCellColorForLayer(cell, layerId);
+                      if (colorClass === 'hidden') return null;
+                      return (
+                        <div
+                          key={`${layerId}-${idx}`}
+                          className={`absolute w-7 h-7 rounded-md transition-all duration-350 flex items-center justify-center ${colorClass}`}
+                          style={{
+                            left: `${cell.x}%`,
+                            top: `${cell.y}%`,
+                            transform: `translate(-50%, -50%) scale(${zoom / 3})`,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })
+            ) : (
+              gridCells.map((cell, idx) => (
+                <div
+                  key={idx}
+                  className={`absolute w-7 h-7 rounded-md transition-all duration-300 flex items-center justify-center ${getCellColor(cell)}`}
+                  style={{
+                    left: `${cell.x}%`,
+                    top: `${cell.y}%`,
+                    transform: `translate(-50%, -50%) scale(${zoom / 3})`,
+                  }}
+                >
+                  {/* Specific features markings */}
+                  {mode === 'blitz-gap' && cell.gap && (
+                    <div className="w-2 h-2 rounded-full bg-red-600 animate-ping absolute" />
+                  )}
+                  {mode === 'blitz-gap' && selectedCaseStudyId === 'bc-parks' && cell.park && (
+                    <Shield className="w-3 h-3 text-emerald-900" />
+                  )}
+                  {mode === 'sdm-explorer' && cell.val > 75 && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-sage-200" />
+                  )}
+                </div>
+              ))
+            )}
           </div>
 
           {/* Compass Rose illustration */}
@@ -296,40 +356,6 @@ export default function GlobePlaceholder({
               <span className="absolute -bottom-3 text-[10px] font-mono font-bold">S</span>
               <span className="absolute -left-3 text-[10px] font-mono font-bold">W</span>
               <span className="absolute -right-3 text-[10px] font-mono font-bold">E</span>
-            </div>
-          </div>
-
-          {/* Zoom & Rotation overlay hud */}
-          <div className="absolute top-4 left-4 flex flex-col gap-2 bg-white/80 backdrop-blur-md p-2.5 rounded-xl border border-sage-200 shadow-xs max-w-xs text-xs pointer-events-auto">
-            <div className="font-semibold text-wood-900 flex items-center gap-1">
-              <Compass className="w-3.5 h-3.5 text-sage-600" /> Map Projection HUD
-            </div>
-            <div className="text-[10px] text-wood-600 font-mono">
-              <div>Scale Zoom: {zoom}x (Canada-aligned)</div>
-              <div>Center Lat: {latitude}° N</div>
-              <div>Center Lng: {Math.abs(rotation + 15).toFixed(0)}° W</div>
-            </div>
-            
-            {/* Simulated sliders */}
-            <div className="mt-1.5 pt-1.5 border-t border-sage-200 flex flex-col gap-1">
-              <div className="flex justify-between items-center text-[10px] text-wood-600">
-                <span>Zoom Level</span>
-                <div className="flex gap-1">
-                  <button onClick={() => setZoom(z => Math.max(1, z - 1))} className="p-0.5 rounded hover:bg-sage-200 text-wood-900"><ZoomOut className="w-3 h-3" /></button>
-                  <button onClick={() => setZoom(z => Math.min(6, z + 1))} className="p-0.5 rounded hover:bg-sage-200 text-wood-900"><ZoomIn className="w-3 h-3" /></button>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-[10px] text-wood-600 mt-1">
-                <span>Opacity ({opacity}%)</span>
-                <input
-                  type="range"
-                  min="20"
-                  max="100"
-                  value={opacity}
-                  onChange={(e) => setOpacity(Number(e.target.value))}
-                  className="w-16 h-1 bg-sage-200 rounded-lg appearance-none cursor-pointer accent-sage-600"
-                />
-              </div>
             </div>
           </div>
 

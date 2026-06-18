@@ -42,7 +42,7 @@ export default function App() {
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main Structural Layout Content Frame */}
-      <main id="main-content-frame" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content-frame" className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8">
         {renderActiveView()}
       </main>
 

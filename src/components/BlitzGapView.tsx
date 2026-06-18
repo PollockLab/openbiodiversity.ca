@@ -17,59 +17,40 @@ export default function BlitzGapView() {
   return (
     <div className="space-y-8 pb-16">
       
-      {/* Historical Accomplishments Milestones - Compact Version */}
-      <section className="bg-white border border-gray-100 rounded-2xl p-4 md:p-5 card-shadow">
-        <div className="flex items-center gap-1.5 mb-3">
-          <Award className="w-4 h-4 text-sage-500" />
-          <h3 className="font-semibold text-wood-950 text-xs font-display uppercase tracking-wider">
-            Blitz the Gap 2025 Impact Summary
-          </h3>
-        </div>
+      {/* Historical Accomplishments Milestones - Compact Side-by-Side Panel */}
+      <section className="bg-white border border-gray-150 rounded-2xl p-3 md:p-3.5 card-shadow">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          
+          {/* Left: Summary Title Block */}
+          <div className="flex items-center gap-2 flex-shrink-0 py-1.5 md:pr-1">
+            <Award className="w-5 h-5 text-sage-600 flex-shrink-0" />
+            <h3 className="font-bold text-wood-950 text-xs sm:text-sm font-display tracking-tight leading-tight uppercase md:max-w-[160px]">
+              Blitz the Gap 2025 Impact
+            </h3>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-center font-sans">
-            <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.uniqueEmptyCellsConquered}</span>
-            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Area Sampled for the 1st time on iNat</span>
+          {/* Right: Core Stats Grid */}
+          <div className="flex-grow w-full grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="bg-gray-50/60 py-2 px-3 rounded-lg border border-gray-100 text-center flex flex-col justify-center transition-colors hover:bg-gray-50">
+              <span className="text-base sm:text-lg font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.uniqueEmptyCellsConquered}</span>
+              <span className="text-[10px] text-gray-550 font-sans block mt-0.5 leading-tight">Area Sampled for the 1st time on iNat</span>
+            </div>
+            <div className="bg-gray-50/60 py-2 px-3 rounded-lg border border-gray-100 text-center flex flex-col justify-center transition-colors hover:bg-gray-50">
+              <span className="text-base sm:text-lg font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.speciesWithFirstObservation}</span>
+              <span className="text-[10px] text-gray-550 font-sans block mt-0.5 leading-tight">Species Logged 1st Time on iNat</span>
+            </div>
+            <div className="bg-gray-50/60 py-2 px-3 rounded-lg border border-gray-100 text-center flex flex-col justify-center transition-colors hover:bg-gray-50">
+              <span className="text-base sm:text-lg font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.speciesReaching100Observations}</span>
+              <span className="text-[10px] text-gray-550 font-sans block mt-0.5 leading-tight">Species reaching 100 observations on iNat</span>
+            </div>
           </div>
-          <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-center font-sans">
-            <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.speciesWithFirstObservation}</span>
-            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Species Logged 1st Time on iNat</span>
-          </div>
-          <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-center font-sans">
-            <span className="text-xl font-bold font-mono text-sage-600 block leading-tight">{staticBtg2025Milestone.speciesReaching100Observations}</span>
-            <span className="text-[10px] text-gray-400 font-sans block mt-0.5">Species reaching 100 observations on iNat</span>
-          </div>
+
         </div>
       </section>
 
       {/* Case studies Navigation & Map display block */}
       <section className="space-y-5">
         
-        {/* Navigation Selector Tabs */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-4.5 space-y-4 card-shadow">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-650 uppercase tracking-widest font-mono">
-            <Compass className="w-4 h-4 text-sage-500" /> OUR FEATURED PROJECTS
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {btgCaseStudies.map((study) => (
-              <button
-                key={study.id}
-                onClick={() => {
-                  setActiveStudyId(study.id);
-                  // Ensure description dropdown expands when switching projects
-                  setIsDescriptionOpen(true);
-                }}
-                className={`p-3 text-left rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${activeStudyId === study.id ? 'bg-sage-500 border-sage-500 text-white shadow-sm font-medium' : 'bg-gray-55 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
-              >
-                <span className={`text-[9px] uppercase font-mono font-bold tracking-widest ${activeStudyId === study.id ? 'text-sage-100' : 'text-sage-500'}`}>
-                  {study.id === 'general' ? '01 // GLOBAL CAN' : study.id === 'kbas' ? '02 // KBA STRATEGY' : study.id === 'bc-parks' ? '03 // BC PROTECTED' : '04 // NL LOCAL'}
-                </span>
-                <span className="text-xs font-display font-bold block mt-1 leading-tight">{study.title.replace('Case Study', '').replace('Map', '')}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Full span map visualizer */}
         <div className="w-full">
           <GlobePlaceholder
@@ -80,96 +61,109 @@ export default function BlitzGapView() {
           />
         </div>
 
-        {/* Collapsible Dropdowns Accordion Assembly */}
-        <div className="space-y-4">
+        {/* Unified Project Case Studies & Details Panel */}
+        <div className="bg-white border border-gray-150 rounded-2xl overflow-hidden shadow-sm flex flex-col card-shadow p-5 md:p-6 space-y-6">
           
-          {/* Accordion 1: Case Study Details (Background, Goals & Field Guidance) */}
-          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden card-shadow">
-            <button
-              onClick={() => setIsDescriptionOpen(!isDescriptionOpen)}
-              className="w-full flex justify-between items-center px-6 py-4.5 text-left font-display font-semibold text-wood-950 transition-colors hover:bg-gray-50 focus:outline-none"
-            >
-              <div className="flex items-center gap-2 text-sm sm:text-base">
-                <Compass className="w-4.5 h-4.5 text-sage-600" />
-                <span>Project Description &bull; {activeStudy.title}</span>
-              </div>
-              <div>
-                {isDescriptionOpen ? (
-                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                )}
-              </div>
-            </button>
+          {/* Selector Buttons (Prominent Buttons for Featured Projects) */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-widest font-mono">
+              <Compass className="w-4 h-4 text-sage-500" /> OUR FEATURED PROJECTS
+            </div>
             
-            {isDescriptionOpen && (
-              <div className="p-6 border-t border-gray-100 bg-white space-y-6 animate-fadeIn">
-                <div>
-                  <h4 className="font-display font-bold text-lg text-wood-950 leading-snug">{activeStudy.title}</h4>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed font-sans">{activeStudy.description}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+              {btgCaseStudies.map((study) => {
+                const isActive = activeStudyId === study.id;
+                return (
+                  <button
+                    key={study.id}
+                    onClick={() => {
+                      setActiveStudyId(study.id);
+                    }}
+                    className={`p-3 text-center rounded-xl border font-semibold font-display text-[11px] sm:text-xs transition-all cursor-pointer flex items-center justify-center min-h-[48px] ${
+                      isActive
+                        ? 'bg-sage-500 border-sage-500 text-white shadow-sm font-bold'
+                        : 'bg-gray-55 text-gray-600 border-gray-100 hover:bg-gray-100 hover:text-wood-950'
+                    }`}
+                  >
+                    <span>
+                      {study.title.replace('Case Study', '').replace('Map', '').trim()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Details block */}
+          <div className="pt-4 border-t border-gray-100 space-y-6 animate-fadeIn bg-white">
+            <div>
+              <h4 className="font-display font-bold text-lg text-wood-950 leading-snug">{activeStudy.title}</h4>
+              <p className="text-xs text-gray-550 mt-1 leading-relaxed font-sans">{activeStudy.description}</p>
+            </div>
+
+            {/* Campaign targets progress slider */}
+            <div className="space-y-2 border-t border-gray-100 pt-4 font-sans">
+              <div className="flex justify-between items-center text-xs font-mono">
+                <span className="text-gray-400">Campaign Target Records:</span>
+                <strong className="text-wood-900">{activeStudy.metricsGoal.target}</strong>
+              </div>
+              <div className="flex justify-between items-center text-xs font-mono">
+                <span className="text-gray-400">Current observations submitted:</span>
+                <strong className="text-sage-500 font-bold">{activeStudy.metricsGoal.current}</strong>
+              </div>
+
+              <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden mt-1.5 border border-gray-200">
+                <div
+                  className="bg-sage-500 h-full rounded-full transition-all duration-1000"
+                  style={{ width: `${activeStudy.metricsGoal.progress}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] font-mono text-gray-400 font-bold">
+                <span>0% START</span>
+                <span>{activeStudy.metricsGoal.progress}% COMPLETED</span>
+                <span>100% MET</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 leading-relaxed font-sans text-xs">
+                <h5 className="font-semibold text-wood-900 font-display text-xs mb-1">Background</h5>
+                <p className="text-gray-550 leading-relaxed font-sans mt-1">{activeStudy.background}</p>
+              </div>
+              
+              <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 leading-relaxed font-sans text-xs">
+                <h5 className="font-semibold text-wood-900 flex items-center gap-1 font-display text-xs mb-1">
+                  <MapPin className="w-3.5 h-3.5 text-sage-500" /> Field Guidance
+                </h5>
+                <p className="text-gray-550 leading-relaxed font-sans mt-1">{activeStudy.guidance}</p>
+              </div>
+            </div>
+
+            {activeStudy.featuredRegions && (
+              <div className="space-y-2 pt-2 border-t border-gray-100 font-sans text-xs">
+                <span className="text-[10px] font-semibold text-gray-400 font-mono block uppercase tracking-wider">Featured Gaps Sectors to Target:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {activeStudy.featuredRegions.map((region, idx) => (
+                    <span key={idx} className="bg-sage-50/50 text-sage-700 text-[10px] px-2.5 py-1 rounded border border-sage-100 font-semibold inline-block">
+                      {region}
+                    </span>
+                  ))}
                 </div>
-
-                {/* Progress target meters inside the dropdown */}
-                <div className="space-y-2 border-t border-gray-100 pt-4 font-sans">
-                  <div className="flex justify-between items-center text-xs font-mono">
-                    <span className="text-gray-400">Campaign Target Records:</span>
-                    <strong className="text-wood-900">{activeStudy.metricsGoal.target}</strong>
-                  </div>
-                  <div className="flex justify-between items-center text-xs font-mono">
-                    <span className="text-gray-400">Current observations submitted:</span>
-                    <strong className="text-sage-500 font-bold">{activeStudy.metricsGoal.current}</strong>
-                  </div>
-
-                  <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden mt-1.5 border border-gray-200">
-                    <div
-                      className="bg-sage-500 h-full rounded-full transition-all duration-1000"
-                      style={{ width: `${activeStudy.metricsGoal.progress}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] font-mono text-gray-400 font-bold">
-                    <span>0% START</span>
-                    <span>{activeStudy.metricsGoal.progress}% COMPLETED</span>
-                    <span>100% MET</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 leading-relaxed font-sans text-xs">
-                    <h5 className="font-semibold text-wood-900 font-display text-xs mb-1">Background</h5>
-                    <p className="text-gray-550 leading-relaxed font-sans mt-1">{activeStudy.background}</p>
-                  </div>
-                  
-                  <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 leading-relaxed font-sans text-xs">
-                    <h5 className="font-semibold text-wood-900 flex items-center gap-1 font-display text-xs mb-1">
-                      <MapPin className="w-3.5 h-3.5 text-sage-500" /> Field Guidance
-                    </h5>
-                    <p className="text-gray-550 leading-relaxed font-sans mt-1">{activeStudy.guidance}</p>
-                  </div>
-                </div>
-
-                {activeStudy.featuredRegions && (
-                  <div className="space-y-2 pt-2 border-t border-gray-100 font-sans text-xs">
-                    <span className="text-[10px] font-semibold text-gray-400 font-mono block uppercase tracking-wider">Featured Gaps Sectors to Target:</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {activeStudy.featuredRegions.map((region, idx) => (
-                        <span key={idx} className="bg-sage-50/50 text-sage-700 text-[10px] px-2.5 py-1 rounded border border-sage-100 font-semibold inline-block">
-                          {region}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
+        </div>
 
+        {/* Collapsible Dropdowns Accordion Assembly */}
+        <div className="space-y-4">
+          
           {/* Accordion 2: Standings Leaderboard */}
           <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden card-shadow">
             <button
               onClick={() => setIsLeaderboardOpen(!isLeaderboardOpen)}
               className="w-full flex justify-between items-center px-6 py-4.5 text-left font-display font-semibold text-wood-950 transition-colors hover:bg-gray-50 focus:outline-none"
             >
-              <div className="flex items-center gap-2 text-sm sm:text-base">
+              <div className="flex items-center gap-2 text-sm sm:text-base cursor-pointer">
                 <Users className="w-4.5 h-4.5 text-sage-600" />
                 <span>National Grid Climbers Leaderboard &bull; Standings</span>
               </div>
