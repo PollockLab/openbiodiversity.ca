@@ -157,18 +157,8 @@ export default function GlobePlaceholder({
     const map = new maplibregl.Map({
       container: mapDivRef.current,
       // try out inserting base map style here.
-      style: {
-        version: 8,
-        sources: {
-          carto: {
-            type: 'raster',
-            tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'],
-            tileSize: 256,
-            attribution: '© <a href="https://carto.com/attributions">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          }
-        },
-        layers: [{ id: 'carto-voyager', type: 'raster', source: 'carto' }]
-      },
+      // apparently with straight url would fix problem caused by maplibre/carto issue (?)
+      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
       center: [-98, 60], // Centered beautifully over Canada
       zoom: 3.2,
       maxZoom: 14,
@@ -216,13 +206,14 @@ export default function GlobePlaceholder({
       mapRef.current = null;
     };
   }, []);
-
+  
+  // comment out to allow base map to be loaded properly.
   // Set style when mapType changes
-  useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.setStyle(getMapStyle(mapType));
-    }
-  }, [mapType]);
+  //useEffect(() => {
+  //  if (mapRef.current) {
+  //    mapRef.current.setStyle(getMapStyle(mapType));
+  //  }
+  //}, [mapType]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!mapContainerRef.current) return;
