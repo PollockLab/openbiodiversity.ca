@@ -156,7 +156,19 @@ export default function GlobePlaceholder({
 
     const map = new maplibregl.Map({
       container: mapDivRef.current,
-      style: getMapStyle(mapType),
+      // try out inserting base map style here.
+      style: {
+        version: 8,
+        sources: {
+          carto: {
+            type: 'raster',
+            tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'],
+            tileSize: 256,
+            attribution: '© <a href="https://carto.com/attributions">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          }
+        },
+        layers: [{ id: 'carto-voyager', type: 'raster', source: 'carto' }]
+      },
       center: [-98, 60], // Centered beautifully over Canada
       zoom: 3.2,
       maxZoom: 14,
