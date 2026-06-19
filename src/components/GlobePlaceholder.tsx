@@ -158,7 +158,7 @@ export default function GlobePlaceholder({
       container: mapDivRef.current,
       // try out inserting base map style here.
       // apparently with straight url would fix problem caused by maplibre/carto issue (?)
-      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
       center: [-98, 60], // Centered beautifully over Canada
       zoom: 3.2,
       maxZoom: 14,
