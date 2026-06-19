@@ -116,8 +116,8 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
         </div>
  
         {/* Globe component in default mode */}
-        // we dont want placeholder anymore <GlobePlaceholder mode="useful-layers" selectedLayerId="layer-1" />
-        // we want our maps:
+        {/* we dont want placeholder anymore <GlobePlaceholder mode="useful-layers" selectedLayerId="layer-1" /> */}
+        {/* we want our maps: */}
         <BaseMap />
       </section>
 
