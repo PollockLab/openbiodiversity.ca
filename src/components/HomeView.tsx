@@ -1,8 +1,7 @@
 import React from 'react';
 import { Globe, BookOpen, Layers, Award, ShieldAlert, ArrowRight, CheckCircle2, ChevronRight, Sparkles } from 'lucide-react';
 import GlobePlaceholder from './GlobePlaceholder';
-// fetch basemap so we can embed it:
-import BaseMap from './BaseMap';
+
 
 interface HomeViewProps {
   setActiveTab: (tab: string) => void;
@@ -115,10 +114,8 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
           </div>
         </div>
  
-        {/* Globe component in default mode */}
-        {/* we dont want placeholder anymore <GlobePlaceholder mode="useful-layers" selectedLayerId="layer-1" /> */}
-        {/* we want our maps: */}
-        <BaseMap />
+        {/* Globe component with live MapLibre tiles and full interactive overlay telemetry */}
+        <GlobePlaceholder mode="useful-layers" selectedLayerId="layer-1" selectedLayerIds={['layer-1']} />
       </section>
 
     </div>

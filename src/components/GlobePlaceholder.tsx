@@ -1,5 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Globe, Map as MapIcon, Layers, Eye, Shield, Compass, Navigation, RefreshCw, ZoomIn, ZoomOut } from 'lucide-react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+
+// Helper to provide compliant styles reactively based on selected Map type
+const getMapStyle = (type: 'topo' | 'satellite' | 'terrain') => {
+  const dpr = typeof window !== 'undefined' && window.devicePixelRatio >= 2 ? '@2x' : '';
+  let tilesUrl = `https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${dpr}.png`;
+  let attribution = '© <a href="https://carto.com/attributions">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+  if (type === 'satellite') {
+    tilesUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    attribution = '© Esri — Source: Esri, USDA, USGS, and the GIS User Community';
+  } else if (type === 'terrain') {
+    tilesUrl = 'https://tile.opentopomap.org/{z}/{x}/{y}.png';
+    attribution = '© <a href="https://opentopomap.org">OpenTopoMap</a>, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  }
+
+  return {
+    version: 8 as const,
+    sources: {
+      'raster-tiles': {
+        type: 'raster' as const,
+        tiles: [tilesUrl],
+        tileSize: 256,
+        attribution
+      }
+    },
+    layers: [
+      {
+        id: 'simple-tiles-layer',
+        type: 'raster' as const,
+        source: 'raster-tiles',
+        minzoom: 0,
+        maxzoom: 18
+      }
+    ]
+  };
+};
 
 interface GlobePlaceholderProps {
   mode: 'useful-layers' | 'sdm-explorer' | 'blitz-gap';
@@ -30,14 +68,18 @@ export default function GlobePlaceholder({
   onBiasCorrectedChange,
   onShowUncertaintyChange,
 }: GlobePlaceholderProps) {
-  const [zoom, setZoom] = useState<number>(3);
-  const [rotation, setRotation] = useState<number>(-95); // centered on Canada longitude
-  const [latitude, setLatitude] = useState<number>(56); // centered on Canada latitude
+  const [zoom, setZoom] = useState<number>(3.2);
+  const [rotation, setRotation] = useState<number>(0); 
+  const [latitude, setLatitude] = useState<number>(60); 
   const [mapType, setMapType] = useState<'topo' | 'satellite' | 'terrain'>('topo');
   const [hoveredCoords, setHoveredCoords] = useState<{ lat: string; lng: string; value?: string } | null>({ lat: '56.1304° N', lng: '106.3468° W', value: 'Baseline data' });
   const [simulationActive, setSimulationActive] = useState<boolean>(true);
   const [opacity, setOpacity] = useState<number>(85);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  
+  const mapDivRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const [projectedCells, setProjectedCells] = useState<Array<{ x: number; y: number; original: any }>>([]);
 
   // Generate random data points overlay representing observations or grid density
   const [gridCells, setGridCells] = useState<Array<{ x: number; y: number; val: number; kba?: boolean; park?: boolean; gap?: boolean }>>([]);
@@ -81,15 +123,117 @@ export default function GlobePlaceholder({
     setGridCells(cells);
   }, [mode, selectedLayerId, selectedSdmId, activeTaxonGroup, selectedCaseStudyId]);
 
+  const updateCellProjections = (mapInstance: maplibregl.Map | null) => {
+    if (!mapInstance) return;
+    try {
+      const projected = gridCells.map(cell => {
+        const lng = -140 + (cell.x / 100) * 85;
+        const lat = 83 - (cell.y / 100) * 38;
+        const point = mapInstance.project([lng, lat]);
+        return {
+          x: point.x,
+          y: point.y,
+          original: cell
+        };
+      });
+      setProjectedCells(projected);
+    } catch (e) {
+      // guard against any projection issues during initialization
+    }
+  };
+
+  // Synchronize projected cells when gridCells change or Map changes
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.resize();
+      updateCellProjections(mapRef.current);
+    }
+  }, [gridCells]);
+
+  // Handle map initialization and events
+  useEffect(() => {
+    if (!mapDivRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapDivRef.current,
+      style: getMapStyle(mapType),
+      center: [-98, 60], // Centered beautifully over Canada
+      zoom: 3.2,
+      maxZoom: 14,
+      minZoom: 1.5,
+      bearing: 0,
+      pitch: 0,
+      dragRotate: false, // keep it aligned but allow zoom & pan
+    });
+
+    mapRef.current = map;
+
+    const onMapEvent = () => {
+      updateCellProjections(map);
+      setZoom(map.getZoom());
+      setRotation(map.getBearing());
+    };
+
+    map.on('load', () => {
+      map.resize();
+      onMapEvent();
+    });
+    map.on('move', onMapEvent);
+    map.on('zoom', onMapEvent);
+    map.on('resize', onMapEvent);
+
+    // Call resize to ensure accurate calculations after render pipeline settles
+    const timer1 = setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.resize();
+        updateCellProjections(mapRef.current);
+      }
+    }, 150);
+
+    const timer2 = setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.resize();
+        updateCellProjections(mapRef.current);
+      }
+    }, 600);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Set style when mapType changes
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.setStyle(getMapStyle(mapType));
+    }
+  }, [mapType]);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!mapContainerRef.current) return;
     const rect = mapContainerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Convert relative coordinates to reasonable Canada coordinates
-    const pLng = -140 + (x / rect.width) * 85;
-    const pLat = 83 - (y / rect.height) * 38;
+    let pLat = 56;
+    let pLng = -106;
+
+    if (mapRef.current) {
+      try {
+        const lngLat = mapRef.current.unproject([x, y]);
+        pLat = lngLat.lat;
+        pLng = lngLat.lng;
+      } catch (err) {
+        pLng = -140 + (x / rect.width) * 85;
+        pLat = 83 - (y / rect.height) * 38;
+      }
+    } else {
+      pLng = -140 + (x / rect.width) * 85;
+      pLat = 83 - (y / rect.height) * 38;
+    }
 
     // Simulate an observation lookup value
     let simulatedValue = 'N/A';
@@ -267,32 +411,18 @@ export default function GlobePlaceholder({
       </div>
 
       {/* Main visualization frame */}
-      <div className="relative flex-1 min-h-[600px] bg-slate-900 select-none overflow-hidden" ref={mapContainerRef} onMouseMove={handleMouseMove}>
-        {/* Canvas visual grid and background matching selected base maps */}
-        <div className={`absolute inset-0 transition-opacity duration-500 ${mapType === 'satellite' ? 'bg-radial from-[#1e3a24] via-[#0b171c] to-[#04090d]' : mapType === 'terrain' ? 'bg-gradient-to-b from-[#e3eede] via-[#cfd9cc] to-[#b4beaf]' : 'bg-[#eef4f0]'}`}>
-          {/* Faux grid cells to outline map coordinates lines */}
-          <div className="absolute inset-0 grid grid-cols-12 grid-rows-8 opacity-20 pointer-events-none">
-            {Array.from({ length: 96 }).map((_, idx) => (
-              <div key={idx} className="border-t border-l border-wood-500/20" />
-            ))}
-          </div>
+      <div 
+        className={`relative flex-1 min-h-[600px] select-none overflow-hidden transition-colors duration-300 ${
+          mapType === 'satellite' ? 'bg-[#0b171c]' : 'bg-[#eef4f0]'
+        }`} 
+        ref={mapContainerRef} 
+        onMouseMove={handleMouseMove}
+      >
+        {/* Live MapLibre viewport rendering interactive tiles */}
+        <div ref={mapDivRef} className="absolute inset-0 w-full h-full z-0" style={{ width: '100%', height: '100%' }} />
 
-          {/* Canada geographic outline drawing (SVG Silhouette) to look like a real map */}
-          <svg className="absolute inset-x-0 inset-y-4 w-full h-[95%] opacity-30 pointer-events-none text-wood-500" viewBox="0 0 1000 600" fill="currentColor">
-            {/* Extremely approximate path mapping Canada continental contours, islands & Great Lakes */}
-            <path d="M 120 180 Q 150 140 230 110 T 380 90 T 520 120 T 680 70 T 820 90 T 890 240 Q 910 280 870 340 T 780 430 T 620 480 T 490 490 T 360 450 T 210 490 T 110 390 Z" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="3 3" />
-            {/* Newfoundland Island */}
-            <path d="M 830 380 L 890 370 L 870 430 Z" />
-            {/* Vancouver Island */}
-            <path d="M 110 390 L 130 420 L 100 450 Z" />
-            {/* Hudson Bay contour */}
-            <path d="M 450 200 C 470 280 580 280 610 210 C 620 180 580 160 540 180 Z" fill={mapType === 'satellite' ? '#04090d' : '#acc8be'} />
-            {/* Great Lakes contours */}
-            <circle cx="580" cy="440" r="15" fill={mapType === 'satellite' ? '#04090d' : '#acc8be'} />
-            <circle cx="620" cy="450" r="12" fill={mapType === 'satellite' ? '#04090d' : '#acc8be'} />
-            <circle cx="660" cy="430" r="14" fill={mapType === 'satellite' ? '#04090d' : '#acc8be'} />
-          </svg>
-
+        {/* Dynamic high-contrast canvas overlays aligned to unprojected GIS points */}
+        <div className="absolute inset-0 z-10 pointer-events-none">
           {/* GridCells representing data overlays */}
           <div className="absolute inset-0">
             {mode === 'useful-layers' ? (
@@ -304,17 +434,17 @@ export default function GlobePlaceholder({
                     style={{ opacity: layerOpacityPercent / 100 }} 
                     className="absolute inset-0 pointer-events-none"
                   >
-                    {gridCells.map((cell, idx) => {
-                      const colorClass = getCellColorForLayer(cell, layerId);
+                    {projectedCells.map((pCell, idx) => {
+                      const colorClass = getCellColorForLayer(pCell.original, layerId);
                       if (colorClass === 'hidden') return null;
                       return (
                         <div
                           key={`${layerId}-${idx}`}
                           className={`absolute w-7 h-7 rounded-md transition-all duration-350 flex items-center justify-center ${colorClass}`}
                           style={{
-                            left: `${cell.x}%`,
-                            top: `${cell.y}%`,
-                            transform: `translate(-50%, -50%) scale(${zoom / 3})`,
+                            left: `${pCell.x}px`,
+                            top: `${pCell.y}px`,
+                            transform: `translate(-50%, -50%)`,
                           }}
                         />
                       );
@@ -323,113 +453,54 @@ export default function GlobePlaceholder({
                 );
               })
             ) : (
-              gridCells.map((cell, idx) => (
-                <div
-                  key={idx}
-                  className={`absolute w-7 h-7 rounded-md transition-all duration-300 flex items-center justify-center ${getCellColor(cell)}`}
-                  style={{
-                    left: `${cell.x}%`,
-                    top: `${cell.y}%`,
-                    transform: `translate(-50%, -50%) scale(${zoom / 3})`,
-                  }}
-                >
-                  {/* Specific features markings */}
-                  {mode === 'blitz-gap' && cell.gap && (
-                    <div className="w-2 h-2 rounded-full bg-red-600 animate-ping absolute" />
-                  )}
-                  {mode === 'blitz-gap' && selectedCaseStudyId === 'bc-parks' && cell.park && (
-                    <Shield className="w-3 h-3 text-emerald-900" />
-                  )}
-                  {mode === 'sdm-explorer' && cell.val > 75 && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-sage-200" />
-                  )}
-                </div>
-              ))
+              projectedCells.map((pCell, idx) => {
+                const cell = pCell.original;
+                return (
+                  <div
+                    key={idx}
+                    className={`absolute w-7 h-7 rounded-md transition-all duration-300 flex items-center justify-center ${getCellColor(cell)}`}
+                    style={{
+                      left: `${pCell.x}px`,
+                      top: `${pCell.y}px`,
+                      transform: `translate(-50%, -50%)`,
+                    }}
+                  >
+                    {/* Specific features markings */}
+                    {mode === 'blitz-gap' && cell.gap && (
+                      <div className="w-2 h-2 rounded-full bg-red-600 animate-ping absolute" />
+                    )}
+                    {mode === 'blitz-gap' && selectedCaseStudyId === 'bc-parks' && cell.park && (
+                      <Shield className="w-3 h-3 text-emerald-990" />
+                    )}
+                    {mode === 'sdm-explorer' && cell.val > 75 && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-sage-200" />
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
 
           {/* Compass Rose illustration */}
-          <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1 opacity-65 text-wood-700 pointer-events-none">
-            <div className="relative w-12 h-12 rounded-full border border-wood-500/40 flex items-center justify-center bg-white/40 backdrop-blur-xs">
-              <Compass className="w-8 h-8 text-wood-600 animate-[spin_12s_linear_infinite]" style={{ transform: `rotate(${rotation}deg)` }} />
-              <span className="absolute -top-3 text-[10px] font-mono font-bold">N</span>
-              <span className="absolute -bottom-3 text-[10px] font-mono font-bold">S</span>
-              <span className="absolute -left-3 text-[10px] font-mono font-bold">W</span>
-              <span className="absolute -right-3 text-[10px] font-mono font-bold">E</span>
+          <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1 opacity-80 text-wood-950 pointer-events-none">
+            <div className="relative w-12 h-12 rounded-full border border-wood-500/50 flex items-center justify-center bg-white/70 backdrop-blur-xs shadow-sm">
+              <Compass className="w-8 h-8 text-wood-800 transition-transform duration-100" style={{ transform: `rotate(${rotation}deg)` }} />
+              <span className="absolute -top-3.5 text-[9px] font-mono font-bold text-wood-950">N</span>
+              <span className="absolute -bottom-3.5 text-[9px] font-mono font-bold text-gray-500">S</span>
+              <span className="absolute -left-3.5 text-[9px] font-mono font-bold text-gray-500">W</span>
+              <span className="absolute -right-3.5 text-[9px] font-mono font-bold text-gray-500">E</span>
             </div>
           </div>
-
-          {/* Hover coordinate panel removed from overlay to match user requests */}
         </div>
       </div>
 
-      {/* Map Legend Footer */}
+      {/* Map Overlay Telemetry Info Footer - Legends removed as requested */}
       <div className="bg-wood-50 border-t border-sage-100 p-4 font-sans text-xs">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="font-semibold text-wood-700">Map Legend:</span>
-            
-            {mode === 'blitz-gap' ? (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded bg-red-500 border border-red-300 inline-block" />
-                  <span className="text-wood-600">Observation Gap (High Priority)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded bg-sage-500/30 border border-sage-300 inline-block" />
-                  <span className="text-wood-600">Sampled Zone (&ge; 1 Record)</span>
-                </div>
-                {selectedCaseStudyId === 'bc-parks' && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded bg-emerald-500/70 border border-emerald-300 flex items-center justify-center inline-block">
-                      <Shield className="w-2 h-2 text-emerald-950" />
-                    </span>
-                    <span className="text-wood-600">BC Parks boundary polygon</span>
-                  </div>
-                )}
-                {selectedCaseStudyId === 'kbas' && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded bg-amber-600/60 border border-amber-300 inline-block" />
-                    <span className="text-wood-600">Key Biodiversity Area (KBA) Polygons</span>
-                  </div>
-                )}
-              </>
-            ) : mode === 'sdm-explorer' ? (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded bg-sage-700 border border-sage-200 inline-block" />
-                  <span className="text-wood-600">High Occurrence Probability (&gt;75%)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded bg-sage-500/60 inline-block" />
-                  <span className="text-wood-600">Medium Occurrence Probability (35%-75%)</span>
-                </div>
-                {showUncertainty && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded bg-fuchsia-500/70 border border-fuchsia-300 inline-block" />
-                    <span className="text-wood-600">High Model Uncertainty Area</span>
-                  </div>
-                )}
-              </>
-            ) : (
-              // Useful layers maps
-              <>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded bg-emerald-600/70 inline-block" />
-                  <span className="text-wood-600">Optimal Score / Intact Zone</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded bg-amber-600/60 inline-block" />
-                  <span className="text-wood-600">Moderate Threat / Edge Corridor</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded bg-purple-700/80 inline-block" />
-                  <span className="text-wood-600">High Human Footprint / Fragmented</span>
-                </div>
-              </>
-            )}
+          <div className="text-wood-650 font-semibold font-sans">
+            Observation Grid Overlays Enabled
           </div>
-
+ 
           <div className="flex flex-wrap items-center gap-3.5 text-[11px] font-mono text-gray-500">
             <div className="bg-white/80 border border-gray-200 rounded-lg px-2.5 py-1 text-xs">
               {hoveredCoords ? (

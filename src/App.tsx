@@ -16,6 +16,14 @@ import ContactView from './components/ContactView';
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
 
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    if (document.body) {
+      document.body.scrollTop = 0;
+    }
+  }, [activeTab]);
+
   const renderActiveView = () => {
     switch (activeTab) {
       case 'home':
