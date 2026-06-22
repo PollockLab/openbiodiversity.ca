@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Download, CheckCircle2, FileText, ChevronDown } from 'lucide-react';
+import { Layers, Download, CheckCircle2, FileText, ChevronDown, X } from 'lucide-react';
 import { usefulLayersCanada } from '../data/biodiversityLayers';
 import GlobePlaceholder from './GlobePlaceholder';
 
@@ -152,18 +152,32 @@ export default function UsefulLayersView() {
               if (!layer) return null;
               const isActive = activeTabId === layerId;
               return (
-                <button
+                <div
                   key={layerId}
-                  onClick={() => setActiveTabId(layerId)}
-                  className={`px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none -mb-[1px] font-sans border-t border-x rounded-t-lg ${
+                  className={`px-3 py-1.5 text-xs font-semibold flex items-center gap-2 transition-all select-none -mb-[1px] font-sans border-t border-x rounded-t-lg ${
                     isActive
                       ? 'bg-white text-wood-950 border-t-2 border-t-sage-500 border-x-gray-200 font-bold z-10 shadow-xs'
                       : 'bg-transparent text-gray-500 border-transparent hover:text-wood-900 hover:bg-gray-150/40'
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-sage-500' : 'bg-gray-350'}`} />
-                  <span>{layer.name}</span>
-                </button>
+                  <button
+                    onClick={() => setActiveTabId(layerId)}
+                    className="flex items-center gap-1.5 text-left cursor-pointer focus:outline-none"
+                  >
+                    <span className={`w-1.5 h-1.5 shrink-0 rounded-full ${isActive ? 'bg-sage-500' : 'bg-gray-350'}`} />
+                    <span>{layer.name}</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleLayer(layerId);
+                    }}
+                    className="hover:bg-gray-200 rounded-full p-0.5 text-gray-400 hover:text-red-500 transition-colors ml-0.5 cursor-pointer focus:outline-none"
+                    title="Deselect Spatial Layer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
               );
             })}
           </div>

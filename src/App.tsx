@@ -12,17 +12,35 @@ import SdmExplorerView from './components/SdmExplorerView';
 import BlitzGapView from './components/BlitzGapView';
 import AboutView from './components/AboutView';
 import ContactView from './components/ContactView';
+import BioblitzStandaloneView from './components/BioblitzStandaloneView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
 
+  // Check for standalone view mode parameter
+  const [params] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      return {
+        view: p.get('view'),
+        url: p.get('url') || ''
+      };
+    }
+    return { view: null, url: '' };
+  });
+
   React.useEffect(() => {
+    if (params.view === 'bioblitz-analyzer') return;
     window.scrollTo({ top: 0, behavior: 'auto' });
     document.documentElement.scrollTop = 0;
     if (document.body) {
       document.body.scrollTop = 0;
     }
-  }, [activeTab]);
+  }, [activeTab, params.view]);
+
+  if (params.view === 'bioblitz-analyzer') {
+    return <BioblitzStandaloneView initialUrl={params.url} />;
+  }
 
   const renderActiveView = () => {
     switch (activeTab) {

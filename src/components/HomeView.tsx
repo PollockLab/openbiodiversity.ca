@@ -1,6 +1,6 @@
 import React from 'react';
 import { Globe, BookOpen, Layers, Award, ShieldAlert, ArrowRight, CheckCircle2, ChevronRight, Sparkles } from 'lucide-react';
-import GlobePlaceholder from './GlobePlaceholder';
+import BaseMap from './BaseMap';
 
 
 interface HomeViewProps {
@@ -114,8 +114,8 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
           </div>
         </div>
  
-        {/* Globe component with live MapLibre tiles and full interactive overlay telemetry */}
-        <GlobePlaceholder mode="useful-layers" selectedLayerId="layer-1" selectedLayerIds={['layer-1']} />
+        {/* Embedded clean Base Map using MapLibre with full satellite & terrain raster capability */}
+        <BaseMap />
       </section>
 
     </div>

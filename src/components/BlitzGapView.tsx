@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Award, Compass, MapPin, BarChart3, Users, Flame, ChevronDown, ChevronUp } from 'lucide-react';
+import { Award, Compass, MapPin, BarChart3, Users, Flame, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { btgCaseStudies, btgLeaderboard, staticBtg2025Milestone } from '../data/blitzTheGapData';
 import GlobePlaceholder from './GlobePlaceholder';
 import BioblitzAnalyzer from './BioblitzAnalyzer';
@@ -9,8 +9,22 @@ export default function BlitzGapView() {
   const [selectedIconicTaxon, setSelectedIconicTaxon] = useState<string>('All');
   
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(true);
-  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
-  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(true);
+  const [leaderboardTab, setLeaderboardTab] = useState<'obs' | 'species' | 'grid' | 'novelty'>('obs');
+  const [expandedMetric, setExpandedMetric] = useState<'obs' | 'species' | 'grid' | 'novelty' | null>(null);
+
+  const getSortedLeaderboard = () => {
+    const list = [...btgLeaderboard];
+    if (leaderboardTab === 'obs') {
+      return list.sort((a, b) => b.observations - a.observations);
+    } else if (leaderboardTab === 'species') {
+      return list.sort((a, b) => b.species - a.species);
+    } else if (leaderboardTab === 'grid') {
+      return list.sort((a, b) => b.explorerScore - a.explorerScore);
+    } else {
+      return list.sort((a, b) => b.voiScore - a.voiScore);
+    }
+  };
 
   const activeStudy = btgCaseStudies.find(study => study.id === activeStudyId) || btgCaseStudies[0];
 
@@ -158,7 +172,7 @@ export default function BlitzGapView() {
         <div className="space-y-4">
           
           {/* Accordion 2: Standings Leaderboard */}
-          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden card-shadow">
+          <div className="bg-white border border-gray-150 rounded-2xl overflow-hidden card-shadow">
             <button
               onClick={() => setIsLeaderboardOpen(!isLeaderboardOpen)}
               className="w-full flex justify-between items-center px-6 py-4.5 text-left font-display font-semibold text-wood-950 transition-colors hover:bg-gray-50 focus:outline-none"
@@ -177,116 +191,135 @@ export default function BlitzGapView() {
             </button>
             
             {isLeaderboardOpen && (
-              <div className="p-6 border-t border-gray-100 bg-white space-y-4 animate-fadeIn">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 font-sans mb-2">
-                  <div>
-                    <h3 className="font-display font-semibold text-base text-wood-900 tracking-tight">
-                      National Standing Listings
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Standings compiling grid completeness indices, rare taxi triggers, and model calibration points.
-                    </p>
+              <div className="p-4 sm:p-5 border-t border-gray-100 bg-white space-y-4 animate-fadeIn font-sans">
+                
+                {/* iNat-like Leaderboard metric tabs selection row */}
+                <div className="flex flex-wrap gap-1 bg-gray-50 p-1 rounded-xl">
+                  {/* Tab 1: Observations */}
+                  <div
+                    onClick={() => setLeaderboardTab('obs')}
+                    className={`flex-1 min-w-[100px] py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${leaderboardTab === 'obs' ? 'bg-white text-sage-600 shadow-3xs border border-sage-100/30' : 'text-gray-500 hover:text-gray-900 bg-transparent border border-transparent'}`}
+                  >
+                    <span>Observations</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedMetric(expandedMetric === 'obs' ? null : 'obs');
+                      }}
+                      className={`w-4 h-4 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${expandedMetric === 'obs' ? 'text-sage-600 bg-sage-100' : 'text-gray-400 hover:text-sage-600 hover:bg-gray-100'}`}
+                      title="Show details"
+                    >
+                      <Info className="w-3 h-3" />
+                    </span>
                   </div>
-                  <div className="bg-sage-50 text-sage-600 border border-sage-100 text-[10px] px-2.5 py-1 rounded-full font-mono font-medium">
-                    Season Ends October 1st
+
+                  {/* Tab 2: Species */}
+                  <div
+                    onClick={() => setLeaderboardTab('species')}
+                    className={`flex-1 min-w-[100px] py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${leaderboardTab === 'species' ? 'bg-white text-sage-600 shadow-3xs border border-sage-100/30' : 'text-gray-500 hover:text-gray-900 bg-transparent border border-transparent'}`}
+                  >
+                    <span>Species</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedMetric(expandedMetric === 'species' ? null : 'species');
+                      }}
+                      className={`w-4 h-4 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${expandedMetric === 'species' ? 'text-sage-600 bg-sage-100' : 'text-gray-400 hover:text-sage-600 hover:bg-gray-100'}`}
+                      title="Show details"
+                    >
+                      <Info className="w-3 h-3" />
+                    </span>
+                  </div>
+
+                  {/* Tab 3: New Gridcells */}
+                  <div
+                    onClick={() => setLeaderboardTab('grid')}
+                    className={`flex-1 min-w-[110px] py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${leaderboardTab === 'grid' ? 'bg-white text-sage-600 shadow-3xs border border-sage-100/30' : 'text-gray-500 hover:text-gray-900 bg-transparent border border-transparent'}`}
+                  >
+                    <span>New Gridcells</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedMetric(expandedMetric === 'grid' ? null : 'grid');
+                      }}
+                      className={`w-4 h-4 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${expandedMetric === 'grid' ? 'text-sage-600 bg-sage-100' : 'text-gray-400 hover:text-sage-600 hover:bg-gray-100'}`}
+                      title="Show details"
+                    >
+                      <Info className="w-3 h-3" />
+                    </span>
+                  </div>
+
+                  {/* Tab 4: Species Novelty */}
+                  <div
+                    onClick={() => setLeaderboardTab('novelty')}
+                    className={`flex-1 min-w-[110px] py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${leaderboardTab === 'novelty' ? 'bg-white text-sage-600 shadow-3xs border border-sage-100/30' : 'text-gray-500 hover:text-gray-900 bg-transparent border border-transparent'}`}
+                  >
+                    <span>Species Novelty</span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedMetric(expandedMetric === 'novelty' ? null : 'novelty');
+                      }}
+                      className={`w-4 h-4 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${expandedMetric === 'novelty' ? 'text-sage-600 bg-sage-100' : 'text-gray-400 hover:text-sage-600 hover:bg-gray-100'}`}
+                      title="Show details"
+                    >
+                      <Info className="w-3 h-3" />
+                    </span>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse font-sans">
-                      <thead>
-                        <tr className="bg-gray-50 text-gray-650 font-mono border-b border-gray-100 py-3 text-[10px] uppercase tracking-wider">
-                          <th className="p-3 text-center w-12">Rank</th>
-                          <th className="p-3">Naturalist Handle</th>
-                          <th className="p-3 text-center">Observations</th>
-                          <th className="p-3 text-center">Species Count</th>
-                          <th className="p-3 text-center text-emerald-600">Explorer Rate</th>
-                          <th className="p-3 text-center text-indigo-600">Taxonomic Multi</th>
-                          <th className="p-3 text-center text-amber-600">VOI Value</th>
-                          <th className="p-3">Taxon Specialty</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {btgLeaderboard.map((r, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="p-3 text-center font-bold">
-                              {idx < 3 ? (
-                                <span className={`w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-mono font-bold ${idx === 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' : idx === 1 ? 'bg-slate-205 text-slate-800' : 'bg-orange-100 text-orange-800'}`}>
-                                  {r.rank}
-                                </span>
-                              ) : (
-                                <span className="font-mono text-gray-400">{r.rank}</span>
-                              )}
-                            </td>
-                            <td className="p-3 font-semibold text-wood-950 flex items-center gap-1.5">
-                              {r.username}
-                              {idx === 0 && <Flame className="w-3.5 h-3.5 text-red-500 fill-red-500 animate-pulse" />}
-                            </td>
-                            <td className="p-3 text-center font-mono font-medium text-wood-850">{r.observations}</td>
-                            <td className="p-3 text-center font-mono text-gray-400">{r.species}</td>
-                            <td className="p-3 text-center font-mono text-emerald-600 font-bold">{r.explorerScore}%</td>
-                            <td className="p-3 text-center font-mono text-indigo-600 font-bold">x{r.taxonomicScore / 100}</td>
-                            <td className="p-3 text-center font-mono text-amber-600">{r.voiScore}</td>
-                            <td className="p-3 font-sans text-wood-600">
-                              <span className="bg-sage-50 text-sage-600 px-2.5 py-0.5 rounded font-semibold border border-sage-100 text-[10px]">
-                                {r.primaryTaxon}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {/* Inline Small Explanation explaining metrics with small Info Icons, visible ONLY if expandedMetric is active */}
+                {expandedMetric && (
+                  <div className="flex items-start gap-2 bg-sage-53 p-3 rounded-lg border border-sage-100/40 text-[11px] text-gray-550 leading-normal">
+                    <Info className="w-4.5 h-4.5 text-sage-500 shrink-0 mt-0.5" />
+                    <div>
+                      {expandedMetric === 'obs' && (
+                        <span><strong>Observations Count (`num_obs`):</strong> Cumulative verified observations logged on iNaturalist in priority regions.</span>
+                      )}
+                      {expandedMetric === 'species' && (
+                        <span><strong>Species (`num_species`):</strong> Count of unique verified species recorded, encouraging taxonomic diversity.</span>
+                      )}
+                      {expandedMetric === 'grid' && (
+                        <span><strong>New Gridcells Sampled (`num_new_1km_gridcells`):</strong> Number of 1km grid squares recorded for the first time ever on iNaturalist.</span>
+                      )}
+                      {expandedMetric === 'novelty' && (
+                        <span><strong>Species Novelty Score (`species_novelty`):</strong> Unique score where each observation is weighted inversely proportional to historical counts, rewarding rare species.</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Accordion 3: How We Score Metrics */}
-          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden card-shadow">
-            <button
-              onClick={() => setIsMetricsOpen(!isMetricsOpen)}
-              className="w-full flex justify-between items-center px-6 py-4.5 text-left font-display font-semibold text-wood-950 transition-colors hover:bg-gray-50 focus:outline-none"
-            >
-              <div className="flex items-center gap-2 text-sm sm:text-base">
-                <BarChart3 className="w-4.5 h-4.5 text-sage-600" />
-                <span>How We Score: The Three Evaluation Metrics</span>
-              </div>
-              <div>
-                {isMetricsOpen ? (
-                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
                 )}
-              </div>
-            </button>
-            
-            {isMetricsOpen && (
-              <div className="p-6 border-t border-gray-100 bg-white space-y-4 animate-fadeIn font-sans text-xs">
-                <div>
-                  <p className="text-xs text-gray-500 leading-relaxed font-sans mb-2">
-                    We gamify submissions using three algorithms to measure spatial value and scientific importance.
-                  </p>
+
+                {/* Smaller iNat-like scrollable list box */}
+                <div className="max-h-60 overflow-y-auto pr-1 border border-gray-100 rounded-xl divide-y divide-gray-100 bg-white">
+                  {getSortedLeaderboard().map((user, idx) => (
+                    <div key={user.username} className="flex items-center justify-between p-2.5 hover:bg-gray-50/50 transition-colors text-xs">
+                      
+                      {/* Left info label structure */}
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-5 font-mono font-extrabold text-gray-350 text-center">{idx + 1}</span>
+                        <div className="w-7 h-7 rounded-full bg-sage-50 border border-sage-200 flex items-center justify-center font-bold font-display text-gray-500 uppercase shrink-0">
+                          {user.username.charAt(0)}
+                        </div>
+                        <span className="font-semibold text-wood-950 flex items-center gap-1 leading-none">
+                          {user.username}
+                          {idx === 0 && <Flame className="w-3.5 h-3.5 text-red-500 fill-red-500 animate-pulse shrink-0" />}
+                        </span>
+                      </div>
+
+                      {/* Right values label alignments */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-wood-900 pr-1 text-right min-w-[70px]">
+                          {leaderboardTab === 'obs' && `${user.observations} obs`}
+                          {leaderboardTab === 'species' && `${user.species} spp`}
+                          {leaderboardTab === 'grid' && `${user.explorerScore} cells`}
+                          {leaderboardTab === 'novelty' && `${user.voiScore} novelty`}
+                        </span>
+                      </div>
+
+                    </div>
+                  ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
-                  <div className="bg-gray-50 p-4.5 rounded-xl border border-gray-100 space-y-2 text-xs">
-                    <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs font-mono border border-emerald-100">M1</span>
-                    <h5 className="font-display font-semibold text-xs text-wood-900">Explorer Score (Pure Coverage)</h5>
-                    <p className="text-[11px] text-gray-500 leading-normal">{activeStudy.metrics.explorer}</p>
-                  </div>
-                  <div className="bg-gray-50 p-4.5 rounded-xl border border-gray-100 space-y-2 text-xs">
-                    <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs font-mono border border-blue-100">M2</span>
-                    <h5 className="font-display font-semibold text-xs text-wood-900">Taxonomic Score (New Species)</h5>
-                    <p className="text-[11px] text-gray-500 leading-normal">{activeStudy.metrics.taxonomic}</p>
-                  </div>
-                  <div className="bg-gray-50 p-4.5 rounded-xl border border-gray-100 space-y-2 text-xs">
-                    <span className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs font-mono border border-amber-100">M3</span>
-                    <h5 className="font-display font-semibold text-xs text-wood-900">VOI Score (Information Value)</h5>
-                    <p className="text-[11px] text-gray-500 leading-normal">{activeStudy.metrics.voi}</p>
-                  </div>
-                </div>
               </div>
             )}
           </div>

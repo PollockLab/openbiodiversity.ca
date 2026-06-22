@@ -6,15 +6,35 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // Helper to provide compliant styles reactively based on selected Map type
 const getMapStyle = (type: 'topo' | 'satellite' | 'terrain') => {
   const dpr = typeof window !== 'undefined' && window.devicePixelRatio >= 2 ? '@2x' : '';
-  let tilesUrl = `https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${dpr}.png`;
+  let tilesUrls: string[] = [];
   let attribution = '© <a href="https://carto.com/attributions">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
   if (type === 'satellite') {
-    tilesUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    // Esri raster tile servers distributed to ensure redundancy and avoid rate limits
+    tilesUrls = [
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    ];
     attribution = '© Esri — Source: Esri, USDA, USGS, and the GIS User Community';
   } else if (type === 'terrain') {
-    tilesUrl = 'https://tile.opentopomap.org/{z}/{x}/{y}.png';
+    // OpenTopoMap with active subdomains for faster tile loading and robust access
+    tilesUrls = [
+      'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
+      'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
+      'https://c.tile.opentopomap.org/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+    ];
     attribution = '© <a href="https://opentopomap.org">OpenTopoMap</a>, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  } else {
+    // Topo style (CARTO Voyager with multiple subdomains and standard openstreetmap as direct backup)
+    tilesUrls = [
+      `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${dpr}.png`,
+      `https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${dpr}.png`,
+      `https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${dpr}.png`,
+      `https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${dpr}.png`,
+      `https://tile.openstreetmap.org/{z}/{x}/{y}.png`
+    ];
   }
 
   return {
@@ -22,12 +42,19 @@ const getMapStyle = (type: 'topo' | 'satellite' | 'terrain') => {
     sources: {
       'raster-tiles': {
         type: 'raster' as const,
-        tiles: [tilesUrl],
+        tiles: tilesUrls,
         tileSize: 256,
         attribution
       }
     },
     layers: [
+      {
+        id: 'bg-color',
+        type: 'background' as const,
+        paint: {
+          'background-color': type === 'satellite' ? '#0b171c' : '#eef4f0'
+        }
+      },
       {
         id: 'simple-tiles-layer',
         type: 'raster' as const,
@@ -80,6 +107,9 @@ export default function GlobePlaceholder({
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [projectedCells, setProjectedCells] = useState<Array<{ x: number; y: number; original: any }>>([]);
+  const [webGlSupported, setWebGlSupported] = useState<boolean>(true);
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 800, height: 600 });
 
   // Generate random data points overlay representing observations or grid density
   const [gridCells, setGridCells] = useState<Array<{ x: number; y: number; val: number; kba?: boolean; park?: boolean; gap?: boolean }>>([]);
@@ -105,12 +135,6 @@ export default function GlobePlaceholder({
       const x = 15 + (rVal * 70); // 15% to 85% width
       const y = 20 + (seedRandom(`y-${seed}-${i}`) * 55); // 20% to 75% height
 
-      // check if it fits regional highlights of case studies
-      let inCaseStudyRegion = false;
-      if (selectedCaseStudyId === 'newfoundland' && x > 70 && y > 45) inCaseStudyRegion = true;
-      if (selectedCaseStudyId === 'bc-parks' && x < 40 && y < 55) inCaseStudyRegion = true;
-      if (selectedCaseStudyId === 'kbas' && rVal > 0.4) inCaseStudyRegion = true;
-
       cells.push({
         x,
         y,
@@ -124,51 +148,81 @@ export default function GlobePlaceholder({
   }, [mode, selectedLayerId, selectedSdmId, activeTaxonGroup, selectedCaseStudyId]);
 
   const updateCellProjections = (mapInstance: maplibregl.Map | null) => {
-    if (!mapInstance) return;
-    try {
-      const projected = gridCells.map(cell => {
-        const lng = -140 + (cell.x / 100) * 85;
-        const lat = 83 - (cell.y / 100) * 38;
-        const point = mapInstance.project([lng, lat]);
-        return {
-          x: point.x,
-          y: point.y,
-          original: cell
-        };
-      });
-      setProjectedCells(projected);
-    } catch (e) {
-      // guard against any projection issues during initialization
+    if (mapInstance && mapLoaded) {
+      try {
+        const projected = gridCells.map(cell => {
+          const lng = -140 + (cell.x / 100) * 85;
+          const lat = 83 - (cell.y / 100) * 38;
+          const point = mapInstance.project([lng, lat]);
+          return {
+            x: point.x,
+            y: point.y,
+            original: cell
+          };
+        });
+        setProjectedCells(projected);
+        return;
+      } catch (e) {
+        // Fall through to exact percentage calculation
+      }
     }
+
+    // High fidelity percentage-based vector fall back calculation
+    const projected = gridCells.map(cell => {
+      const xPx = (cell.x / 100) * containerSize.width;
+      const yPx = (cell.y / 100) * containerSize.height;
+      return {
+        x: xPx,
+        y: yPx,
+        original: cell
+      };
+    });
+    setProjectedCells(projected);
   };
 
-  // Synchronize projected cells when gridCells change or Map changes
+  // Synchronize projected cells when elements change
   useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.resize();
-      updateCellProjections(mapRef.current);
-    }
-  }, [gridCells]);
+    updateCellProjections(mapRef.current);
+  }, [gridCells, containerSize, mapLoaded, webGlSupported]);
 
   // Handle map initialization and events
   useEffect(() => {
     if (!mapDivRef.current) return;
 
-    const map = new maplibregl.Map({
-      container: mapDivRef.current,
-      // try out inserting base map style here.
-      // apparently with straight url would fix problem caused by maplibre/carto issue (?)
-      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-      center: [-98, 60], // Centered beautifully over Canada
-      zoom: 3.2,
-      maxZoom: 14,
-      minZoom: 1.5,
-      bearing: 0,
-      pitch: 0,
-      dragRotate: false, // keep it aligned but allow zoom & pan
-    });
+    // Direct WebGL check to prevent catastrophic iframe load failures in browser sandbox environments
+    let isSupported = false;
+    try {
+      const canvas = document.createElement('canvas');
+      isSupported = !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+    } catch (e) {
+      isSupported = false;
+    }
+    setWebGlSupported(isSupported);
 
-    mapRef.current = map;
+    if (!isSupported) {
+      console.warn("WebGL not detected or restricted in this browser context. Launching Vector Map fallback mode.");
+      return;
+    }
+
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: mapDivRef.current,
+        style: getMapStyle(mapType),
+        center: [-98, 60], // Centered beautifully over Canada
+        zoom: 3.2,
+        maxZoom: 14,
+        minZoom: 1.5,
+        bearing: 0,
+        pitch: 0,
+        dragRotate: false, // keep it aligned but allow zoom & pan
+      });
+      mapRef.current = map;
+    } catch (err) {
+      console.error("MapLibre GL failed to initialize:", err);
+      setWebGlSupported(false);
+      return;
+    }
 
     const onMapEvent = () => {
       updateCellProjections(map);
@@ -177,6 +231,7 @@ export default function GlobePlaceholder({
     };
 
     map.on('load', () => {
+      setMapLoaded(true);
       map.resize();
       onMapEvent();
     });
@@ -184,36 +239,72 @@ export default function GlobePlaceholder({
     map.on('zoom', onMapEvent);
     map.on('resize', onMapEvent);
 
-    // Call resize to ensure accurate calculations after render pipeline settles
-    const timer1 = setTimeout(() => {
+    // Dynamic ResizeObserver ensures precise canvas scaling and prevents blank viewports during container expands/tabs transitions
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setContainerSize({ width: width || 800, height: height || 600 });
+      }
       if (mapRef.current) {
         mapRef.current.resize();
-        updateCellProjections(mapRef.current);
       }
-    }, 150);
-
-    const timer2 = setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.resize();
-        updateCellProjections(mapRef.current);
-      }
-    }, 600);
+    });
+    
+    if (mapDivRef.current) {
+      resizeObserver.observe(mapDivRef.current);
+    }
 
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      map.remove();
+      resizeObserver.disconnect();
+      if (map) {
+        map.remove();
+      }
       mapRef.current = null;
+      setMapLoaded(false);
     };
   }, []);
-  
-  // comment out to allow base map to be loaded properly.
-  // Set style when mapType changes
-  //useEffect(() => {
-  //  if (mapRef.current) {
-  //    mapRef.current.setStyle(getMapStyle(mapType));
-  //  }
-  //}, [mapType]);
+
+  // Set style when mapType changes (safeguarded on mapLoaded to prevent race condition)
+  useEffect(() => {
+    if (mapRef.current && mapLoaded) {
+      try {
+        mapRef.current.setStyle(getMapStyle(mapType));
+      } catch (err) {
+        console.warn("Could not set dynamic style:", err);
+      }
+    }
+  }, [mapType, mapLoaded]);
+
+  const handleZoomIn = () => {
+    if (mapRef.current && mapLoaded) {
+      mapRef.current.zoomIn();
+    } else {
+      setZoom(prev => Math.min(prev + 0.5, 10));
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (mapRef.current && mapLoaded) {
+      mapRef.current.zoomOut();
+    } else {
+      setZoom(prev => Math.max(prev - 0.5, 1.5));
+    }
+  };
+
+  const handleResetView = () => {
+    if (mapRef.current && mapLoaded) {
+      mapRef.current.easeTo({
+        center: [-98, 60],
+        zoom: 3.2,
+        bearing: 0,
+        pitch: 0,
+        duration: 800
+      });
+    } else {
+      setZoom(3.2);
+      setRotation(0);
+    }
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!mapContainerRef.current) return;
@@ -424,6 +515,65 @@ export default function GlobePlaceholder({
         {/* Live MapLibre viewport rendering interactive tiles */}
         <div ref={mapDivRef} className="absolute inset-0 w-full h-full z-0" style={{ width: '100%', height: '100%' }} />
 
+        {/* Dynamic high-contrast aesthetic vector base map of Canada for sandboxed, disabled, or initializing map fallbacks */}
+        {(!webGlSupported || !mapLoaded) && (
+          <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center opacity-85 transition-all duration-300 p-8 select-none pointer-events-none">
+            <svg viewBox="0 0 800 500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full max-w-5xl max-h-[500px]">
+              {/* Grid Lines / Coordinate lines grid to give a great scientific telemetry look */}
+              <g stroke="currentColor" className="opacity-10 text-gray-500" strokeWidth="0.5" strokeDasharray="3 3">
+                <line x1="100" y1="0" x2="100" y2="500" />
+                <line x1="200" y1="0" x2="200" y2="500" />
+                <line x1="300" y1="0" x2="300" y2="500" />
+                <line x1="400" y1="0" x2="400" y2="500" />
+                <line x1="500" y1="0" x2="500" y2="500" />
+                <line x1="600" y1="0" x2="600" y2="500" />
+                <line x1="700" y1="0" x2="700" y2="500" />
+                <line x1="0" y1="100" x2="800" y2="100" />
+                <line x1="0" y1="200" x2="800" y2="200" />
+                <line x1="0" y1="300" x2="800" y2="300" />
+                <line x1="0" y1="400" x2="800" y2="400" />
+              </g>
+              
+              {/* Canada Landmass borders */}
+              <path 
+                d="M 120 180 L 120 350 L 220 350 L 400 350 L 500 370 L 540 410 L 540 370 L 580 410 L 610 370 L 640 375 L 680 340 L 710 345 L 750 280 L 710 240 L 680 250 L 620 200 L 580 180 L 540 220 L 480 190 L 400 230 L 360 200 L 280 210 Z" 
+                className={`${mapType === 'satellite' ? 'fill-sky-950/40 stroke-cyan-500/50' : mapType === 'terrain' ? 'fill-amber-100/30 stroke-amber-700/30' : 'fill-sage-50/50 stroke-sage-500/40'}`} 
+                strokeWidth="1.5"
+              />
+              
+              {/* Baffin Island */}
+              <path 
+                d="M 540 100 L 600 130 L 640 180 L 580 200 L 520 160 Z" 
+                className={`${mapType === 'satellite' ? 'fill-sky-950/40 stroke-cyan-500/50' : mapType === 'terrain' ? 'fill-amber-100/30 stroke-amber-700/30' : 'fill-sage-50/50 stroke-sage-500/40'}`} 
+                strokeWidth="1.5"
+              />
+              
+              {/* Victoria, Ellesmere & Arctic islands */}
+              <circle cx="340" cy="110" r="28" className={`${mapType === 'satellite' ? 'fill-sky-950/20 stroke-cyan-500/30' : mapType === 'terrain' ? 'fill-amber-100/20 stroke-amber-700/25' : 'fill-sage-50/20 stroke-sage-500/20'}`} strokeDasharray="3 3" />
+              <circle cx="450" cy="90" r="35" className={`${mapType === 'satellite' ? 'fill-sky-950/20 stroke-cyan-500/30' : mapType === 'terrain' ? 'fill-amber-100/20 stroke-amber-700/25' : 'fill-sage-50/20 stroke-sage-500/20'}`} strokeDasharray="3 3" />
+              <circle cx="560" cy="60" r="25" className={`${mapType === 'satellite' ? 'fill-sky-950/20 stroke-cyan-500/30' : mapType === 'terrain' ? 'fill-amber-100/20 stroke-amber-700/25' : 'fill-sage-50/20 stroke-sage-500/20'}`} strokeDasharray="3 3" />
+
+              {/* Newfoundland Island */}
+              <path 
+                d="M 720 310 L 755 305 L 750 335 L 725 330 Z" 
+                className={`${mapType === 'satellite' ? 'fill-sky-950/50 stroke-cyan-400/60' : mapType === 'terrain' ? 'fill-amber-100/40 stroke-amber-700/40' : 'fill-sage-50/60 stroke-sage-500/60'}`} 
+              />
+
+              {/* Vancouver Island */}
+              <path 
+                d="M 115 340 L 135 355 L 125 365 Z" 
+                className={`${mapType === 'satellite' ? 'fill-sky-950/50 stroke-cyan-400/60' : mapType === 'terrain' ? 'fill-amber-100/40 stroke-amber-700/40' : 'fill-sage-50/60 stroke-sage-500/60'}`} 
+              />
+
+              {/* Major lakes markings (for topological feel) */}
+              <path d="M 520 395 C 510 395, 510 405, 520 405" fill="none" className="stroke-cyan-500/40" strokeWidth="1.5" />
+              <circle cx="450" cy="365" r="8" fill="none" className="stroke-cyan-500/30" strokeWidth="1" />
+              <circle cx="340" cy="315" r="9" fill="none" className="stroke-cyan-500/30" strokeWidth="1" />
+              <circle cx="280" cy="275" r="8" fill="none" className="stroke-cyan-500/30" strokeWidth="1" />
+            </svg>
+          </div>
+        )}
+
         {/* Dynamic high-contrast canvas overlays aligned to unprojected GIS points */}
         <div className="absolute inset-0 z-10 pointer-events-none">
           {/* GridCells representing data overlays */}
@@ -484,6 +634,31 @@ export default function GlobePlaceholder({
             )}
           </div>
 
+          {/* Navigation control cluster */}
+          <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 font-sans pointer-events-auto">
+            <button
+              onClick={handleZoomIn}
+              className="w-8 h-8 rounded-lg bg-white/95 border border-sage-200 shadow-md flex items-center justify-center text-wood-800 hover:text-sage-600 transition-all cursor-pointer hover:bg-gray-50"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleZoomOut}
+              className="w-8 h-8 rounded-lg bg-white/95 border border-sage-200 shadow-md flex items-center justify-center text-wood-800 hover:text-sage-600 transition-all cursor-pointer hover:bg-gray-50"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleResetView}
+              className="w-8 h-8 rounded-lg bg-white/95 border border-sage-200 shadow-md flex items-center justify-center text-wood-800 hover:text-sage-600 transition-all cursor-pointer hover:bg-gray-50"
+              title="Reset Map View"
+            >
+              <RefreshCw className="w-4 h-4 animate-spin-hover" />
+            </button>
+          </div>
+
           {/* Compass Rose illustration */}
           <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1 opacity-80 text-wood-950 pointer-events-none">
             <div className="relative w-12 h-12 rounded-full border border-wood-500/50 flex items-center justify-center bg-white/70 backdrop-blur-xs shadow-sm">
@@ -501,7 +676,7 @@ export default function GlobePlaceholder({
       <div className="bg-wood-50 border-t border-sage-100 p-4 font-sans text-xs">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="text-wood-650 font-semibold font-sans">
-            Observation Grid Overlays Enabled
+            Observation Grid Overlays Enabled {!webGlSupported && " (Aesthetic Vector Sandbox Mode)"}
           </div>
  
           <div className="flex flex-wrap items-center gap-3.5 text-[11px] font-mono text-gray-500">
