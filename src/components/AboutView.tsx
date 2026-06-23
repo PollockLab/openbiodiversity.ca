@@ -53,7 +53,7 @@ export default function AboutView() {
     { name: "Peter Soroye", organization: "WCS Canada", role: "KBA Assessment and Outreach Coordinator", tag: "KBA", photo: peter_photo},
     { name: "Joseph Bowden", organization: "Natural Resources Canada", role: "Research Scientist", tag: "BCP", photo: joseph_photo},
     { name: "Guillaume Larocque", organization: "QCBS, GEOBON, Biodiversité Québec", role: "Research Professional", tag: "WCS", photo: guillaume_photo},
-    { name: "James Pagé", organization: "Canadian Wildlife Federation", role: "Species at Risk and Biodiversity Specialist", tag: "Blah", james_photo}
+    { name: "James Pagé", organization: "Canadian Wildlife Federation", role: "Species at Risk and Biodiversity Specialist", tag: "Blah", james_photo},
     { name: "Wietze Sujiker", organization: "MILA", role: "Geospatial Data Engineer", tag: "iNAT", photo: null }
   ];
 
