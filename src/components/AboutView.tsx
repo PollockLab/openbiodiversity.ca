@@ -1,5 +1,18 @@
 import React from 'react';
 
+// photos import
+import ciara_photo from '../photos/ciara_raudsep.png';
+import james_photo from '../photos/james_page.png';
+import katherine_photo from '../photos/katherine_hebert.jpg';
+import maho_photo from '../photos/maho_horikawa.png';
+import peter_photo from '../photos/peter_soroye.png';
+import ryan_photo from '../photos/ryan_hull.jpg';
+import guillaume_photo from '../photos/guillaume_larocque.png';
+import joseph_photo from '../photos/joseph_bowden.png';
+import noah_photo from '../photos/noah_wightman.jpg';
+import laura_photo from '../photos/laura_pollock.jpg';
+
+
 const TreeDecorationLeft = () => (
   <div className="absolute left-[-220px] bottom-10 w-[170px] h-[550px] pointer-events-none opacity-10 hidden xl:block select-none">
     <svg viewBox="0 0 100 300" className="w-full h-full text-sage-750 fill-current">
@@ -28,20 +41,20 @@ const TreeDecorationRight = () => (
 
 export default function AboutView() {
   const teamMembers = [
-    { name: "Dr. Laura Pollock", role: "Principal Investigator", tag: "LP", photo: null },
-    { name: "Katherine Hébert", role: "Postdoctoral Researcher", tag: "KH", photo: null },
-    { name: "Guillaume Larocque", role: "Lead Spatial Modeler", tag: "GL", photo: null },
-    { name: "Noah Wightman", role: "Software Developer", tag: "NW", photo: null },
-    { name: "Ryan Hull", role: "Research Assistant", tag: "RH", photo: null },
-    { name: "Maho Horikawa", role: "Research Assistant", tag: "MH", photo: null }
+    { name: "Dr. Laura Pollock", role: "Principal Investigator", tag: "LP", photo: laura_photo},
+    { name: "Katherine Hébert", role: "Postdoctoral Researcher", tag: "KH", photo: katherine_photo},
+    { name: "Noah Wightman", role: "Software Developer", tag: "NW", photo: noah_photo},
+    { name: "Ryan Hull", role: "Research Assistant", tag: "RH", photo: ryan_photo},
+    { name: "Maho Horikawa", role: "Research Assistant", tag: "MH", photo: maho_photo}
   ];
 
   const partnersList = [
-    { name: "Partner Leader 1", organization: "McGill University", role: "Academic Lead", tag: "MU", photo: null },
-    { name: "Partner Leader 2", organization: "Key Biodiversity Areas", role: "National Coalition", tag: "KBA", photo: null },
-    { name: "Partner Leader 3", organization: "BC Protected Parks", role: "Provincial Agency", tag: "BCP", photo: null },
-    { name: "Partner Leader 4", organization: "Wildlife Conservation Society", role: "Global Society", tag: "WCS", photo: null },
-    { name: "Partner Leader 5", organization: "iNaturalist Canada", role: "Scientific Network", tag: "iNAT", photo: null }
+    { name: "Ciara Raudsepp-Hearne", organization: "WCS Canada", role: "Director of KBAs", tag: "MU", photo: ciara_photo},
+    { name: "Peter Soroye", organization: "WCS Canada", role: "KBA Assessment and Outreach Coordinator", tag: "KBA", photo: peter_photo},
+    { name: "Joseph Bowden", organization: "Natural Resources Canada", role: "Research Scientist", tag: "BCP", photo: joseph_photo},
+    { name: "Guillaume Larocque", organization: "QCBS, GEOBON, Biodiversité Québec", role: "Research Professional", tag: "WCS", photo: guillaume_photo},
+    { name: "James Pagé", organization: "Canadian Wildlife Federation", role: "Species at Risk and Biodiversity Specialist", tag: "Blah", james_photo}
+    { name: "Wietze Sujiker", organization: "MILA", role: "Geospatial Data Engineer", tag: "iNAT", photo: null }
   ];
 
   return (
