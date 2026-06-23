@@ -13,6 +13,18 @@ import noah_photo from '../pictures/noah_wightman.jpg';
 import laura_photo from '../pictures/laura_pollock.jpg';
 import wietze_photo from '../pictures/wietze_sujiker.png';
 
+// logos import
+import cwf_logo from '../pictures/CWF_logo.png';
+import kba_logo from '../pictures/KBA_logo.png';
+import ldp_logo from '../pictures/LDP_logo.png';
+import mila_logo from '../pictures/MILA_logo.png';
+import natcan_logo from '../pictures/NatResourcesCAN_logo.png';
+import qcbs_logo from '../pictures/QCBS_logo.png';
+import wcs_logo from '../pictures/WCS_logo.png';
+import inat_logo from '../pictures/inat_logo.png';
+import mcgill_logo from '../pictures/mcgill_logo.png';
+
+
 const TreeDecorationLeft = () => (
   <div className="absolute left-[-220px] bottom-10 w-[170px] h-[550px] pointer-events-none opacity-10 hidden xl:block select-none">
     <svg viewBox="0 0 100 300" className="w-full h-full text-sage-750 fill-current">
@@ -54,7 +66,7 @@ export default function AboutView() {
     { name: "Joseph Bowden", organization: "Natural Resources Canada", role: "Research Scientist", tag: "BCP", photo: joseph_photo},
     { name: "Guillaume Larocque", organization: "QCBS, GEOBON, Biodiversité Québec", role: "Research Professional", tag: "WCS", photo: guillaume_photo},
     { name: "James Pagé", organization: "Canadian Wildlife Federation", role: "Species at Risk and Biodiversity Specialist", tag: "CWF", photo: james_photo},
-    { name: "Wietze Sujiker", organization: "MILA", role: "Geospatial Data Engineer", tag: "iNAT", photo: wietze_photo}
+    { name: "Wietze Sujiker", organization: "MILA", role: "Geospatial Data Engineer", tag: "iNAT", photo: wietze_photo }
   ];
 
   return (
@@ -190,6 +202,19 @@ export default function AboutView() {
           ))}
         </div>
       </section>
+
+      {/* Partner Logos Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-y-12 gap-x-16 pt-8 pb-12 items-center justify-items-center max-w-3xl mx-auto px-4">
+        <img src={mcgill_logo} alt="McGill University" className="h-14 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+        <img src={wcs_logo} alt="Wildlife Conservation Society Canada" className="h-24 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+        <img src={kba_logo} alt="Key Biodiversity Areas Canada" className="h-36 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+        <img src={cwf_logo} alt="Canadian Wildlife Federation" className="h-30 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+        <img src={mila_logo} alt="Mila AI Institute" className="h-36 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+        <img src={inat_logo} alt="iNaturalist Canada" className="h-36 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+        <img src={ldp_logo} alt="LDP" className="h-24 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+        <img src={natcan_logo} alt="Natural Resources Canada" className="h-24 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+        <img src={qcbs_logo} alt="QCBS" className="h-24 w-auto object-contain hover:scale-105 transition-all duration-300 select-none" referrerPolicy="no-referrer" />
+      </div>
 
     </div>
   );

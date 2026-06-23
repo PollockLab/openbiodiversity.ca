@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Award, Compass, MapPin, BarChart3, Users, Flame, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { btgCaseStudies, btgLeaderboard, staticBtg2025Milestone } from '../data/blitzTheGapData';
-import GlobePlaceholder from './GlobePlaceholder';
 import BioblitzAnalyzer from './BioblitzAnalyzer';
 
 export default function BlitzGapView() {
   const [activeStudyId, setActiveStudyId] = useState<'general' | 'kbas' | 'bc-parks' | 'newfoundland'>('general');
-  const [selectedIconicTaxon, setSelectedIconicTaxon] = useState<string>('All');
   
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(true);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(true);
@@ -66,12 +64,12 @@ export default function BlitzGapView() {
       <section className="space-y-5">
         
         {/* Full span map visualizer */}
-        <div className="w-full">
-          <GlobePlaceholder
-            mode="blitz-gap"
-            selectedCaseStudyId={activeStudyId}
-            activeTaxonGroup={selectedIconicTaxon}
-            onTaxonGroupChange={setSelectedIconicTaxon}
+        <div className="w-full bg-white border border-gray-150 rounded-2xl overflow-hidden shadow-sm card-shadow">
+          <iframe
+            src="https://pollocklab.github.io/where-to-blitz/"
+            title="Where to Blitz Map"
+            className="w-full h-[650px] md:h-[750px] border-0"
+            allow="geolocation"
           />
         </div>
 
