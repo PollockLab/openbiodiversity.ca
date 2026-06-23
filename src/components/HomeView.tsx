@@ -15,13 +15,13 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
       <section className="relative overflow-hidden bg-white rounded-3xl p-8 md:p-12 border border-gray-100 card-shadow animate-fadeIn">
         <div className="absolute top-0 right-0 w-80 h-80 bg-sage-50/40 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="max-w-3xl relative">
+        <div className="w-full relative">
           
-          <h1 className="font-display font-medium text-4xl sm:text-5xl text-wood-900 tracking-tight leading-[1.15]">
+          <h1 className="font-display font-medium text-4xl sm:text-5xl text-wood-900 tracking-tight leading-[1.15] w-full">
             Canada's Spatial Biodiversity Portal
           </h1>
           
-          <p className="mt-6 text-sm sm:text-base text-gray-500 leading-relaxed max-w-2xl font-sans">
+          <p className="mt-6 text-sm sm:text-base text-gray-500 leading-relaxed w-full font-sans">
             Welcome to <strong className="text-wood-900 font-semibold font-display">openbiodiversity.ca</strong>, an open platform for spatial biodiversity data supported by the research of the <a href="https://qbiodiversity.org/">Quantitative Biodiversity Lab</a> at McGill University.
           </p>
         </div>

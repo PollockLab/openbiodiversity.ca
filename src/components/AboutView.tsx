@@ -20,22 +20,28 @@ const TreeDecorationRight = () => (
   </div>
 );
 
+// To link photos from src/pictures/ in the future without breaking build compilation now:
+// 1. Place the image files inside `/src/pictures/`
+// 2. Import them at the top of this file, e.g.:
+//    import lauraPic from '../pictures/laura_pollock.jpg';
+// 3. Replace the `photo: null` placeholder with your imported photo variable like `photo: lauraPic`
+
 export default function AboutView() {
   const teamMembers = [
-    { name: "Dr. Laura Pollock", role: "Principal Investigator", tag: "LP" },
-    { name: "Katherine Hébert", role: "Postdoctoral Researcher", tag: "KH" },
-    { name: "Guillaume Larocque", role: "Lead Spatial Modeler", tag: "GL" },
-    { name: "Noah Wightman", role: "Software Developer", tag: "NW" },
-    { name: "Ryan Hull", role: "Research Assistant", tag: "RH" },
-    { name: "Maho Horikawa", role: "Research Assistant", tag: "MH" }
+    { name: "Dr. Laura Pollock", role: "Principal Investigator", tag: "LP", photo: null },
+    { name: "Katherine Hébert", role: "Postdoctoral Researcher", tag: "KH", photo: null },
+    { name: "Guillaume Larocque", role: "Lead Spatial Modeler", tag: "GL", photo: null },
+    { name: "Noah Wightman", role: "Software Developer", tag: "NW", photo: null },
+    { name: "Ryan Hull", role: "Research Assistant", tag: "RH", photo: null },
+    { name: "Maho Horikawa", role: "Research Assistant", tag: "MH", photo: null }
   ];
 
   const partnersList = [
-    { tag: "MU", name: "McGill University", type: "Academic Lead" },
-    { tag: "KBA", name: "Key Biodiversity Areas", type: "National Coalition" },
-    { tag: "BCP", name: "BC Protected Parks", type: "Provincial Agency" },
-    { tag: "WCS", name: "Wildlife Conservation", type: "Global Society" },
-    { tag: "iNAT", name: "iNaturalist Canada", type: "Scientific Network" }
+    { name: "Partner Leader 1", organization: "McGill University", role: "Academic Lead", tag: "MU", photo: null },
+    { name: "Partner Leader 2", organization: "Key Biodiversity Areas", role: "National Coalition", tag: "KBA", photo: null },
+    { name: "Partner Leader 3", organization: "BC Protected Parks", role: "Provincial Agency", tag: "BCP", photo: null },
+    { name: "Partner Leader 4", organization: "Wildlife Conservation Society", role: "Global Society", tag: "WCS", photo: null },
+    { name: "Partner Leader 5", organization: "iNaturalist Canada", role: "Scientific Network", tag: "iNAT", photo: null }
   ];
 
   return (
@@ -103,12 +109,21 @@ export default function AboutView() {
             {teamMembers.map((member) => (
               <div key={member.name} className="flex flex-col items-center text-center space-y-3">
                 <div className="relative w-18 h-18 rounded-full bg-sage-50 border border-sage-200/60 shadow-3xs flex items-center justify-center text-sage-600 overflow-hidden group hover:border-sage-500 hover:bg-sage-100/50 transition-all">
-                  <div className="flex flex-col items-center select-none">
-                    <span className="font-display font-bold text-sm tracking-tight text-sage-800">
-                      {member.tag}
-                    </span>
-                    <span className="text-[8px] text-sage-450 font-medium tracking-wider font-sans uppercase mt-0.5">photo</span>
-                  </div>
+                  {member.photo ? (
+                    <img
+                      src={member.photo}
+                      alt={member.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center select-none">
+                      <span className="font-display font-bold text-sm tracking-tight text-sage-800">
+                        {member.tag}
+                      </span>
+                      <span className="text-[8px] text-sage-455 font-medium tracking-wider font-sans uppercase mt-0.5">photo</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-0.5">
@@ -133,18 +148,30 @@ export default function AboutView() {
           Achieving nationwide coverage relies on extensive cross-sector collaboration. We are proud to partner with leading academic bodies, provincial authorities, conservation consortia, and community-science networks to integrate spatial models and map observation gaps.
         </p>
 
-        {/* Partners Logos */}
+        {/* Partners Logos / Representatives */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 pt-2">
           {partnersList.map((partner) => (
             <div key={partner.name} className="flex flex-col items-center text-center space-y-3 animate-fadeIn">
               <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-150 shadow-3xs flex flex-col items-center justify-center text-gray-500 overflow-hidden group hover:border-sage-400 hover:bg-gray-100/50 transition-all">
-                <span className="font-mono text-xs font-bold text-gray-450 select-none">{partner.tag}</span>
-                <span className="text-[8px] text-gray-400 font-medium tracking-wider font-sans uppercase mt-0.5">logo</span>
+                {partner.photo ? (
+                  <img
+                    src={partner.photo}
+                    alt={partner.name}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center select-none">
+                    <span className="font-mono text-xs font-bold text-gray-450 select-none">{partner.tag}</span>
+                    <span className="text-[8px] text-gray-400 font-medium tracking-wider font-sans uppercase mt-0.5">photo</span>
+                  </div>
+                )}
               </div>
               
               <div className="space-y-0.5">
-                <h5 className="font-display font-bold text-xs text-wood-950 leading-tight">{partner.name}</h5>
-                <p className="text-[10px] text-gray-400 font-sans font-medium leading-tight">{partner.type}</p>
+                <h5 className="font-display font-bold text-xs text-wood-950 leading-tight-1">{partner.name}</h5>
+                <p className="text-[10px] text-sage-600 font-semibold font-sans leading-tight">{partner.organization}</p>
+                <p className="text-[9px] text-gray-400 font-sans font-medium leading-tight">{partner.role}</p>
               </div>
             </div>
           ))}

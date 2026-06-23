@@ -196,7 +196,7 @@ export default function BaseMap() {
         }}
         title={isSatellite ? 'Switch to map view' : 'Switch to satellite view'}
       >
-        {isSatellite ? '🗺 Map' : '🛰 Satellite'}
+        {isSatellite ? 'Map' : 'Satellite'}
       </button>
     </div>
   );
