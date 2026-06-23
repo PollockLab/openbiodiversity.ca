@@ -1,7 +1,7 @@
 import React from 'react';
 
 // photos import
-import ciara_photo from '../pictures/ciara_raudsep.png';
+import ciara_photo from '../pictures/ciara_raudsepp.png';
 import james_photo from '../pictures/james_page.png';
 import katherine_photo from '../pictures/katherine_hebert.jpg';
 import maho_photo from '../pictures/maho_horikawa.png';
