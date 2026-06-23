@@ -11,7 +11,7 @@ import guillaume_photo from '../pictures/guillaume_larocque.png';
 import joseph_photo from '../pictures/joseph_bowden.png';
 import noah_photo from '../pictures/noah_wightman.jpg';
 import laura_photo from '../pictures/laura_pollock.jpg';
-
+import wietze_photo from '../pictures/wietze_sujiker.png';
 
 const TreeDecorationLeft = () => (
   <div className="absolute left-[-220px] bottom-10 w-[170px] h-[550px] pointer-events-none opacity-10 hidden xl:block select-none">
@@ -44,8 +44,8 @@ export default function AboutView() {
     { name: "Dr. Laura Pollock", role: "Principal Investigator", tag: "LP", photo: laura_photo},
     { name: "Dr. Katherine Hébert", role: "Postdoctoral Researcher", tag: "KH", photo: katherine_photo},
     { name: "Noah Wightman", role: "Software Developer", tag: "NW", photo: noah_photo},
-    { name: "Ryan Hull", role: "Research Assistant", tag: "RH", photo: ryan_photo},
-    { name: "Maho Horikawa", role: "Research Assistant", tag: "MH", photo: maho_photo}
+    { name: "Maho Horikawa", role: "Research Assistant", tag: "MH", photo: maho_photo},
+    { name: "Ryan Hull", role: "Research Assistant", tag: "RH", photo: ryan_photo}
   ];
 
   const partnersList = [
@@ -53,8 +53,8 @@ export default function AboutView() {
     { name: "Peter Soroye", organization: "WCS Canada", role: "KBA Assessment and Outreach Coordinator", tag: "KBA", photo: peter_photo},
     { name: "Joseph Bowden", organization: "Natural Resources Canada", role: "Research Scientist", tag: "BCP", photo: joseph_photo},
     { name: "Guillaume Larocque", organization: "QCBS, GEOBON, Biodiversité Québec", role: "Research Professional", tag: "WCS", photo: guillaume_photo},
-    { name: "James Pagé", organization: "Canadian Wildlife Federation", role: "Species at Risk and Biodiversity Specialist", tag: "CWF", james_photo},
-    { name: "Wietze Sujiker", organization: "MILA", role: "Geospatial Data Engineer", tag: "iNAT", photo: null }
+    { name: "James Pagé", organization: "Canadian Wildlife Federation", role: "Species at Risk and Biodiversity Specialist", tag: "CWF", photo: james_photo},
+    { name: "Wietze Sujiker", organization: "MILA", role: "Geospatial Data Engineer", tag: "iNAT", photo: wietze_photo}
   ];
 
   return (
@@ -118,7 +118,7 @@ export default function AboutView() {
           <h4 className="font-display font-semibold text-sm text-wood-850 mb-6 text-center sm:text-left">
             Research and Development Team:
           </h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
             {teamMembers.map((member) => (
               <div key={member.name} className="flex flex-col items-center text-center space-y-3">
                 <div className="relative w-18 h-18 rounded-full bg-sage-50 border border-sage-200/60 shadow-3xs flex items-center justify-center text-sage-600 overflow-hidden group hover:border-sage-500 hover:bg-sage-100/50 transition-all">
@@ -162,7 +162,7 @@ export default function AboutView() {
         </p>
 
         {/* Partners Logos / Representatives */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 pt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 pt-2">
           {partnersList.map((partner) => (
             <div key={partner.name} className="flex flex-col items-center text-center space-y-3 animate-fadeIn">
               <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-150 shadow-3xs flex flex-col items-center justify-center text-gray-500 overflow-hidden group hover:border-sage-400 hover:bg-gray-100/50 transition-all">
