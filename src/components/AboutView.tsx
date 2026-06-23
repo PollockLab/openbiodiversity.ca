@@ -1,16 +1,16 @@
 import React from 'react';
 
 // photos import
-import ciara_photo from '../photos/ciara_raudsep.png';
-import james_photo from '../photos/james_page.png';
-import katherine_photo from '../photos/katherine_hebert.jpg';
-import maho_photo from '../photos/maho_horikawa.png';
-import peter_photo from '../photos/peter_soroye.png';
-import ryan_photo from '../photos/ryan_hull.jpg';
-import guillaume_photo from '../photos/guillaume_larocque.png';
-import joseph_photo from '../photos/joseph_bowden.png';
-import noah_photo from '../photos/noah_wightman.jpg';
-import laura_photo from '../photos/laura_pollock.jpg';
+import ciara_photo from '../pictures/ciara_raudsep.png';
+import james_photo from '../pictures/james_page.png';
+import katherine_photo from '../pictures/katherine_hebert.jpg';
+import maho_photo from '../pictures/maho_horikawa.png';
+import peter_photo from '../pictures/peter_soroye.png';
+import ryan_photo from '../pictures/ryan_hull.jpg';
+import guillaume_photo from '../pictures/guillaume_larocque.png';
+import joseph_photo from '../pictures/joseph_bowden.png';
+import noah_photo from '../pictures/noah_wightman.jpg';
+import laura_photo from '../pictures/laura_pollock.jpg';
 
 
 const TreeDecorationLeft = () => (
