@@ -5,7 +5,7 @@ export default function BioblitzAnalyzer() {
   const [url, setUrl] = useState<string>('');
 
   return (
-    <div className="bg-white border border-gray-150 rounded-2xl p-6 card-shadow font-sans">
+    <div className="bg-white rounded-2xl p-6 shadow-md shadow-gray-300 font-sans">
       <div className="space-y-4">
         
         {/* Simple compact header */}

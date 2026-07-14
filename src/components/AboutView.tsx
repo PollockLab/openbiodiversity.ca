@@ -87,7 +87,7 @@ export default function AboutView() {
       </section>
 
       {/* Main Philosophy & Scientific Vision */}
-      <section className="bg-white border border-sage-100/80 rounded-2xl p-6 md:p-8 space-y-6 card-shadow">
+      <section className="bg-white rounded-2xl p-6 md:p-8 space-y-6 shadow-md shadow-gray-300">
         <div>
           <h2 className="font-display font-semibold text-xl text-wood-900">
             Scientific Vision
@@ -100,7 +100,7 @@ export default function AboutView() {
       </section>
 
       {/* Who We Are & Team Section */}
-      <section className="bg-white border border-sage-100/80 rounded-2xl p-6 md:p-8 space-y-6 card-shadow">
+      <section className="bg-white rounded-2xl p-6 md:p-8 space-y-6 shadow-md shadow-gray-300">
         <div className="border-b border-gray-100 pb-4">
           <h3 className="font-display font-semibold text-2xl text-wood-950">
             Who We Are
@@ -162,7 +162,7 @@ export default function AboutView() {
       </section>
 
       {/* Our Partners Section */}
-      <section className="bg-white border border-sage-100/80 rounded-2xl p-6 md:p-8 space-y-6 card-shadow">
+      <section className="bg-white rounded-2xl p-6 md:p-8 space-y-6 shadow-md shadow-gray-300">
         <div className="border-b border-gray-100 pb-4">
           <h3 className="font-display font-semibold text-2xl text-wood-950">
             Our Partners

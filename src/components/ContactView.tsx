@@ -31,7 +31,7 @@ export default function ContactView() {
       </section>
 
       {/* Main Single Centered Form Box */}
-      <div className="bg-white border border-sage-100 rounded-3xl p-6 sm:p-8 card-shadow">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-md shadow-gray-300">
         {submitted ? (
           <div className="text-center py-10 space-y-4 animate-fadeIn">
             <div className="w-16 h-16 bg-sage-50 text-sage-500 border border-sage-100 rounded-full flex items-center justify-center mx-auto">
@@ -61,7 +61,7 @@ export default function ContactView() {
                 <input
                   id="name-input"
                   type="text"
-                  placeholder="e.g. Dr. Jane Smith"
+                  placeholder="e.g. John Gap"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sage-500 text-wood-700 font-sans"
@@ -77,7 +77,7 @@ export default function ContactView() {
                 <input
                   id="email-input"
                   type="email"
-                  placeholder="e.g. jane.smith@mcgill.ca"
+                  placeholder="john.gap@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sage-500 text-wood-700 font-sans"

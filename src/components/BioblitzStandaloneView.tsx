@@ -92,7 +92,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
         </header>
 
         {/* Input/Analyze Form Section */}
-        <section className="bg-white border border-sage-100 rounded-2xl p-6 shadow-xs">
+        <section className="bg-white rounded-2xl p-6 shadow-md shadow-gray-300">
           <div className="space-y-2 mb-4">
             <h2 className="text-base font-semibold font-display text-wood-900">Analyze iNaturalist Project Bounds</h2>
             <p className="text-xs text-gray-500 font-sans leading-relaxed">
@@ -153,7 +153,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               {/* Box 1: Progress meter */}
-              <div className="bg-white border border-sage-100 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="bg-white rounded-2xl p-5 shadow-md shadow-gray-300 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">Doubling Target Progress</span>
                   <Percent className="w-5 h-5 text-sage-600" />
@@ -179,7 +179,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
               </div>
 
               {/* Box 2: Spatial Completeness Scores */}
-              <div className="bg-white border border-sage-100 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="bg-white rounded-2xl p-5 shadow-md shadow-gray-300 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">Gap-Climber Scorecard</span>
                   <Target className="w-5 h-5 text-sage-600" />
@@ -219,7 +219,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
               </div>
 
               {/* Box 3: Campaign Priorities overview */}
-              <div className="bg-white border border-sage-100 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="bg-white rounded-2xl p-5 shadow-md shadow-gray-300 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">Priority Gaps Identified</span>
                   <Trophy className="w-5 h-5 text-sage-600" />
@@ -236,7 +236,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
             </div>
 
             {/* Custom Field Actions list */}
-            <div className="bg-white border border-sage-100 rounded-2xl p-6 shadow-xs space-y-3">
+            <div className="bg-white rounded-2xl p-6 shadow-md shadow-gray-300 space-y-3">
               <h3 className="font-display font-semibold text-sm text-wood-900 flex items-center gap-1.5">
                 <ListChecks className="w-4.5 h-4.5 text-sage-500" /> Custom Field Guidelines for Volunteers:
               </h3>

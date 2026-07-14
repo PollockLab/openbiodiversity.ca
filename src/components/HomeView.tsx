@@ -1,6 +1,7 @@
 import React from 'react';
 import { Globe, BookOpen, Layers, Award, ShieldAlert, ArrowRight, CheckCircle2, ChevronRight, Sparkles } from 'lucide-react';
 import BaseMap from './BaseMap';
+import LogoIcon from './LogoIcon';
 
 
 interface HomeViewProps {
@@ -12,7 +13,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
     <div className="space-y-12 pb-16">
       
       {/* Prime Hero Section */}
-      <section className="relative overflow-hidden bg-white rounded-3xl p-8 md:p-12 border border-gray-100 card-shadow animate-fadeIn">
+      <section className="relative overflow-hidden bg-white rounded-3xl p-8 md:p-12 shadow-md shadow-gray-300 animate-fadeIn">
         <div className="absolute top-0 right-0 w-80 h-80 bg-sage-50/40 rounded-full blur-3xl pointer-events-none" />
 
         <div className="w-full relative">
@@ -37,10 +38,10 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Pillar 1: Blitz the Gap 2026 (Now First) */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 card-shadow flex flex-col justify-between hover:border-sage-200 transition-all duration-200">
+          <div className="bg-white rounded-2xl p-6 shadow-md shadow-gray-300 flex flex-col justify-between hover:scale-[1.01] transition-all duration-200">
             <div className="space-y-4">
               <div className="w-12 h-12 bg-sage-50 text-sage-500 rounded-xl flex items-center justify-center font-bold">
-                <Award className="w-6 h-6" />
+                <LogoIcon className="w-7 h-7" />
               </div>
               <h3 className="font-display font-semibold text-base text-wood-900">
                 Blitz the Gap 2026
@@ -58,7 +59,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
           </div>
 
           {/* Pillar 2: 10 Useful Layers for Conservation (Now Second) */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 card-shadow flex flex-col justify-between hover:border-sage-200 transition-all duration-200">
+          <div className="bg-white rounded-2xl p-6 shadow-md shadow-gray-300 flex flex-col justify-between hover:scale-[1.01] transition-all duration-200">
             <div className="space-y-4">
               <div className="w-12 h-12 bg-sage-50 text-sage-500 rounded-xl flex items-center justify-center font-bold">
                 <Layers className="w-6 h-6" />
@@ -79,7 +80,7 @@ export default function HomeView({ setActiveTab }: HomeViewProps) {
           </div>
 
           {/* Pillar 3: Species Distributions (Now Third) */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 card-shadow flex flex-col justify-between hover:border-sage-200 transition-all duration-200">
+          <div className="bg-white rounded-2xl p-6 shadow-md shadow-gray-300 flex flex-col justify-between hover:scale-[1.01] transition-all duration-200">
             <div className="space-y-4">
               <div className="w-12 h-12 bg-sage-50 text-sage-500 rounded-xl flex items-center justify-center font-bold">
                 <Globe className="w-6 h-6" />

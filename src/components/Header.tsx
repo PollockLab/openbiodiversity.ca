@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Globe, MapPinned, Info, Mail, Compass, HelpCircle } from 'lucide-react';
+import { Menu, X, Globe, MapPinned, Info, Mail, Compass } from 'lucide-react';
+import LogoIcon from './LogoIcon';
 
 interface HeaderProps {
   activeTab: string;
@@ -40,7 +41,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Compass },
-    { id: 'blitz-gap', label: 'Blitz the Gap 2026', icon: HelpCircle },
+    { id: 'blitz-gap', label: 'Blitz the Gap 2026', icon: LogoIcon },
     { id: 'useful-layers', label: '10 Useful Layers', icon: Globe },
     { id: 'sdm-explorer', label: 'SDMs (500+)', icon: MapPinned },
     { id: 'about', label: 'About', icon: Info },

@@ -50,7 +50,7 @@ export default function UsefulLayersView() {
     <div className="space-y-8 pb-16">
       
       {/* Intro Header */}
-      <section className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 card-shadow">
+      <section className="bg-white rounded-2xl p-6 md:p-8 shadow-md shadow-gray-300">
         <h1 className="font-display font-semibold text-2xl sm:text-3xl text-wood-900 tracking-tight">
           10 Useful Layers for Conservation in Canada
         </h1>
@@ -60,7 +60,7 @@ export default function UsefulLayersView() {
       </section>
 
       {/* Map + Chrome Tabs Unified Box */}
-      <div className="bg-white border border-sage-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+      <div className="bg-white rounded-2xl overflow-hidden shadow-md shadow-gray-300 flex flex-col">
         
         {/* Map Container */}
         <div className="relative w-full border-b border-gray-250">

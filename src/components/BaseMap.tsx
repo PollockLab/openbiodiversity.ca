@@ -117,7 +117,7 @@ export default function BaseMap() {
   const bgStyleColor = isSatellite ? '#0b0c16' : '#eef4f0';
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '500px' }} className="rounded-2xl overflow-hidden border border-gray-150 shadow-sm">
+    <div style={{ position: 'relative', width: '100%', height: '500px' }} className="rounded-2xl overflow-hidden shadow-md shadow-gray-300">
       <div 
         ref={mapContainer} 
         style={{ 

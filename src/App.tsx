@@ -15,7 +15,16 @@ import ContactView from './components/ContactView';
 import BioblitzStandaloneView from './components/BioblitzStandaloneView';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('home');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const hash = window.location.hash.replace('#', '');
+      const validTabs = ['home', 'useful-layers', 'sdm-explorer', 'blitz-gap', 'about', 'contact'];
+      if (validTabs.includes(hash)) {
+        return hash;
+      }
+    }
+    return 'home';
+  });
 
   // Check for standalone view mode parameter
   const [params] = useState(() => {
@@ -28,6 +37,32 @@ export default function App() {
     }
     return { view: null, url: '' };
   });
+
+  // Sync activeTab to URL Hash
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && params.view !== 'bioblitz-analyzer') {
+      const currentHash = window.location.hash.replace('#', '');
+      if (currentHash !== activeTab) {
+        window.location.hash = activeTab;
+      }
+    }
+  }, [activeTab, params.view]);
+
+  // Listen for hash changes (e.g., browser back/forward buttons)
+  React.useEffect(() => {
+    if (params.view === 'bioblitz-analyzer') return;
+
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      const validTabs = ['home', 'useful-layers', 'sdm-explorer', 'blitz-gap', 'about', 'contact'];
+      if (validTabs.includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [params.view]);
 
   React.useEffect(() => {
     if (params.view === 'bioblitz-analyzer') return;

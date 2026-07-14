@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Award, Compass, MapPin, BarChart3, Users, Flame, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Award, Compass, MapPin, BarChart3, Users, Flame, ChevronDown, ChevronUp, Info, BookOpen } from 'lucide-react';
 import { btgCaseStudies, btgLeaderboard, staticBtg2025Milestone } from '../data/blitzTheGapData';
 import BioblitzAnalyzer from './BioblitzAnalyzer';
 
@@ -30,14 +30,14 @@ export default function BlitzGapView() {
     <div className="space-y-8 pb-16">
       
       {/* Historical Accomplishments Milestones - Compact Side-by-Side Panel */}
-      <section className="bg-white border border-gray-150 rounded-2xl p-3 md:p-3.5 card-shadow">
+      <section className="bg-white rounded-2xl p-2.5 md:py-2 md:px-3.5 shadow-md shadow-gray-300 -mt-5 mb-2">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           
           {/* Left: Summary Title Block */}
-          <div className="flex items-center gap-2 flex-shrink-0 py-1.5 md:pr-1">
+          <div className="flex items-center gap-2 flex-shrink-0 py-1 md:pr-1">
             <Award className="w-5 h-5 text-sage-600 flex-shrink-0" />
             <h3 className="font-bold text-wood-950 text-xs sm:text-sm font-display tracking-tight leading-tight uppercase md:max-w-[160px]">
-              Blitz the Gap 2025 Impact
+              Blitz the Gap <br /> 2025 Impact
             </h3>
           </div>
 
@@ -64,7 +64,7 @@ export default function BlitzGapView() {
       <section className="space-y-5">
         
         {/* Full span map visualizer */}
-        <div className="w-full bg-white border border-gray-150 rounded-2xl overflow-hidden shadow-sm card-shadow">
+        <div className="w-full bg-white rounded-2xl overflow-hidden shadow-md shadow-gray-300">
           <iframe
             src="https://pollocklab.github.io/where-to-blitz/"
             title="Where to Blitz Map"
@@ -74,95 +74,103 @@ export default function BlitzGapView() {
         </div>
 
         {/* Unified Project Case Studies & Details Panel */}
-        <div className="bg-white border border-gray-150 rounded-2xl overflow-hidden shadow-sm flex flex-col card-shadow p-5 md:p-6 space-y-6">
+        <div className="bg-white rounded-2xl overflow-hidden flex flex-col shadow-md shadow-gray-300 p-5 md:p-6 space-y-6">
           
           {/* Selector Buttons (Prominent Buttons for Featured Projects) */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-widest font-mono">
-              <Compass className="w-4 h-4 text-sage-500" /> OUR FEATURED PROJECTS
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-x-5 gap-y-2 items-stretch border-b border-gray-100 pb-5">
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-              {btgCaseStudies.map((study) => {
+            {/* Row 1 Left: Spacer for Desktop, hidden on Mobile */}
+            <div className="order-1 md:order-1 md:col-span-5 hidden md:block">
+              <div className="h-4" />
+            </div>
+
+            {/* Row 1 Right: Featured Projects Header */}
+            <div className="order-2 md:order-2 md:col-span-7">
+              <div className="h-4 flex items-center">
+                <span className="text-[10px] font-extrabold text-sage-600 uppercase tracking-wider font-mono">Featured Projects</span>
+              </div>
+            </div>
+
+            {/* Row 2 Left: General Gap Map (No icon, matched sizing) */}
+            <div className="order-1 md:order-3 md:col-span-5 flex items-stretch">
+              <button
+                onClick={() => setActiveStudyId('general')}
+                className={`w-full p-3 text-center rounded-xl border transition-all cursor-pointer flex flex-col justify-center min-h-[48px] h-full shadow-sm ${
+                  activeStudyId === 'general'
+                    ? 'bg-sage-600 border-sage-600 text-white shadow-sm shadow-sage-100/50 font-bold'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-sage-400 hover:bg-sage-50/20'
+                }`}
+              >
+                <span className="font-semibold font-display text-[11px] sm:text-xs">General Gap Map</span>
+              </button>
+            </div>
+
+            {/* Row 2 Right: Featured Projects Subgrid */}
+            <div className="order-3 md:order-4 md:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-2 items-stretch">
+              {btgCaseStudies.filter(study => study.id !== 'general').map((study) => {
                 const isActive = activeStudyId === study.id;
                 return (
                   <button
                     key={study.id}
-                    onClick={() => {
-                      setActiveStudyId(study.id);
-                    }}
-                    className={`p-3 text-center rounded-xl border font-semibold font-display text-[11px] sm:text-xs transition-all cursor-pointer flex items-center justify-center min-h-[48px] ${
+                    onClick={() => setActiveStudyId(study.id)}
+                    className={`p-3 text-center rounded-xl border font-semibold font-display text-[11px] sm:text-xs transition-all cursor-pointer flex flex-col justify-center min-h-[48px] h-full shadow-sm ${
                       isActive
                         ? 'bg-sage-500 border-sage-500 text-white shadow-sm font-bold'
-                        : 'bg-gray-55 text-gray-600 border-gray-100 hover:bg-gray-100 hover:text-wood-950'
+                        : 'bg-white text-gray-655 border-gray-200 hover:border-sage-400 hover:bg-sage-50/10 hover:text-wood-950'
                     }`}
                   >
-                    <span>
+                    <span className="line-clamp-2 leading-snug">
                       {study.title.replace('Case Study', '').replace('Map', '').trim()}
                     </span>
                   </button>
                 );
               })}
             </div>
+
           </div>
 
           {/* Details block */}
-          <div className="pt-4 border-t border-gray-100 space-y-6 animate-fadeIn bg-white">
+          <div className="pt-2 space-y-5 animate-fadeIn bg-white">
             <div>
               <h4 className="font-display font-bold text-lg text-wood-950 leading-snug">{activeStudy.title}</h4>
               <p className="text-xs text-gray-550 mt-1 leading-relaxed font-sans">{activeStudy.description}</p>
+              <p className="text-xs text-gray-600 mt-2.5 leading-relaxed font-sans border-l-2 border-sage-200 pl-3">{activeStudy.background}</p>
             </div>
 
             {/* Campaign targets progress slider */}
-            <div className="space-y-2 border-t border-gray-100 pt-4 font-sans">
+            <div className="bg-sage-50/40 border border-sage-100/60 rounded-xl p-4.5 font-sans">
               <div className="flex justify-between items-center text-xs font-mono">
-                <span className="text-gray-400">Campaign Target Records:</span>
-                <strong className="text-wood-900">{activeStudy.metricsGoal.target}</strong>
-              </div>
-              <div className="flex justify-between items-center text-xs font-mono">
-                <span className="text-gray-400">Current observations submitted:</span>
-                <strong className="text-sage-500 font-bold">{activeStudy.metricsGoal.current}</strong>
+                <span className="text-gray-650 font-semibold flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-sage-600 animate-pulse" />
+                  Progress Goal:
+                </span>
+                <span className="text-gray-550 font-medium">
+                  <span className="text-sage-700 font-bold">{activeStudy.metricsGoal.current}</span>
+                  <span className="text-gray-400"> / </span>
+                  <span className="text-wood-950 font-bold">{activeStudy.metricsGoal.target}</span>
+                </span>
               </div>
 
-              <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden mt-1.5 border border-gray-200">
-                <div
-                  className="bg-sage-500 h-full rounded-full transition-all duration-1000"
-                  style={{ width: `${activeStudy.metricsGoal.progress}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] font-mono text-gray-400 font-bold">
-                <span>0% START</span>
-                <span>{activeStudy.metricsGoal.progress}% COMPLETED</span>
-                <span>100% MET</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 leading-relaxed font-sans text-xs">
-                <h5 className="font-semibold text-wood-900 font-display text-xs mb-1">Background</h5>
-                <p className="text-gray-550 leading-relaxed font-sans mt-1">{activeStudy.background}</p>
-              </div>
-              
-              <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-100 leading-relaxed font-sans text-xs">
-                <h5 className="font-semibold text-wood-900 flex items-center gap-1 font-display text-xs mb-1">
-                  <MapPin className="w-3.5 h-3.5 text-sage-500" /> Field Guidance
-                </h5>
-                <p className="text-gray-550 leading-relaxed font-sans mt-1">{activeStudy.guidance}</p>
-              </div>
-            </div>
-
-            {activeStudy.featuredRegions && (
-              <div className="space-y-2 pt-2 border-t border-gray-100 font-sans text-xs">
-                <span className="text-[10px] font-semibold text-gray-400 font-mono block uppercase tracking-wider">Featured Gaps Sectors to Target:</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {activeStudy.featuredRegions.map((region, idx) => (
-                    <span key={idx} className="bg-sage-50/50 text-sage-700 text-[10px] px-2.5 py-1 rounded border border-sage-100 font-semibold inline-block">
-                      {region}
-                    </span>
-                  ))}
+              <div className="relative pt-6 pb-2">
+                <div className="relative h-2 bg-gray-100 rounded-full border border-gray-200/50">
+                  <div
+                    className="relative bg-sage-600 h-full rounded-full transition-all duration-1000"
+                    style={{ width: `${activeStudy.metricsGoal.progress}%` }}
+                  >
+                    {/* Tick + Floating % Complete label at the right edge of filled progress */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-center translate-x-1/2">
+                      {/* % Complete above the tick */}
+                      <span className="absolute bottom-3.5 bg-sage-700 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shadow-xs whitespace-nowrap">
+                        {activeStudy.metricsGoal.progress}%
+                      </span>
+                      {/* Visual Tick */}
+                      <div className="w-1.5 h-4.5 bg-sage-800 rounded-full border border-white shadow-3xs" />
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
+
           </div>
         </div>
 
@@ -170,14 +178,14 @@ export default function BlitzGapView() {
         <div className="space-y-4">
           
           {/* Accordion 2: Standings Leaderboard */}
-          <div className="bg-white border border-gray-150 rounded-2xl overflow-hidden card-shadow">
+          <div className="bg-white rounded-2xl overflow-hidden shadow-md shadow-gray-300">
             <button
               onClick={() => setIsLeaderboardOpen(!isLeaderboardOpen)}
               className="w-full flex justify-between items-center px-6 py-4.5 text-left font-display font-semibold text-wood-950 transition-colors hover:bg-gray-50 focus:outline-none"
             >
               <div className="flex items-center gap-2 text-sm sm:text-base cursor-pointer">
                 <Users className="w-4.5 h-4.5 text-sage-600" />
-                <span>National Grid Climbers Leaderboard &bull; Standings</span>
+                <span className="font-bold text-wood-950">National Leaderboard Standings</span>
               </div>
               <div>
                 {isLeaderboardOpen ? (
@@ -191,79 +199,88 @@ export default function BlitzGapView() {
             {isLeaderboardOpen && (
               <div className="p-4 sm:p-5 border-t border-gray-100 bg-white space-y-4 animate-fadeIn font-sans">
                 
-                {/* iNat-like Leaderboard metric tabs selection row */}
-                <div className="flex flex-wrap gap-1 bg-gray-50 p-1 rounded-xl">
+                {/* Visual Hint for Multiple Leaderboards */}
+                <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider font-mono">
+                  Select a category to view standings:
+                </div>
+
+                {/* Prominent Leaderboard Tabs Selector */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pb-2">
                   {/* Tab 1: Observations */}
-                  <div
+                  <button
                     onClick={() => setLeaderboardTab('obs')}
-                    className={`flex-1 min-w-[100px] py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${leaderboardTab === 'obs' ? 'bg-white text-sage-600 shadow-3xs border border-sage-100/30' : 'text-gray-500 hover:text-gray-900 bg-transparent border border-transparent'}`}
+                    className={`p-3 text-center rounded-xl border font-bold font-display text-xs transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      leaderboardTab === 'obs'
+                        ? 'bg-sage-600 border-sage-600 text-white shadow-md shadow-sage-200/50'
+                        : 'bg-gray-50 text-gray-650 border-gray-200 hover:border-sage-400 hover:bg-sage-50/10 hover:text-wood-950'
+                    }`}
                   >
                     <span>Observations</span>
-                    <span
+                    <Info 
+                      className={`w-3.5 h-3.5 cursor-pointer shrink-0 ${leaderboardTab === 'obs' ? 'text-sage-100' : 'text-gray-400 hover:text-sage-600'}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedMetric(expandedMetric === 'obs' ? null : 'obs');
                       }}
-                      className={`w-4 h-4 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${expandedMetric === 'obs' ? 'text-sage-600 bg-sage-100' : 'text-gray-400 hover:text-sage-600 hover:bg-gray-100'}`}
-                      title="Show details"
-                    >
-                      <Info className="w-3 h-3" />
-                    </span>
-                  </div>
+                    />
+                  </button>
 
                   {/* Tab 2: Species */}
-                  <div
+                  <button
                     onClick={() => setLeaderboardTab('species')}
-                    className={`flex-1 min-w-[100px] py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${leaderboardTab === 'species' ? 'bg-white text-sage-600 shadow-3xs border border-sage-100/30' : 'text-gray-500 hover:text-gray-900 bg-transparent border border-transparent'}`}
+                    className={`p-3 text-center rounded-xl border font-bold font-display text-xs transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      leaderboardTab === 'species'
+                        ? 'bg-sage-600 border-sage-600 text-white shadow-md shadow-sage-200/50'
+                        : 'bg-gray-50 text-gray-655 border-gray-200 hover:border-sage-400 hover:bg-sage-50/10 hover:text-wood-950'
+                    }`}
                   >
                     <span>Species</span>
-                    <span
+                    <Info 
+                      className={`w-3.5 h-3.5 cursor-pointer shrink-0 ${leaderboardTab === 'species' ? 'text-sage-100' : 'text-gray-400 hover:text-sage-600'}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedMetric(expandedMetric === 'species' ? null : 'species');
                       }}
-                      className={`w-4 h-4 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${expandedMetric === 'species' ? 'text-sage-600 bg-sage-100' : 'text-gray-400 hover:text-sage-600 hover:bg-gray-100'}`}
-                      title="Show details"
-                    >
-                      <Info className="w-3 h-3" />
-                    </span>
-                  </div>
+                    />
+                  </button>
 
                   {/* Tab 3: New Gridcells */}
-                  <div
+                  <button
                     onClick={() => setLeaderboardTab('grid')}
-                    className={`flex-1 min-w-[110px] py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${leaderboardTab === 'grid' ? 'bg-white text-sage-600 shadow-3xs border border-sage-100/30' : 'text-gray-500 hover:text-gray-900 bg-transparent border border-transparent'}`}
+                    className={`p-3 text-center rounded-xl border font-bold font-display text-xs transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      leaderboardTab === 'grid'
+                        ? 'bg-sage-600 border-sage-600 text-white shadow-md shadow-sage-200/50'
+                        : 'bg-gray-50 text-gray-655 border-gray-200 hover:border-sage-400 hover:bg-sage-50/10 hover:text-wood-950'
+                    }`}
                   >
                     <span>New Gridcells</span>
-                    <span
+                    <Info 
+                      className={`w-3.5 h-3.5 cursor-pointer shrink-0 ${leaderboardTab === 'grid' ? 'text-sage-100' : 'text-gray-400 hover:text-sage-600'}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedMetric(expandedMetric === 'grid' ? null : 'grid');
                       }}
-                      className={`w-4 h-4 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${expandedMetric === 'grid' ? 'text-sage-600 bg-sage-100' : 'text-gray-400 hover:text-sage-600 hover:bg-gray-100'}`}
-                      title="Show details"
-                    >
-                      <Info className="w-3 h-3" />
-                    </span>
-                  </div>
+                    />
+                  </button>
 
                   {/* Tab 4: Species Novelty */}
-                  <div
+                  <button
                     onClick={() => setLeaderboardTab('novelty')}
-                    className={`flex-1 min-w-[110px] py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${leaderboardTab === 'novelty' ? 'bg-white text-sage-600 shadow-3xs border border-sage-100/30' : 'text-gray-500 hover:text-gray-900 bg-transparent border border-transparent'}`}
+                    className={`p-3 text-center rounded-xl border font-bold font-display text-xs transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      leaderboardTab === 'novelty'
+                        ? 'bg-sage-600 border-sage-600 text-white shadow-md shadow-sage-200/50'
+                        : 'bg-gray-50 text-gray-655 border-gray-200 hover:border-sage-400 hover:bg-sage-50/10 hover:text-wood-950'
+                    }`}
                   >
                     <span>Species Novelty</span>
-                    <span
+                    <Info 
+                      className={`w-3.5 h-3.5 cursor-pointer shrink-0 ${leaderboardTab === 'novelty' ? 'text-sage-100' : 'text-gray-400 hover:text-sage-600'}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedMetric(expandedMetric === 'novelty' ? null : 'novelty');
                       }}
-                      className={`w-4 h-4 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${expandedMetric === 'novelty' ? 'text-sage-600 bg-sage-100' : 'text-gray-400 hover:text-sage-600 hover:bg-gray-100'}`}
-                      title="Show details"
-                    >
-                      <Info className="w-3 h-3" />
-                    </span>
-                  </div>
+                    />
+                  </button>
                 </div>
 
                 {/* Inline Small Explanation explaining metrics with small Info Icons, visible ONLY if expandedMetric is active */}

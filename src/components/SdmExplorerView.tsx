@@ -58,7 +58,7 @@ export default function SdmExplorerView() {
       )}
 
       {/* Taxon filter and single species search combobox */}
-      <section className="bg-white border border-gray-150 rounded-2xl p-5 card-shadow space-y-4 relative z-20">
+      <section className="bg-white rounded-2xl p-5 shadow-md shadow-gray-300 space-y-4 relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-end">
           
           {/* Taxon categories filter buttons */}
@@ -158,7 +158,7 @@ export default function SdmExplorerView() {
 
       {/* Selected Species attributes metadata and download triggers below the map */}
       {selectedSpecies && (
-        <section className="bg-white border border-gray-100 rounded-2xl p-6 space-y-5 card-shadow animate-fadeIn">
+        <section className="bg-white rounded-2xl p-6 space-y-5 shadow-md shadow-gray-300 animate-fadeIn">
           <div className="flex justify-between items-start gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
@@ -213,7 +213,7 @@ export default function SdmExplorerView() {
       )}
 
       {/* Map Specifics & Methodology Detail inside collapsible dropdown below the map */}
-      <section className="bg-white border border-gray-100 rounded-2xl overflow-hidden card-shadow">
+      <section className="bg-white rounded-2xl overflow-hidden shadow-md shadow-gray-300">
         <button
           onClick={() => setIsMethodologyOpen(!isMethodologyOpen)}
           className="w-full flex justify-between items-center px-6 py-4.5 text-left font-display font-semibold text-wood-950 transition-colors hover:bg-gray-50 focus:outline-none"
