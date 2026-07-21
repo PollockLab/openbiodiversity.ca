@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Award } from 'lucide-react';
+import { useLanguage } from '../lib/LanguageContext';
 
 export default function BioblitzAnalyzer() {
+  const { lang } = useLanguage();
   const [url, setUrl] = useState<string>('');
 
   return (
@@ -15,10 +17,12 @@ export default function BioblitzAnalyzer() {
           </div>
           <div>
             <h3 className="font-display font-semibold text-base text-wood-950 leading-snug">
-              BioBlitz Analyser
+              {lang === 'EN' ? "BioBlitz Analyser" : "Analyseur de BioBlitz"}
             </h3>
-            <p className="text-xs text-gray-500 font-sans mt-0.5">
-              Input your iNaturalist project link to calculate spatial complete targets and volunteer priorities.
+            <p className="text-xs text-gray-550 font-sans mt-0.5">
+              {lang === 'EN' 
+                ? "Input your iNaturalist project link to calculate spatial complete targets and volunteer priorities."
+                : "Saisissez le lien de votre projet iNaturalist pour calculer les cibles spatiales complètes et les priorités des bénévoles."}
             </p>
           </div>
         </div>
@@ -40,7 +44,7 @@ export default function BioblitzAnalyzer() {
               !url.trim() ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'cursor-pointer shadow-3xs'
             }`}
           >
-            Analyse
+            {lang === 'EN' ? "Analyse" : "Analyser"}
           </a>
         </div>
 

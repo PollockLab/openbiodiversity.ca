@@ -13,8 +13,18 @@ import BlitzGapView from './components/BlitzGapView';
 import AboutView from './components/AboutView';
 import ContactView from './components/ContactView';
 import BioblitzStandaloneView from './components/BioblitzStandaloneView';
+import { LanguageProvider, useLanguage } from './lib/LanguageContext';
 
 export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  );
+}
+
+function AppContent() {
+  const { lang } = useLanguage();
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined' && window.location.hash) {
       const hash = window.location.hash.replace('#', '');
@@ -113,4 +123,5 @@ export default function App() {
     </div>
   );
 }
+
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Globe, Map as MapIcon, Layers, Eye, Shield, Compass, Navigation, RefreshCw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Globe, Map as MapIcon, Layers, Eye, Shield, Compass, Navigation, RefreshCw, ZoomIn, ZoomOut, Maximize2, Minimize2, X } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -66,6 +66,40 @@ const getMapStyle = (type: 'topo' | 'satellite' | 'terrain') => {
   };
 };
 
+function isPointInCanada(lat: number, lng: number): boolean {
+  // Broad bounding box of Canada
+  if (lng < -141.0 || lng > -52.6) return false;
+  if (lat < 41.6 || lat > 83.2) return false;
+
+  // West of the Great Lakes (approx -123 to -95 W): the border is at lat 49 N
+  if (lng >= -123 && lng <= -95 && lat < 49.0) return false;
+
+  // Between -95 and -89 W (Minnesota, Ontario border): border is around 48 N
+  if (lng > -95 && lng <= -89 && lat < 48.0) return false;
+
+  // Between -89 and -83 W (Michigan, Huron border): border is around 46 N
+  if (lng > -89 && lng <= -83 && lat < 46.0) return false;
+
+  // Between -83 and -75 W (Ontario/NY border): border is around 42-45 N
+  if (lng > -83 && lng <= -75) {
+    if (lng <= -80 && lat < 42.0) return false;
+    if (lng > -80 && lat < 43.5) return false;
+  }
+
+  // Between -75 and -67 W (Quebec/Maine border): border goes up to 47.4 N
+  if (lng > -75 && lng <= -67) {
+    if (lng <= -71.5 && lat < 45.0) return false;
+    // Maine border peaks at about 47.46 N at about -69 W
+    if (lng > -71.5 && lng <= -68 && lat < 47.2) return false;
+    if (lng > -68 && lat < 45.5) return false;
+  }
+
+  // New Brunswick/Nova Scotia:
+  if (lng > -67 && lat < 43.0) return false;
+
+  return true;
+}
+
 interface GlobePlaceholderProps {
   mode: 'useful-layers' | 'sdm-explorer' | 'blitz-gap';
   selectedLayerId?: string; // for useful layers
@@ -103,6 +137,31 @@ export default function GlobePlaceholder({
   const [simulationActive, setSimulationActive] = useState<boolean>(true);
   const [opacity, setOpacity] = useState<number>(85);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Esc key down listener to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullscreen(false);
+      }
+    };
+    if (isFullscreen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
+
+  // Handle map resize on fullscreen transition
+  useEffect(() => {
+    if (mapRef.current) {
+      setTimeout(() => {
+        mapRef.current?.resize();
+      }, 100);
+    }
+  }, [isFullscreen]);
   
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -129,20 +188,28 @@ export default function GlobePlaceholder({
     const seed = `${mode}-${selectedLayerIds ? selectedLayerIds.join(',') : selectedLayerId}-${selectedSdmId}-${activeTaxonGroup}-${selectedCaseStudyId}`;
     const strengthMultiplier = seedRandom(seed);
 
-    for (let i = 0; i < 45; i++) {
-      const rVal = seedRandom(`${seed}-${i}`);
+    let attempts = 0;
+    while (cells.length < 40 && attempts < 150) {
+      const rVal = seedRandom(`${seed}-${attempts}`);
       // restrict to a broad Canada boundary shape
       const x = 15 + (rVal * 70); // 15% to 85% width
-      const y = 20 + (seedRandom(`y-${seed}-${i}`) * 55); // 20% to 75% height
+      const y = 20 + (seedRandom(`y-${seed}-${attempts}`) * 55); // 20% to 75% height
 
-      cells.push({
-        x,
-        y,
-        val: Math.floor(rVal * 100),
-        kba: selectedCaseStudyId === 'kbas' && rVal > 0.5,
-        park: selectedCaseStudyId === 'bc-parks' && rVal > 0.4 && x < 40,
-        gap: rVal > 0.75 // Data Gap (Red highlighted)
-      });
+      const lng = -140 + (x / 100) * 85;
+      const lat = 83 - (y / 100) * 38;
+
+      attempts++;
+
+      if (isPointInCanada(lat, lng)) {
+        cells.push({
+          x,
+          y,
+          val: Math.floor(rVal * 100),
+          kba: selectedCaseStudyId === 'kbas' && rVal > 0.5,
+          park: selectedCaseStudyId === 'bc-parks' && rVal > 0.4 && x < 40,
+          gap: rVal > 0.75 // Data Gap (Red highlighted)
+        });
+      }
     }
     setGridCells(cells);
   }, [mode, selectedLayerId, selectedSdmId, activeTaxonGroup, selectedCaseStudyId]);
@@ -212,7 +279,8 @@ export default function GlobePlaceholder({
         center: [-98, 60], // Centered beautifully over Canada
         zoom: 3.2,
         maxZoom: 14,
-        minZoom: 1.5,
+        minZoom: 2.5,
+        maxBounds: [[-145, 41.0], [-50, 83.5]], // strictly restrict viewport to Canada and avoid showing/panning to US points
         bearing: 0,
         pitch: 0,
         dragRotate: false, // keep it aligned but allow zoom & pan
@@ -331,14 +399,20 @@ export default function GlobePlaceholder({
 
     // Simulate an observation lookup value
     let simulatedValue = 'N/A';
-    if (mode === 'useful-layers') {
-      simulatedValue = `${(Math.sin((x + y) * 0.05) * 50 + 50).toFixed(1)} index score`;
-    } else if (mode === 'sdm-explorer') {
-      const probability = (Math.sin(x * 0.03) * Math.cos(y * 0.04) * 0.5 + 0.5) * 100;
-      simulatedValue = `${biasCorrected ? '(Bias-Corrected) ' : ''}Prob: ${probability.toFixed(0)}%`;
-    } else if (mode === 'blitz-gap') {
-      const density = Math.floor((Math.sin(x * 0.01) * Math.cos(y * 0.02) * 0.5 + 0.5) * 45);
-      simulatedValue = density === 0 ? 'Data Gap Sector (0 records)' : `${density} iNat obs/km²`;
+    const isCanada = isPointInCanada(pLat, pLng);
+
+    if (isCanada) {
+      if (mode === 'useful-layers') {
+        simulatedValue = `${(Math.sin((x + y) * 0.05) * 50 + 50).toFixed(1)} index score`;
+      } else if (mode === 'sdm-explorer') {
+        const probability = (Math.sin(x * 0.03) * Math.cos(y * 0.04) * 0.5 + 0.5) * 100;
+        simulatedValue = `${biasCorrected ? '(Bias-Corrected) ' : ''}Prob: ${probability.toFixed(0)}%`;
+      } else if (mode === 'blitz-gap') {
+        const density = Math.floor((Math.sin(x * 0.01) * Math.cos(y * 0.02) * 0.5 + 0.5) * 45);
+        simulatedValue = density === 0 ? 'Data Gap Sector (0 records)' : `${density} iNat obs/km²`;
+      }
+    } else {
+      simulatedValue = 'Outside Study Area (No Data)';
     }
 
     setHoveredCoords({
@@ -441,7 +515,11 @@ export default function GlobePlaceholder({
   };
 
   return (
-    <div className="flex flex-col bg-white border border-sage-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className={`flex flex-col bg-white overflow-hidden transition-all duration-300 ${
+      isFullscreen 
+        ? 'fixed inset-0 z-50 rounded-none w-screen h-screen' 
+        : 'border border-sage-200 rounded-2xl shadow-sm'
+    }`}>
       {/* Map Control bar */}
       <div className="bg-sage-50/70 border-b border-sage-100 py-2.5 px-5 flex flex-wrap justify-between items-center gap-3">
         {mode === 'sdm-explorer' && onBiasCorrectedChange && onShowUncertaintyChange ? (
@@ -484,6 +562,18 @@ export default function GlobePlaceholder({
         {/* Toggle layers controls */}
         <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-sage-200">
           <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-1 px-1.5 text-wood-600 hover:text-wood-900 hover:bg-gray-50/80 rounded-md transition-all cursor-pointer flex items-center justify-center border-none"
+            title={isFullscreen ? "Exit Fullscreen (Esc)" : "Expand Map to Fullscreen"}
+          >
+            {isFullscreen ? (
+              <X className="w-4 h-4 text-red-600 font-bold" />
+            ) : (
+              <Maximize2 className="w-4 h-4 text-sage-600 font-medium" />
+            )}
+          </button>
+          <div className="w-[1px] h-4 bg-gray-200" />
+          <button
             onClick={() => setMapType('topo')}
             className={`px-3 py-1 text-xs rounded-md transition-all ${mapType === 'topo' ? 'bg-sage-500 text-white font-medium shadow-sm' : 'text-wood-600 hover:text-wood-900'}`}
           >
@@ -506,7 +596,7 @@ export default function GlobePlaceholder({
 
       {/* Main visualization frame */}
       <div 
-        className={`relative flex-1 min-h-[600px] select-none overflow-hidden transition-colors duration-300 ${
+        className={`relative flex-1 ${isFullscreen ? 'min-h-0' : 'min-h-[600px]'} select-none overflow-hidden transition-colors duration-300 ${
           mapType === 'satellite' ? 'bg-[#0b171c]' : 'bg-[#eef4f0]'
         }`} 
         ref={mapContainerRef} 
