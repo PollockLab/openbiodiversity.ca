@@ -1,7 +1,6 @@
 {
   "name": "Remix: openbiodiversity.ca",
-  "description": "Canada\u0027s spatial biodiversity portal, home to useful conservation layers, species distributions, and Blitz the Gap 2026.",
-  "requestFramePermissions": [],
+  "description": "Canada's spatial biodiversity portal, home to useful conservation layers, species distributions, and Blitz the Gap 2026.",
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
