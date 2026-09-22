@@ -29,9 +29,9 @@ const getGreyStyle = (isRetina: boolean) => ({
       type: 'raster' as const,
       // Request retina high-density @2x tiles on High-DPI screens to remove blurriness/bad quality
       tiles: [
-        `https://a.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}${isRetina ? '@2x' : ''}.png`,
-        `https://b.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}${isRetina ? '@2x' : ''}.png`,
-        `https://c.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}${isRetina ? '@2x' : ''}.png`,
+        `https://a.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}${isRetina ? '@2x' : ''}.png?key=cb1_3tuk_1_95daa98bdc35dbf25c43bc46`,
+        `https://b.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}${isRetina ? '@2x' : ''}.png?key=cb1_3tuk_1_95daa98bdc35dbf25c43bc46`,
+        `https://c.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}${isRetina ? '@2x' : ''}.png?key=cb1_3tuk_1_95daa98bdc35dbf25c43bc46`,
       ],
       tileSize: 256,
       attribution:
