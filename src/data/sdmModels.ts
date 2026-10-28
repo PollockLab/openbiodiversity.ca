@@ -4,6 +4,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-caribou',
     scientificName: 'Rangifer tarandus caribou',
+    ecccSlug: 'rangifer-tarandus',
     commonName: 'Woodland Caribou (Boreal Population)',
     commonNameFr: 'Caribou des bois (population boréale)',
     taxonGroup: 'Mammal',
@@ -19,6 +20,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-wolverine',
     scientificName: 'Gulo gulo',
+    ecccSlug: 'gulo-gulo',
     commonName: 'Wolverine (Western Population)',
     commonNameFr: "Carcajou (population de l'Ouest)",
     taxonGroup: 'Mammal',
@@ -34,6 +36,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-lynx',
     scientificName: 'Lynx canadensis',
+    ecccSlug: 'lynx-canadensis',
     commonName: 'Canada Lynx',
     commonNameFr: 'Lynx du Canada',
     taxonGroup: 'Mammal',
@@ -49,6 +52,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-grizzly',
     scientificName: 'Ursus arctos horribilis',
+    ecccSlug: 'ursus-arctos',
     commonName: 'Grizzly Bear',
     commonNameFr: 'Ours grizzly',
     taxonGroup: 'Mammal',
@@ -64,6 +68,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-marten',
     scientificName: 'Martes americana',
+    ecccSlug: 'martes-americana',
     commonName: 'American Marten',
     commonNameFr: "Martre d'Amérique",
     taxonGroup: 'Mammal',
@@ -79,6 +84,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-warbler',
     scientificName: 'Cardellina canadensis',
+    ecccSlug: 'cardellina-canadensis',
     commonName: 'Canada Warbler',
     commonNameFr: 'Paruline du Canada',
     taxonGroup: 'Bird',
@@ -94,6 +100,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-flycatcher',
     scientificName: 'Contopus cooperi',
+    ecccSlug: 'contopus-cooperi',
     commonName: 'Olive-sided Flycatcher',
     commonNameFr: 'Moucherolle à côtés olive',
     taxonGroup: 'Bird',
@@ -109,6 +116,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-owl',
     scientificName: 'Strix occidentalis caurina',
+    ecccSlug: 'strix-occidentalis',
     commonName: 'Northern Spotted Owl',
     commonNameFr: 'Chouette tachetée du Nord',
     taxonGroup: 'Bird',
@@ -124,6 +132,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-chickadee',
     scientificName: 'Poecile hudsonicus',
+    ecccSlug: 'poecile-hudsonicus',
     commonName: 'Boreal Chickadee',
     commonNameFr: 'Mésange à tête brune',
     taxonGroup: 'Bird',
@@ -139,6 +148,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-garter',
     scientificName: 'Thamnophis sirtalis parietalis',
+    ecccSlug: 'thamnophis-sirtalis',
     commonName: 'Red-sided Garter Snake',
     commonNameFr: 'Couleuvre rayée à flancs rouges',
     taxonGroup: 'Reptile',
@@ -169,6 +179,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-woodfrog',
     scientificName: 'Lithobates sylvaticus',
+    ecccSlug: 'lithobates-sylvaticus',
     commonName: 'Wood Frog',
     commonNameFr: 'Grenouille des bois',
     taxonGroup: 'Amphibian',
@@ -184,6 +195,7 @@ export const sdmSpeciesList: SDMModel[] = [
   {
     id: 'sdm-chorusfrog',
     scientificName: 'Pseudacris maculata',
+    ecccSlug: 'pseudacris-maculata',
     commonName: 'Boreal Chorus Frog',
     commonNameFr: 'Rainette faux-grillon boréale',
     taxonGroup: 'Amphibian',

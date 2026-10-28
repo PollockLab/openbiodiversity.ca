@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import { Compass, Info, FileDown, Layers, HelpCircle, CheckCircle, Sliders, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { sdmSpeciesList } from '../data/sdmModels';
-import GlobePlaceholder from './GlobePlaceholder';
+import SdmMap from './SdmMap';
+import { sdmCogUrl } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
 export default function SdmExplorerView() {
   const { lang } = useLanguage();
   const [selectedSdmId, setSelectedSdmId] = useState<string>('sdm-caribou');
-  
-  // Custom Toggles
-  const [biasCorrected, setBiasCorrected] = useState<boolean>(true);
-  const [showUncertainty, setShowUncertainty] = useState<boolean>(false);
   
   // Collapsible accordion state
   const [isMethodologyOpen, setIsMethodologyOpen] = useState<boolean>(false);
@@ -33,14 +30,6 @@ export default function SdmExplorerView() {
   const selectedSpecies = sdmSpeciesList.find(s => s.id === selectedSdmId) || sdmSpeciesList[0];
   const selectedName = lang === 'FR' && selectedSpecies?.commonNameFr ? selectedSpecies.commonNameFr : selectedSpecies?.commonName;
 
-  const handleDownloadModel = (name: string, isBias: boolean) => {
-    if (lang === 'EN') {
-      alert(`Downloading 1km GeoTIFF raster for: ${name}\nEnsemble Type: ${isBias ? 'Bias-Corrected Ensemble' : 'Raw Machine-Learning Ensemble'}\nClipped boundary bounds: IUCN + occupancy constraints.`);
-    } else {
-      alert(`Téléchargement de la trame GeoTIFF de 1 km pour : ${name}\nType d'ensemble : ${isBias ? 'Ensemble corrigé des biais' : 'Ensemble brut d\'apprentissage automatique'}\nLimites de coupure : UICN + contraintes d'occupation.`);
-    }
-  };
-
   return (
     <div className="space-y-8 pb-16">
       
@@ -60,15 +49,19 @@ export default function SdmExplorerView() {
 
       {/* Map visualizer fully spanning horizontally */}
       <section className="w-full">
-        <GlobePlaceholder
-          mode="sdm-explorer"
-          selectedSdmId={selectedSdmId}
-          activeTaxonGroup={selectedSpecies?.taxonGroup}
-          biasCorrected={biasCorrected}
-          onBiasCorrectedChange={setBiasCorrected}
-          showUncertainty={showUncertainty}
-          onShowUncertaintyChange={setShowUncertainty}
-        />
+        <select
+          value={selectedSdmId}
+          onChange={e => setSelectedSdmId(e.target.value)}
+          aria-label={lang === 'EN' ? 'Species' : 'Espèce'}
+          className="mb-3 w-full sm:w-auto bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-sans text-wood-900"
+        >
+          {sdmSpeciesList.map(s => (
+            <option key={s.id} value={s.id}>
+              {(lang === 'FR' && s.commonNameFr ? s.commonNameFr : s.commonName)} ({s.scientificName})
+            </option>
+          ))}
+        </select>
+        <SdmMap slug={selectedSpecies?.ecccSlug} />
       </section>
 
       {/* Selected Species attributes metadata and download triggers below the map */}
@@ -127,12 +120,13 @@ export default function SdmExplorerView() {
               <span className="w-2 h-2 rounded-full bg-sage-500 inline-block" />
               {lang === 'EN' ? "Bias Corrected Model GeoTIFF Available" : "Modèle GeoTIFF corrigé des biais disponible"}
             </div>
-            <button
-              onClick={() => handleDownloadModel(selectedName || '', biasCorrected)}
-              className="btn-primary text-white text-xs font-semibold uppercase tracking-widest px-5 py-3 rounded-full transition-all shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-sage-600 border border-transparent"
+            <a
+              href={selectedSpecies.ecccSlug ? sdmCogUrl(selectedSpecies.ecccSlug) : undefined}
+              download
+              className={`btn-primary text-white text-xs font-semibold uppercase tracking-widest px-5 py-3 rounded-full transition-all shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-sage-600 border border-transparent ${selectedSpecies.ecccSlug ? '' : 'opacity-40 pointer-events-none'}`}
             >
               <FileDown className="w-4 h-4" /> {lang === 'EN' ? "Download 1km Raster GIS Data (.TIF)" : "Télécharger les données SIG matricielles de 1 km (.TIF)"}
-            </button>
+            </a>
           </div>
         </section>
       )}
