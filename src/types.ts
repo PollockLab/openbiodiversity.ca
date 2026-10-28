@@ -23,6 +23,7 @@ export interface BiodiversityLayer {
 export interface SDMModel {
   id: string;
   scientificName: string;
+  ecccSlug?: string; // ECCC_2026 SDM COG slug, absent = no model yet
   commonName: string;
   commonNameFr?: string;
   taxonGroup: 'Mammal' | 'Bird' | 'Reptile' | 'Amphibian' | 'Butterfly' | 'Tree' | 'Plant';

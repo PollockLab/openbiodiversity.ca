@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 // Styles dynamically configured with high-DPI retina tiles for crisp quality and globe projection
-const getGreyStyle = (isRetina: boolean) => ({
+export const getGreyStyle = (isRetina: boolean) => ({
   version: 8 as const,
   projection: { type: 'globe' as const },
   sources: {
