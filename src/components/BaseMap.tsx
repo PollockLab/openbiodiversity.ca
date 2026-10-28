@@ -379,10 +379,11 @@ export default function BaseMap() {
       });
 
       // 5. Add Reference Borders and Labels Layer on top of the heatmaps
+      // ryan edit below 28thoct to add api key for carto basemap.
       const isRetina = typeof window !== 'undefined' && window.devicePixelRatio >= 2;
       const overlayUrl = isSatellite
         ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
-        : `https://a.basemaps.cartocdn.com/rastertiles/light_only_labels/{z}/{x}/{y}${isRetina ? '@2x' : ''}.png`;
+        : `https://a.basemaps.cartocdn.com/rastertiles/light_only_labels/{z}/{x}/{y}${isRetina ? '@2x' : ''}.png?key=cb1_3tuk_1_95daa98bdc35dbf25c43bc46`;
 
       map.addSource(sourceOverlayId, {
         type: 'raster',
