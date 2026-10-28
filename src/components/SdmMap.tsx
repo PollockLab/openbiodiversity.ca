@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
@@ -8,11 +8,10 @@ import { useLanguage } from '../lib/LanguageContext';
 const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
 
-export default function SdmMap({ slug }: { slug?: string }) {
+export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string; period: SdmPeriod; onPeriodChange: (p: SdmPeriod) => void }) {
   const { lang } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const [period, setPeriod] = useState<SdmPeriod>('current');
   const slugRef = useRef(slug);
   const periodRef = useRef(period);
   const langRef = useRef(lang);
@@ -72,7 +71,7 @@ export default function SdmMap({ slug }: { slug?: string }) {
       <div ref={containerRef} className="w-full h-full" />
       <div className="absolute top-3 left-3 flex rounded-lg overflow-hidden shadow-sm text-xs font-sans border border-gray-200">
         {([['current', lang === 'EN' ? 'Current (1980-2010)' : 'Actuel (1980-2010)'], ['2100', lang === 'EN' ? '2100 projection (2071-2100)' : 'Projection 2100 (2071-2100)']] as const).map(([k, label]) => (
-          <button key={k} onClick={() => setPeriod(k)} aria-pressed={period === k}
+          <button key={k} onClick={() => onPeriodChange(k)} aria-pressed={period === k}
             className={`px-3 py-1.5 cursor-pointer ${period === k ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
             {label}
           </button>

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Compass, Info, FileDown, Layers, HelpCircle, CheckCircle, Sliders, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { sdmSpeciesList } from '../data/sdmModels';
 import SdmMap from './SdmMap';
-import { sdmCogUrl } from '../data/sdmSource';
+import { sdmCogUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
 export default function SdmExplorerView() {
   const { lang } = useLanguage();
   const [selectedSdmId, setSelectedSdmId] = useState<string>('sdm-caribou');
+  const [period, setPeriod] = useState<SdmPeriod>('current');
   
   // Collapsible accordion state
   const [isMethodologyOpen, setIsMethodologyOpen] = useState<boolean>(false);
@@ -61,7 +62,7 @@ export default function SdmExplorerView() {
             </option>
           ))}
         </select>
-        <SdmMap slug={selectedSpecies?.ecccSlug} />
+        <SdmMap slug={selectedSpecies?.ecccSlug} period={period} onPeriodChange={setPeriod} />
       </section>
 
       {/* Selected Species attributes metadata and download triggers below the map */}
@@ -121,7 +122,7 @@ export default function SdmExplorerView() {
               {lang === 'EN' ? "Bias Corrected Model GeoTIFF Available" : "Modèle GeoTIFF corrigé des biais disponible"}
             </div>
             <a
-              href={selectedSpecies.ecccSlug ? sdmCogUrl(selectedSpecies.ecccSlug) : undefined}
+              href={selectedSpecies.ecccSlug ? sdmCogUrl(selectedSpecies.ecccSlug, period) : undefined}
               download
               className={`btn-primary text-white text-xs font-semibold uppercase tracking-widest px-5 py-3 rounded-full transition-all shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-sage-600 border border-transparent ${selectedSpecies.ecccSlug ? '' : 'opacity-40 pointer-events-none'}`}
             >
