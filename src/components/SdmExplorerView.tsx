@@ -117,16 +117,12 @@ export default function SdmExplorerView() {
           </div>
 
           <div className="border-t border-gray-100 pt-5 flex flex-wrap justify-between items-center gap-4">
-            <div className="text-[11px] text-gray-400 font-mono flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-sage-500 inline-block" />
-              {lang === 'EN' ? "Bias Corrected Model GeoTIFF Available" : "Modèle GeoTIFF corrigé des biais disponible"}
-            </div>
             <a
               href={selectedSpecies.ecccSlug ? sdmCogUrl(selectedSpecies.ecccSlug, period) : undefined}
               download
               className={`btn-primary text-white text-xs font-semibold uppercase tracking-widest px-5 py-3 rounded-full transition-all shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-sage-600 border border-transparent ${selectedSpecies.ecccSlug ? '' : 'opacity-40 pointer-events-none'}`}
             >
-              <FileDown className="w-4 h-4" /> {lang === 'EN' ? "Download 1km Raster GIS Data (.TIF)" : "Télécharger les données SIG matricielles de 1 km (.TIF)"}
+              <FileDown className="w-4 h-4" /> {lang === 'EN' ? "Download Raster (.TIF)" : "Télécharger le raster (.TIF)"}
             </a>
           </div>
         </section>
