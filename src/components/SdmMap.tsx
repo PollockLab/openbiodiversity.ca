@@ -9,6 +9,8 @@ const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
 // The models are fit with a ~500 km buffer into Mexico; only Canada and the US are shown. Fill matches the basemap land.
 const MASK = 'mexico-mask';
+const RANGE = 'iucn-range';
+const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 
 export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string; period: SdmPeriod; onPeriodChange: (p: SdmPeriod) => void }) {
   const { lang } = useLanguage();
@@ -36,6 +38,8 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
     map.on('load', () => {
       map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}mexico.geojson` });
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': '#fbfaf8' } });
+      map.addSource(RANGE, { type: 'geojson', data: EMPTY });
+      map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#e8590c', 'line-width': 1.5, 'line-opacity': 0.9 } });
     });
 
     map.on('click', async (e) => {
@@ -72,6 +76,23 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
     return () => { map.off('load', apply); };
   }, [slug, period]);
 
+  // IUCN outline is period-independent: reload on species change only
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      const src = map.getSource(RANGE) as maplibregl.GeoJSONSource | undefined;
+      if (!src) return;
+      src.setData(EMPTY);
+      if (!slug) return;
+      // flatgeobuf + proj4 load lazily so they stay out of the main bundle
+      import('../data/sdmRange').then((m) => m.fetchSdmRange(slug)).then((fc) => { if (mapRef.current === map && slugRef.current === slug) src.setData(fc); })
+        .catch((e) => console.warn('IUCN range unavailable', e));
+    };
+    if (map.getSource(RANGE)) apply(); else map.once('load', apply);
+    return () => { map.off('load', apply); };
+  }, [slug]);
+
   return (
     <div className="relative w-full h-[520px] rounded-2xl overflow-hidden card-shadow border border-gray-100">
       <div ref={containerRef} className="w-full h-full" />
@@ -83,6 +104,13 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
           </button>
         ))}
       </div>
+      {period === '2100' && (
+        <p className="absolute top-12 left-3 max-w-xs bg-white/90 rounded-lg px-3 py-2 text-xs font-sans text-gray-700 shadow-sm pointer-events-none">
+          {lang === 'EN'
+            ? 'Not clipped to the known range, unlike the current map. Suitability outside today\'s range may not be a range gain.'
+            : "Contrairement à la carte actuelle, non découpée selon l'aire connue. La convenance hors de l'aire actuelle n'est pas forcément un gain d'aire."}
+        </p>
+      )}
       <div className="absolute bottom-6 left-3 bg-white/90 rounded-lg px-3 py-2 text-[10px] font-mono text-gray-600 shadow-sm pointer-events-none">
         <div className="mb-1">{period === '2100'
           ? (lang === 'EN' ? 'Ensemble, 2071-2100, 1 km (unclipped)' : 'Ensemble, 2071-2100, 1 km (non découpé)')
@@ -94,6 +122,10 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
               <span>0</span>
               <span>{lang === 'EN' ? 'Suitability (%)' : 'Convenance (%)'}</span>
               <span>100</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-block w-6 border-t" style={{ borderColor: '#e8590c' }} />
+              <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
           </>
         )}

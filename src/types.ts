@@ -29,7 +29,6 @@ export interface SDMModel {
   taxonGroup: 'Mammal' | 'Bird' | 'Reptile' | 'Amphibian' | 'Butterfly' | 'Tree' | 'Plant';
   iucnStatus: string;
   resolution: string;
-  clippedBy: 'IUCN Range' | "Noah's Method" | 'KBA Boundary';
   habitatType: string;
   habitatTypeFr?: string;
   biasCorrectedAvailable: boolean;
