@@ -15,9 +15,11 @@
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "flatgeobuf": "^4.6.1",
     "lucide-react": "^0.546.0",
     "maplibre-gl": "^5.24.0",
     "motion": "^12.23.24",
+    "proj4": "^2.22.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^6.2.3"

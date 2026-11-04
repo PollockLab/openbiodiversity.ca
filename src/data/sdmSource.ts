@@ -16,3 +16,6 @@ export const sdmTileUrl = (cogUrl: string) =>
 
 export const sdmPointUrl = (cogUrl: string, lon: number, lat: number) =>
   `${TITILER_BASE}/point/${lon},${lat}?url=${encodeURIComponent(cogUrl)}`;
+
+// Expert range, one file per species; the bucket rejects Range preflights, so fetch it whole
+export const sdmRangeUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_iucn-range_NA_na_NA_NA.fgb`;
