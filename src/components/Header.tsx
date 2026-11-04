@@ -46,7 +46,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
     { id: 'home', label: lang === 'EN' ? 'Home' : 'Accueil', icon: Compass },
     { id: 'blitz-gap', label: 'Blitz the Gap 2026', icon: LogoIcon },
     { id: 'useful-layers', label: lang === 'EN' ? '10 Useful Layers' : '10 couches utiles', icon: Globe },
-    { id: 'sdm-explorer', label: lang === 'EN' ? 'SDMs (500+)' : 'SDM (500+)', icon: MapPinned },
+    { id: 'sdm-explorer', label: lang === 'EN' ? 'SDMs (1,900+)' : 'SDM (1 900+)', icon: MapPinned },
     { id: 'about', label: lang === 'EN' ? 'About' : 'À propos', icon: Info },
     { id: 'contact', label: lang === 'EN' ? 'Contact' : 'Contact', icon: Mail }
   ];

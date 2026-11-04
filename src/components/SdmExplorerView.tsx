@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Compass, Info, FileDown, Filter, Search, Layers, HelpCircle, CheckCircle, Sliders, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { loadSdmSpecies } from '../data/sdmModels';
 import { SDMModel } from '../types';
@@ -7,6 +7,13 @@ import { sdmCogUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
 const GROUPS: SDMModel['taxonGroup'][] = ['Mammal', 'Bird', 'Reptile', 'Amphibian'];
+
+const DEFAULT_SPECIES = 'rangifer-tarandus';
+const MAX_MATCHES = 50;
+// Lowercase and strip diacritics so "epervier" matches "Épervier"
+const norm = (s?: string) => (s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+// Species live in the hash as #sdm-explorer?sp=<id>; App.tsx routes on the part before "?"
+const speciesFromHash = () => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('sp') || DEFAULT_SPECIES;
 
 const IUCN_LABELS: Record<string, [string, string]> = {
   LC: ['Least Concern', 'Préoccupation mineure'],
@@ -19,20 +26,31 @@ const IUCN_LABELS: Record<string, [string, string]> = {
 
 export default function SdmExplorerView() {
   const { lang } = useLanguage();
-  const [selectedSdmId, setSelectedSdmId] = useState<string>('rangifer-tarandus');
+  const [selectedSdmId, setSelectedSdmId] = useState<string>(speciesFromHash);
   const [species, setSpecies] = useState<SDMModel[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [taxon, setTaxon] = useState<string>('All');
-  const [query, setQuery] = useState<string>('');
+  const [typed, setTyped] = useState<string | null>(null); // null = show the selected name
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const comboRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [period, setPeriod] = useState<SdmPeriod>('current');
   
   useEffect(() => {
     loadSdmSpecies()
-      .then(setSpecies)
+      .then(list => {
+        setSpecies(list);
+        setSelectedSdmId(id => (list.some(s => s.id === id) ? id : DEFAULT_SPECIES));
+      })
       .catch(e => setLoadError(String(e?.message ?? e)))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}`);
+  }, [selectedSdmId]);
 
   // Collapsible accordion state
   const [isMethodologyOpen, setIsMethodologyOpen] = useState<boolean>(false);
@@ -58,18 +76,47 @@ export default function SdmExplorerView() {
     species.forEach(s => { c[s.taxonGroup] = (c[s.taxonGroup] || 0) + 1; });
     return c;
   }, [species]);
+  const index = useMemo(() => species.map(s => ({ s, names: [s.commonName, s.commonNameFr, s.scientificName].map(norm).filter(Boolean) })), [species]);
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return species.filter(s =>
-      (taxon === 'All' || s.taxonGroup === taxon) &&
-      (!q || [s.commonName, s.commonNameFr, s.scientificName].some(n => n?.toLowerCase().includes(q))));
-  }, [species, taxon, query]);
+    const q = norm(typed ?? '').trim();
+    const rows = index.filter(r => (taxon === 'All' || r.s.taxonGroup === taxon) && (!q || r.names.some(n => n.includes(q))));
+    if (!q) return rows.map(r => r.s);
+    const rank = (r: typeof rows[number]) => (r.names.some(n => n.startsWith(q)) ? 0 : 1);
+    return rows.map(r => ({ r, k: rank(r) })).sort((x, y) => x.k - y.k).map(x => x.r.s);
+  }, [index, taxon, typed]);
+  const shown = filtered.slice(0, MAX_MATCHES);
 
   const selectedSpecies = species.find(s => s.id === selectedSdmId);
-  // Keep the map's species selectable even when the filters exclude it
-  const options = selectedSpecies && !filtered.includes(selectedSpecies) ? [selectedSpecies, ...filtered] : filtered;
+  const choose = (s: SDMModel) => {
+    setSelectedSdmId(s.id);
+    setOpen(false);
+    setTyped(null);
+    setActive(-1);
+  };
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) { setOpen(true); return; }
+      if (!shown.length) return;
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      setActive(i => (i + step + shown.length) % shown.length);
+    } else if (e.key === 'Enter') {
+      if (open && shown.length) { e.preventDefault(); choose(shown[Math.max(active, 0)]); }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setTyped(null);
+      setActive(-1);
+    }
+  };
+  const onBlur = (e: React.FocusEvent) => {
+    if (comboRef.current?.contains(e.relatedTarget as Node)) return;
+    setOpen(false);
+    setTyped(null);
+    setActive(-1);
+  };
   const iucn = selectedSpecies?.iucnStatus ? IUCN_LABELS[selectedSpecies.iucnStatus] : undefined;
   const selectedName = selectedSpecies && nameOf(selectedSpecies);
+  const rawQuery = (typed ?? '').trim();
 
   return (
     <div className="space-y-8 pb-16">
@@ -110,32 +157,62 @@ export default function SdmExplorerView() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="search"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder={lang === 'EN' ? 'Search by common or scientific name…' : 'Rechercher par nom vernaculaire ou scientifique…'}
-                aria-label={lang === 'EN' ? 'Search species' : 'Rechercher une espèce'}
-                className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm font-sans text-wood-900"
-              />
-            </div>
-            <select
-              value={selectedSdmId}
-              onChange={e => setSelectedSdmId(e.target.value)}
+          <div ref={comboRef} onBlur={onBlur} className="relative w-full sm:max-w-xl font-sans">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              ref={inputRef}
+              type="text"
+              role="combobox"
+              aria-expanded={open}
+              aria-controls="sdm-listbox"
+              aria-autocomplete="list"
+              aria-activedescendant={open && active >= 0 ? `sdm-opt-${active}` : undefined}
+              aria-label={lang === 'EN' ? 'Search species' : 'Rechercher une espèce'}
+              autoComplete="off"
               disabled={loading}
-              aria-label={lang === 'EN' ? 'Species' : 'Espèce'}
-              className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-sans text-wood-900"
-            >
-              {loading && <option>{lang === 'EN' ? 'Loading…' : 'Chargement…'}</option>}
-              {options.map(s => (
-                <option key={s.id} value={s.id}>
-                  {nameOf(s)} ({s.scientificName})
-                </option>
-              ))}
-            </select>
+              value={loading ? (lang === 'EN' ? 'Loading…' : 'Chargement…') : (typed ?? selectedName ?? '')}
+              onChange={e => { setTyped(e.target.value); setOpen(true); setActive(-1); }}
+              onFocus={e => { setOpen(true); e.currentTarget.select(); }}
+              onClick={() => setOpen(true)}
+              onKeyDown={onKeyDown}
+              placeholder={lang === 'EN' ? 'Search by common or scientific name…' : 'Rechercher par nom vernaculaire ou scientifique…'}
+              className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-9 py-2 text-sm font-sans text-wood-900 truncate"
+            />
+            <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {open && (
+              <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                <ul id="sdm-listbox" role="listbox" aria-label={lang === 'EN' ? 'Species' : 'Espèce'} className="max-h-72 overflow-y-auto">
+                  {shown.map((s, i) => (
+                    <li
+                      key={s.id}
+                      id={`sdm-opt-${i}`}
+                      role="option"
+                      aria-selected={i === active}
+                      ref={el => { if (i === active) el?.scrollIntoView({ block: 'nearest' }); }}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => { choose(s); inputRef.current?.focus(); }}
+                      onMouseMove={() => active !== i && setActive(i)}
+                      className={`px-3 py-2 cursor-pointer flex items-baseline justify-between gap-3 ${i === active ? 'bg-sage-50' : ''} ${s.id === selectedSdmId ? 'font-semibold' : ''}`}
+                    >
+                      <span className="min-w-0 truncate text-sm text-wood-900">
+                        {nameOf(s)} <span className="italic font-mono text-xs text-gray-500">{s.scientificName}</span>
+                      </span>
+                      <span className="shrink-0 text-[10px] uppercase tracking-wider text-gray-400 font-mono">{translateGroup(s.taxonGroup)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {!shown.length && (
+                  <p role="status" className="px-3 py-3 text-sm text-gray-500">
+                    {lang === 'EN' ? `No species match "${rawQuery}"` : `Aucune espèce ne correspond à « ${rawQuery} »`}
+                  </p>
+                )}
+                {filtered.length > MAX_MATCHES && (
+                  <p className="px-3 py-1.5 text-xs text-gray-400 border-t border-gray-100">
+                    {lang === 'EN' ? `Showing ${MAX_MATCHES} of ${filtered.length}` : `${MAX_MATCHES} sur ${filtered.length}`}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <SdmMap slug={selectedSpecies?.ecccSlug ?? selectedSdmId} period={period} onPeriodChange={setPeriod} />
