@@ -27,3 +27,6 @@ dist-ssr
 
 # other
 old_stuff/
+
+# GBIF vernacular-name cache
+scripts/.gbif-cache.json

@@ -1,10 +1,10 @@
 import { SDMModel } from '../types';
 
-type ManifestRow = { slug: string; sci: string; common?: string; class: string; status?: string };
+type ManifestRow = { slug: string; sci: string; common?: string; fr?: string; class: string; status?: string };
 
 // Manifest (public/sdm-species.json) is the source of truth; these only add French names and habitat text
-const overrides: Record<string, Pick<SDMModel, 'commonNameFr' | 'habitatType' | 'habitatTypeFr'>> = {
-  'rangifer-tarandus': { commonNameFr: 'Caribou', habitatType: 'Mature Coniferous Forest & Peatlands', habitatTypeFr: 'Forêt de conifères matures et tourbières' },
+const overrides: Record<string, Partial<Pick<SDMModel, 'commonName' | 'commonNameFr' | 'habitatType' | 'habitatTypeFr'>>> = {
+  'rangifer-tarandus': { commonName: 'Caribou', commonNameFr: 'Caribou', habitatType: 'Mature Coniferous Forest & Peatlands', habitatTypeFr: 'Forêt de conifères matures et tourbières' },
   'gulo-gulo': { commonNameFr: 'Carcajou', habitatType: 'Alpine Tundra & Boreal Wilderness', habitatTypeFr: 'Toundra alpine et région sauvage boréale' },
   'lynx-canadensis': { commonNameFr: 'Lynx du Canada', habitatType: 'Dense Boreal Shrublands', habitatTypeFr: 'Arbustes boréaux denses' },
   'ursus-arctos': { commonNameFr: 'Ours brun', habitatType: 'Subalpine Meadow, Shrublands & Riparian', habitatTypeFr: 'Prairies subalpines, arbustes et zones riveraines' },
@@ -29,6 +29,7 @@ export async function loadSdmSpecies(): Promise<SDMModel[]> {
     ecccSlug: r.slug,
     scientificName: r.sci,
     commonName: r.common ?? r.sci,
+    commonNameFr: r.fr,
     taxonGroup: TAXON[r.class],
     iucnStatus: r.status,
     ...overrides[r.slug],
