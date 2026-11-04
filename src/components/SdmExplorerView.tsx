@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
-import { Compass, Info, FileDown, Layers, HelpCircle, CheckCircle, Sliders, Shield, ChevronDown, ChevronUp } from 'lucide-react';
-import { sdmSpeciesList } from '../data/sdmModels';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Compass, Info, FileDown, Filter, Search, Layers, HelpCircle, CheckCircle, Sliders, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { loadSdmSpecies } from '../data/sdmModels';
+import { SDMModel } from '../types';
 import SdmMap from './SdmMap';
 import { sdmCogUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
+const GROUPS: SDMModel['taxonGroup'][] = ['Mammal', 'Bird', 'Reptile', 'Amphibian'];
+
+const IUCN_LABELS: Record<string, [string, string]> = {
+  LC: ['Least Concern', 'Préoccupation mineure'],
+  NT: ['Near Threatened', 'Quasi menacée'],
+  VU: ['Vulnerable', 'Vulnérable'],
+  EN: ['Endangered', 'En danger'],
+  CR: ['Critically Endangered', 'En danger critique'],
+  DD: ['Data Deficient', 'Données insuffisantes'],
+};
+
 export default function SdmExplorerView() {
   const { lang } = useLanguage();
-  const [selectedSdmId, setSelectedSdmId] = useState<string>('sdm-caribou');
+  const [selectedSdmId, setSelectedSdmId] = useState<string>('rangifer-tarandus');
+  const [species, setSpecies] = useState<SDMModel[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [taxon, setTaxon] = useState<string>('All');
+  const [query, setQuery] = useState<string>('');
   const [period, setPeriod] = useState<SdmPeriod>('current');
   
+  useEffect(() => {
+    loadSdmSpecies()
+      .then(setSpecies)
+      .catch(e => setLoadError(String(e?.message ?? e)))
+      .finally(() => setLoading(false));
+  }, []);
+
   // Collapsible accordion state
   const [isMethodologyOpen, setIsMethodologyOpen] = useState<boolean>(false);
 
@@ -28,8 +52,24 @@ export default function SdmExplorerView() {
     }
   };
 
-  const selectedSpecies = sdmSpeciesList.find(s => s.id === selectedSdmId) || sdmSpeciesList[0];
-  const selectedName = lang === 'FR' && selectedSpecies?.commonNameFr ? selectedSpecies.commonNameFr : selectedSpecies?.commonName;
+  const nameOf = (s: SDMModel) => (lang === 'FR' && s.commonNameFr ? s.commonNameFr : s.commonName);
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { All: species.length };
+    species.forEach(s => { c[s.taxonGroup] = (c[s.taxonGroup] || 0) + 1; });
+    return c;
+  }, [species]);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return species.filter(s =>
+      (taxon === 'All' || s.taxonGroup === taxon) &&
+      (!q || [s.commonName, s.commonNameFr, s.scientificName].some(n => n?.toLowerCase().includes(q))));
+  }, [species, taxon, query]);
+
+  const selectedSpecies = species.find(s => s.id === selectedSdmId);
+  // Keep the map's species selectable even when the filters exclude it
+  const options = selectedSpecies && !filtered.includes(selectedSpecies) ? [selectedSpecies, ...filtered] : filtered;
+  const iucn = selectedSpecies?.iucnStatus ? IUCN_LABELS[selectedSpecies.iucnStatus] : undefined;
+  const selectedName = selectedSpecies && nameOf(selectedSpecies);
 
   return (
     <div className="space-y-8 pb-16">
@@ -50,19 +90,55 @@ export default function SdmExplorerView() {
 
       {/* Map visualizer fully spanning horizontally */}
       <section className="w-full">
-        <select
-          value={selectedSdmId}
-          onChange={e => setSelectedSdmId(e.target.value)}
-          aria-label={lang === 'EN' ? 'Species' : 'Espèce'}
-          className="mb-3 w-full sm:w-auto bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-sans text-wood-900"
-        >
-          {sdmSpeciesList.map(s => (
-            <option key={s.id} value={s.id}>
-              {(lang === 'FR' && s.commonNameFr ? s.commonNameFr : s.commonName)} ({s.scientificName})
-            </option>
-          ))}
-        </select>
-        <SdmMap slug={selectedSpecies?.ecccSlug} period={period} onPeriodChange={setPeriod} />
+        {loadError && (
+          <p role="alert" className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 font-sans">
+            {lang === 'EN' ? `Could not load the species list (${loadError}).` : `Impossible de charger la liste des espèces (${loadError}).`}
+          </p>
+        )}
+        <div className="mb-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-2 font-sans">
+            <span className="flex items-center gap-1 text-xs text-gray-500 mr-1">
+              <Filter className="w-3.5 h-3.5" /> {lang === 'EN' ? 'Taxon:' : 'Taxon :'}
+            </span>
+            {['All', ...GROUPS].map(g => (
+              <button
+                key={g}
+                onClick={() => setTaxon(g)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${taxon === g ? 'bg-sage-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+              >
+                {translateGroup(g)} ({counts[g] || 0})
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder={lang === 'EN' ? 'Search by common or scientific name…' : 'Rechercher par nom vernaculaire ou scientifique…'}
+                aria-label={lang === 'EN' ? 'Search species' : 'Rechercher une espèce'}
+                className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm font-sans text-wood-900"
+              />
+            </div>
+            <select
+              value={selectedSdmId}
+              onChange={e => setSelectedSdmId(e.target.value)}
+              disabled={loading}
+              aria-label={lang === 'EN' ? 'Species' : 'Espèce'}
+              className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-sans text-wood-900"
+            >
+              {loading && <option>{lang === 'EN' ? 'Loading…' : 'Chargement…'}</option>}
+              {options.map(s => (
+                <option key={s.id} value={s.id}>
+                  {nameOf(s)} ({s.scientificName})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <SdmMap slug={selectedSpecies?.ecccSlug ?? selectedSdmId} period={period} onPeriodChange={setPeriod} />
       </section>
 
       {/* Selected Species attributes metadata and download triggers below the map */}
@@ -72,8 +148,6 @@ export default function SdmExplorerView() {
             <div>
               <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
                 <span>{lang === 'EN' ? "Taxonomic Class:" : "Classe taxonomique :"} {translateGroup(selectedSpecies.taxonGroup)}</span>
-                <span>&bull;</span>
-                <span>{lang === 'EN' ? "Resolution:" : "Résolution :"} {selectedSpecies.resolution === '1km Terrestrial' && lang === 'FR' ? '1km terrestre' : selectedSpecies.resolution}</span>
               </div>
               <h3 className="font-display font-semibold text-xl text-wood-900 mt-1">
                 {selectedName}
@@ -83,12 +157,15 @@ export default function SdmExplorerView() {
               </p>
             </div>
             
-            <span className="bg-amber-50 text-amber-900 text-xs px-2.5 py-1 rounded-full font-mono font-bold border border-amber-200">
-              IUCN: {selectedSpecies.iucnStatus}
-            </span>
+            {selectedSpecies.iucnStatus && (
+              <span className="bg-amber-50 text-amber-900 text-xs px-2.5 py-1 rounded-full font-mono font-bold border border-amber-200">
+                IUCN: {selectedSpecies.iucnStatus}{iucn && ` ${iucn[lang === 'EN' ? 0 : 1]}`}
+              </span>
+            )}
           </div>
 
           {/* Technical model parameters */}
+          {selectedSpecies.habitatType && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-sans">
             <div className="bg-gray-50/70 p-3 rounded-lg border border-gray-100 text-xs text-gray-500">
               <span className="block text-[10px] text-gray-400 uppercase tracking-wider font-mono">
@@ -99,12 +176,13 @@ export default function SdmExplorerView() {
               </strong>
             </div>
           </div>
+          )}
 
           <div className="border-t border-gray-100 pt-5 flex flex-wrap justify-between items-center gap-4">
             <a
-              href={selectedSpecies.ecccSlug ? sdmCogUrl(selectedSpecies.ecccSlug, period) : undefined}
+              href={sdmCogUrl(selectedSpecies.ecccSlug, period)}
               download
-              className={`btn-primary text-white text-xs font-semibold uppercase tracking-widest px-5 py-3 rounded-full transition-all shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-sage-600 border border-transparent ${selectedSpecies.ecccSlug ? '' : 'opacity-40 pointer-events-none'}`}
+              className={`btn-primary text-white text-xs font-semibold uppercase tracking-widest px-5 py-3 rounded-full transition-all shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-sage-600 border border-transparent`}
             >
               <FileDown className="w-4 h-4" /> {lang === 'EN' ? "Download Raster (.TIF)" : "Télécharger le raster (.TIF)"}
               {period === '2100' && (lang === 'EN' ? ', 2100, unclipped' : ', 2100, non découpé')}

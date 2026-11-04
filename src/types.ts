@@ -23,17 +23,13 @@ export interface BiodiversityLayer {
 export interface SDMModel {
   id: string;
   scientificName: string;
-  ecccSlug?: string; // ECCC_2026 SDM COG slug, absent = no model yet
+  ecccSlug: string; // ECCC_2026 SDM COG slug
   commonName: string;
   commonNameFr?: string;
-  taxonGroup: 'Mammal' | 'Bird' | 'Reptile' | 'Amphibian' | 'Butterfly' | 'Tree' | 'Plant';
-  iucnStatus: string;
-  resolution: string;
-  habitatType: string;
+  taxonGroup: 'Mammal' | 'Bird' | 'Reptile' | 'Amphibian';
+  iucnStatus?: string; // IUCN code (LC, NT, VU, EN, CR, DD)
+  habitatType?: string;
   habitatTypeFr?: string;
-  biasCorrectedAvailable: boolean;
-  nonBiasCorrectedAvailable: boolean;
-  uncertaintyAvailable: boolean;
 }
 
 export type ChallengeMetricType = 'Explorer' | 'Taxonomic' | 'VOI';
