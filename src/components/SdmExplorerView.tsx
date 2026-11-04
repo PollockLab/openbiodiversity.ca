@@ -42,8 +42,8 @@ export default function SdmExplorerView() {
           </h1>
           <p className="text-sm text-gray-500 mt-1 leading-relaxed font-sans">
             {lang === 'EN' 
-              ? "Explore over 500 species distribution models at 1km spatial resolution. Models are constructed using ensemble algorithms (MaxEnt, Random Forests, XGBoost) and are clipped using IUCN ranges as well as Noah's occupant-envelope method to minimize spatial over-prediction."
-              : "Explorez plus de 500 modèles de distribution d'espèces à une résolution spatiale de 1 km. Les modèles sont construits à l'aide d'algorithmes d'ensemble (MaxEnt, Random Forests, XGBoost) et sont découpés selon les aires de l'UICN ainsi que la méthode de l'enveloppe d'occupation de Noah afin de minimiser la sur-prédiction spatiale."}
+              ? "Explore species distribution models at 1 km resolution across Canada and the United States. Each map is the mean of three models (boosted regression trees, MaxEnt and random forest). Current maps (1980-2010) are clipped to each species' known range; 2100 projections are not (see Methodology)."
+              : "Explorez des modèles de distribution d'espèces à une résolution de 1 km pour le Canada et les États-Unis. Chaque carte est la moyenne de trois modèles (arbres de régression boostés, MaxEnt et forêt aléatoire). Les cartes actuelles (1980-2010) sont découpées selon l'aire connue de chaque espèce; les projections pour 2100 ne le sont pas (voir Méthodologie)."}
           </p>
         </div>
       </section>
@@ -92,26 +92,10 @@ export default function SdmExplorerView() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-sans">
             <div className="bg-gray-50/70 p-3 rounded-lg border border-gray-100 text-xs text-gray-500">
               <span className="block text-[10px] text-gray-400 uppercase tracking-wider font-mono">
-                {lang === 'EN' ? "Clipped Boundary" : "Limite de coupure"}
-              </span>
-              <strong className="text-wood-900 mt-0.5 block">
-                {selectedSpecies.clippedBy === "Noah's Method" && lang === 'FR' ? "Méthode de Noah" : selectedSpecies.clippedBy}
-              </strong>
-            </div>
-            <div className="bg-gray-50/70 p-3 rounded-lg border border-gray-100 text-xs text-gray-500">
-              <span className="block text-[10px] text-gray-400 uppercase tracking-wider font-mono">
                 {lang === 'EN' ? "Preferential Habitat" : "Habitat préférentiel"}
               </span>
               <strong className="text-wood-900 mt-0.5 block truncate" title={lang === 'FR' && selectedSpecies.habitatTypeFr ? selectedSpecies.habitatTypeFr : selectedSpecies.habitatType}>
                 {lang === 'FR' && selectedSpecies.habitatTypeFr ? selectedSpecies.habitatTypeFr : selectedSpecies.habitatType}
-              </strong>
-            </div>
-            <div className="bg-gray-50/70 p-3 rounded-lg border border-gray-100 text-xs text-gray-500">
-              <span className="block text-[10px] text-gray-400 uppercase tracking-wider font-mono">
-                {lang === 'EN' ? "Model Consistency (AUC)" : "Cohérence du modèle (AUC)"}
-              </span>
-              <strong className="text-sage-500 mt-0.5 block font-mono">
-                {lang === 'EN' ? "0.89 (High Precision)" : "0,89 (Haute précision)"}
               </strong>
             </div>
           </div>
@@ -123,6 +107,7 @@ export default function SdmExplorerView() {
               className={`btn-primary text-white text-xs font-semibold uppercase tracking-widest px-5 py-3 rounded-full transition-all shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-sage-600 border border-transparent ${selectedSpecies.ecccSlug ? '' : 'opacity-40 pointer-events-none'}`}
             >
               <FileDown className="w-4 h-4" /> {lang === 'EN' ? "Download Raster (.TIF)" : "Télécharger le raster (.TIF)"}
+              {period === '2100' && (lang === 'EN' ? ', 2100, unclipped' : ', 2100, non découpé')}
             </a>
           </div>
         </section>
@@ -152,23 +137,23 @@ export default function SdmExplorerView() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-gray-500 leading-relaxed font-sans">
               <div className="space-y-2">
                 <h5 className="font-semibold text-wood-900 flex items-center gap-1.5 font-display text-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sage-500" /> {lang === 'EN' ? "Noah's Occupancy-Envelope Method" : "Méthode de l'enveloppe d'occupation de Noah"}
+                  <span className="w-1.5 h-1.5 rounded-full bg-sage-500" /> {lang === 'EN' ? "Clipping to the known range" : "Découpage selon l'aire connue"}
                 </h5>
                 <p>
                   {lang === 'EN' 
-                    ? "Classical species distribution models tend to project species uniformly inside a wide bounding polygon overlay. Noah's Occupancy-Envelope method combines local elevation indices, land forest canopy density, and hydrological distances to clip the models. This restricts predictions purely to accessible valleys, achieving an average 34% error rate reduction in surveys."
-                    : "Les modèles classiques de distribution d'espèces ont tendance à projeter les espèces de manière uniforme à l'intérieur d'un large polygone de délimitation. La méthode de l'enveloppe d'occupation de Noah combine des indices d'altitude locaux, la densité de la canopée forestière et les distances hydrologiques pour découper les modèles. Cela limite les prédictions uniquement aux vallées accessibles, permettant d'obtenir une réduction moyenne de 34 % du taux d'erreur dans les inventaires."}
+                    ? "Models predict suitable habitat wherever the climate and landscape fit, including places the species has never been recorded. For the current period, predictions are turned down with distance from the species' known range, built from expert range maps (IUCN) and occurrence records. How fast predictions fade is fitted for each species from how far its records fall outside the expert range, and predictions far beyond that are set to zero."
+                    : "Les modèles prédisent un habitat favorable partout où le climat et le paysage conviennent, y compris là où l'espèce n'a jamais été observée. Pour la période actuelle, les prédictions sont atténuées en fonction de la distance à l'aire connue de l'espèce, établie à partir des cartes d'aires d'experts (UICN) et des mentions d'occurrence. La vitesse de cette atténuation est ajustée pour chaque espèce selon la distance de ses mentions à l'aire d'experts, et les prédictions bien au-delà sont mises à zéro."}
                 </p>
               </div>
               
               <div className="space-y-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
                 <h5 className="font-semibold text-wood-900 flex items-center gap-1.5 font-display text-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sage-500" /> {lang === 'EN' ? "Pollock Lab Specialty" : "Spécialité du laboratoire Pollock"}
+                  <span className="w-1.5 h-1.5 rounded-full bg-sage-500" /> {lang === 'EN' ? "2100 projections are not clipped" : "Les projections pour 2100 ne sont pas découpées"}
                 </h5>
                 <p>
                   {lang === 'EN'
-                    ? "Standard citizen-science datasets are heavily biased towards highways and trail networks. The Pollock Lab's specialty correction algorithm models local observer density weight tables to discount artificial cluster zones, bringing you an ecologically balanced prediction map instead of a map representing user activity density."
-                    : "Les ensembles de données de science citoyenne standard sont fortement biaisés en faveur des autoroutes et des réseaux de sentiers. L'algorithme de correction spécialisé du laboratoire Pollock modélise des tables de pondération de densité d'observateurs locaux pour ignorer les zones de regroupement artificielles, vous offrant ainsi une carte de prédiction écologiquement équilibrée au lieu d'une carte représentant la densité d'activité des utilisateurs."}
+                    ? "Expert ranges and observations describe where a species lives today, so they cannot be projected into the future. The 2071-2100 maps therefore show unclipped model output. When comparing them with the clipped current maps, suitability outside today's range in 2100 can come from the missing clip rather than a predicted range expansion."
+                    : "Les aires d'experts et les observations décrivent où vit une espèce aujourd'hui; elles ne peuvent donc pas être projetées dans le futur. Les cartes 2071-2100 montrent ainsi les sorties brutes des modèles, sans découpage. Lorsqu'on les compare aux cartes actuelles découpées, la convenance hors de l'aire actuelle en 2100 peut venir de l'absence de découpage plutôt que d'une expansion prévue de l'aire."}
                 </p>
               </div>
             </div>

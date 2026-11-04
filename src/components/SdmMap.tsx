@@ -83,6 +83,13 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
           </button>
         ))}
       </div>
+      {period === '2100' && (
+        <p className="absolute top-12 left-3 max-w-xs bg-white/90 rounded-lg px-3 py-2 text-xs font-sans text-gray-700 shadow-sm pointer-events-none">
+          {lang === 'EN'
+            ? 'Not clipped to the known range, unlike the current map. Suitability outside today\'s range may not be a range gain.'
+            : "Contrairement à la carte actuelle, non découpée selon l'aire connue. La convenance hors de l'aire actuelle n'est pas forcément un gain d'aire."}
+        </p>
+      )}
       <div className="absolute bottom-6 left-3 bg-white/90 rounded-lg px-3 py-2 text-[10px] font-mono text-gray-600 shadow-sm pointer-events-none">
         <div className="mb-1">{period === '2100'
           ? (lang === 'EN' ? 'Ensemble, 2071-2100, 1 km (unclipped)' : 'Ensemble, 2071-2100, 1 km (non découpé)')
