@@ -27,7 +27,7 @@ function AppContent() {
   const { lang } = useLanguage();
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined' && window.location.hash) {
-      const hash = window.location.hash.replace('#', '');
+      const hash = window.location.hash.replace('#', '').split('?')[0];
       const validTabs = ['home', 'useful-layers', 'sdm-explorer', 'blitz-gap', 'about', 'contact'];
       if (validTabs.includes(hash)) {
         return hash;
@@ -51,7 +51,7 @@ function AppContent() {
   // Sync activeTab to URL Hash
   React.useEffect(() => {
     if (typeof window !== 'undefined' && params.view !== 'bioblitz-analyzer') {
-      const currentHash = window.location.hash.replace('#', '');
+      const currentHash = window.location.hash.replace('#', '').split('?')[0];
       if (currentHash !== activeTab) {
         window.location.hash = activeTab;
       }
@@ -63,7 +63,7 @@ function AppContent() {
     if (params.view === 'bioblitz-analyzer') return;
 
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
+      const hash = window.location.hash.replace('#', '').split('?')[0];
       const validTabs = ['home', 'useful-layers', 'sdm-explorer', 'blitz-gap', 'about', 'contact'];
       if (validTabs.includes(hash)) {
         setActiveTab(hash);
