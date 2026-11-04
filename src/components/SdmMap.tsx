@@ -7,6 +7,8 @@ import { useLanguage } from '../lib/LanguageContext';
 
 const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
+// The models are fit with a ~500 km buffer into Mexico; only Canada and the US are shown. Fill matches the basemap land.
+const MASK = 'mexico-mask';
 
 export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string; period: SdmPeriod; onPeriodChange: (p: SdmPeriod) => void }) {
   const { lang } = useLanguage();
@@ -31,13 +33,17 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
     });
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    map.on('load', () => {
+      map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}mexico.geojson` });
+      map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': '#fbfaf8' } });
+    });
 
     map.on('click', async (e) => {
       const s = slugRef.current;
       if (!s) return;
       const fr = langRef.current === 'FR';
       let text = fr ? 'Aucune prédiction' : 'No prediction';
-      try {
+      if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {
         const res = await fetch(sdmPointUrl(sdmCogUrl(s, periodRef.current), e.lngLat.lng, e.lngLat.lat));
         if (res.ok) {
           const v = (await res.json()).values?.[0];
@@ -59,8 +65,8 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
       if (map.getLayer(LAYER)) map.removeLayer(LAYER);
       if (map.getSource(SRC)) map.removeSource(SRC);
       if (!slug) return;
-      map.addSource(SRC, { type: 'raster', tiles: [sdmTileUrl(sdmCogUrl(slug, period))], tileSize: 256, bounds: [-141.0, 41.67, -52.61, 83.11] });
-      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': 0.85 } });
+      map.addSource(SRC, { type: 'raster', tiles: [sdmTileUrl(sdmCogUrl(slug, period))], tileSize: 256, bounds: [-180, 24.4, -52.6, 83.2] });
+      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': 0.85 } }, map.getLayer(MASK) ? MASK : undefined);
     };
     if (map.isStyleLoaded()) apply(); else map.once('load', apply);
     return () => { map.off('load', apply); };

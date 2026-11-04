@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { TITILER_BASE } from '../data/sdmSource';
 import { 
   Layers, 
   Eye, 
@@ -324,14 +325,14 @@ export default function BaseMap() {
     const activeLayer = densityLayers.find(l => l.id === selectedLayerId);
     if (!activeLayer) return;
 
-    // Use Development Seed's TiTiler instance to serve the Cloud Optimized GeoTIFF on-the-fly
+    // Use Biodiversité Québec's TiTiler instance to serve the Cloud Optimized GeoTIFF on-the-fly
     // We request PNG tiles from TiTiler, mapped through the magma color scheme, rescaled to maximize pop
     // Setting rescale lower bound to 1 treats all 0 values as completely transparent, preventing black squares
     const colormap = 'magma';
     const rescale = '1,100'; // Rescale range to highlight the densities beautifully on-the-fly
 
-    const tilerUrl1km = `https://titiler.xyz/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(activeLayer.url1km)}&colormap_name=${colormap}&rescale=${rescale}&nodata=0`;
-    const tilerUrl100m = `https://titiler.xyz/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(activeLayer.url100m)}&colormap_name=${colormap}&rescale=${rescale}&nodata=0`;
+    const tilerUrl1km = `${TITILER_BASE}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(activeLayer.url1km)}&colormap_name=${colormap}&rescale=${rescale}&nodata=0`;
+    const tilerUrl100m = `${TITILER_BASE}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(activeLayer.url100m)}&colormap_name=${colormap}&rescale=${rescale}&nodata=0`;
 
     try {
       // 3. Add 1km density layer (Visible up to the transition zoom level)
