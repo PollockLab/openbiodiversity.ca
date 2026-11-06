@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
-import { sdmCogUrl, sdmTileUrl, sdmPointUrl, SdmPeriod } from '../data/sdmSource';
+import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
 const SRC = 'sdm-source';
@@ -10,10 +10,14 @@ const LAYER = 'sdm-layer';
 // The models are fit with a ~500 km buffer into Mexico; only Canada and the US are shown. Fill matches the basemap land.
 const MASK = 'mexico-mask';
 const RANGE = 'iucn-range';
+const OCC = 'gbif-occurrences';
+const OCC_IN = '#ffffff';
+const OCC_OUT = '#e64980';
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 
 export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string; period: SdmPeriod; onPeriodChange: (p: SdmPeriod) => void }) {
   const { lang } = useLanguage();
+  const [showOcc, setShowOcc] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const slugRef = useRef(slug);
@@ -40,6 +44,8 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': '#fbfaf8' } });
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#e8590c', 'line-width': 1.5, 'line-opacity': 0.9 } });
+      map.addSource(OCC, { type: 'geojson', data: EMPTY });
+      map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#1f2937', 'circle-stroke-width': 1 } });
     });
 
     map.on('click', async (e) => {
@@ -86,23 +92,53 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
       src.setData(EMPTY);
       if (!slug) return;
       // flatgeobuf + proj4 load lazily so they stay out of the main bundle
-      import('../data/sdmRange').then((m) => m.fetchSdmRange(slug)).then((fc) => { if (mapRef.current === map && slugRef.current === slug) src.setData(fc); })
+      import('../data/sdmRange').then((m) => m.fetchLaeaFgb(sdmRangeUrl(slug))).then((fc) => { if (mapRef.current === map && slugRef.current === slug) src.setData(fc); })
         .catch((e) => console.warn('IUCN range unavailable', e));
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply);
     return () => { map.off('load', apply); };
   }, [slug]);
 
+  // Occurrences load only while the toggle is on
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    let live = true;
+    const apply = () => {
+      const src = map.getSource(OCC) as maplibregl.GeoJSONSource | undefined;
+      if (!src) return;
+      src.setData(EMPTY);
+      if (!slug || !showOcc) return;
+      // Records outside the expert range are what widen the clip; without a range, points stay uncolored
+      import('../data/sdmRange').then(async (m) => {
+        const points = await m.fetchLaeaFgb(sdmOccurrenceUrl(slug));
+        const range = await m.fetchLaeaFgb(sdmRangeUrl(slug)).catch(() => null);
+        return range ? m.markInsideRange(points, range) : points;
+      }).then((fc) => { if (live && mapRef.current === map) src.setData(fc); })
+        .catch((e) => console.warn('GBIF occurrences unavailable', e));
+    };
+    if (map.getSource(OCC)) apply(); else map.once('load', apply);
+    return () => { live = false; map.off('load', apply); };
+  }, [slug, showOcc]);
+
   return (
     <div className="relative w-full h-[520px] rounded-2xl overflow-hidden card-shadow border border-gray-100">
       <div ref={containerRef} className="w-full h-full" />
-      <div className="absolute top-3 left-3 flex rounded-lg overflow-hidden shadow-sm text-xs font-sans border border-gray-200">
+      <div className="absolute top-3 left-3 right-14 flex flex-wrap gap-2 text-xs font-sans">
+      <div className="flex rounded-lg overflow-hidden shadow-sm border border-gray-200">
         {([['current', lang === 'EN' ? 'Current (1980-2010)' : 'Actuel (1980-2010)'], ['2100', lang === 'EN' ? '2100 projection (2071-2100)' : 'Projection 2100 (2071-2100)']] as const).map(([k, label]) => (
           <button key={k} onClick={() => onPeriodChange(k)} aria-pressed={period === k}
             className={`px-3 py-1.5 cursor-pointer ${period === k ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
             {label}
           </button>
         ))}
+      </div>
+      {slug && (
+        <button onClick={() => setShowOcc(v => !v)} aria-pressed={showOcc}
+          className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+          {lang === 'EN' ? 'GBIF records' : 'Mentions GBIF'}
+        </button>
+      )}
       </div>
       {period === '2100' && (
         <p className="absolute top-12 left-3 max-w-xs bg-white/90 rounded-lg px-3 py-2 text-xs font-sans text-gray-700 shadow-sm pointer-events-none">
@@ -127,6 +163,17 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
               <span className="inline-block w-6 border-t" style={{ borderColor: '#e8590c' }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
+            {showOcc && (
+              <>
+                {([[OCC_IN, lang === 'EN' ? 'GBIF record inside IUCN range' : "Mention GBIF dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'GBIF record outside it (widens the clip)' : 'Mention GBIF hors aire (élargit le découpage)']] as const).map(([c, label]) => (
+                  <div key={c} className="flex items-center gap-2 mt-1">
+                    <span className="inline-block w-6 text-center"><span className="inline-block w-1.5 h-1.5 rounded-full border border-gray-800" style={{ background: c }} /></span>
+                    <span>{label}</span>
+                  </div>
+                ))}
+                <div className="mt-1 text-gray-400">{lang === 'EN' ? 'Records of any year, 1 km grid' : 'Mentions de toutes années, grille de 1 km'}</div>
+              </>
+            )}
           </>
         )}
       </div>
