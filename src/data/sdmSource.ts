@@ -19,3 +19,6 @@ export const sdmPointUrl = (cogUrl: string, lon: number, lat: number) =>
 
 // Expert range, one file per species; the bucket rejects Range preflights, so fetch it whole
 export const sdmRangeUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_iucn-range_NA_na_NA_NA.fgb`;
+
+// GBIF records used to fit and clip the model, snapped to the 1 km grid; no date or other attributes
+export const sdmOccurrenceUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_gbif-occurrence-points-filtered_NA_na_NA_NA.fgb`;
