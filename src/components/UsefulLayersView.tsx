@@ -23,7 +23,7 @@ export default function UsefulLayersView() {
       <div className="bg-white rounded-2xl overflow-hidden shadow-md shadow-gray-300">
         <iframe
           title="10 Useful Layers Viewer"
-          src="/viewers/10-useful-layers-viewer.html"
+          src={`${import.meta.env.BASE_URL}viewers/10-useful-layers-viewer.html`}
           className="w-full border-0"
           style={{ height: '700px' }}
         />
