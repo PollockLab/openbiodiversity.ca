@@ -35,7 +35,7 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
       style: { ...getGreyStyle(isRetina), projection: { type: 'mercator' } },
       center: [-96, 58],
       zoom: 2.6,
-      attributionControl: { compact: true },
+      attributionControl: { compact: true, customAttribution: 'SDMs: Pollock Lab, <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>' },
     });
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');

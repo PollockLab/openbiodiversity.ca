@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Compass, Info, FileDown, Filter, Search, Layers, HelpCircle, CheckCircle, Sliders, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { Compass, Info, Filter, Search, Layers, HelpCircle, CheckCircle, Sliders, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { loadSdmSpecies } from '../data/sdmModels';
 import { SDMModel } from '../types';
 import SdmMap from './SdmMap';
-import { sdmCogUrl, SdmPeriod } from '../data/sdmSource';
+import { SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
 const GROUPS: SDMModel['taxonGroup'][] = ['Mammal', 'Bird', 'Reptile', 'Amphibian'];
@@ -218,7 +218,7 @@ export default function SdmExplorerView() {
         <SdmMap slug={selectedSpecies?.ecccSlug ?? selectedSdmId} period={period} onPeriodChange={setPeriod} />
       </section>
 
-      {/* Selected Species attributes metadata and download triggers below the map */}
+      {/* Selected Species attributes metadata and license below the map */}
       {selectedSpecies && (
         <section className="bg-white rounded-2xl p-6 space-y-5 shadow-md shadow-gray-300 animate-fadeIn">
           <div className="flex justify-between items-start gap-4 flex-wrap">
@@ -255,16 +255,11 @@ export default function SdmExplorerView() {
           </div>
           )}
 
-          <div className="border-t border-gray-100 pt-5 flex flex-wrap justify-between items-center gap-4">
-            <a
-              href={sdmCogUrl(selectedSpecies.ecccSlug, period)}
-              download
-              className={`btn-primary text-white text-xs font-semibold uppercase tracking-widest px-5 py-3 rounded-full transition-all shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-sage-600 border border-transparent`}
-            >
-              <FileDown className="w-4 h-4" /> {lang === 'EN' ? "Download Raster (.TIF)" : "Télécharger le raster (.TIF)"}
-              {period === '2100' && (lang === 'EN' ? ', 2100, unclipped' : ', 2100, non découpé')}
-            </a>
-          </div>
+          <p className="border-t border-gray-100 pt-5 text-xs text-gray-500 font-sans">
+            {lang === 'EN' ? 'Models by the Pollock Lab, licensed under ' : 'Modèles du laboratoire Pollock, sous licence '}
+            <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline hover:text-sage-600">CC BY-NC 4.0</a>
+            {lang === 'EN' ? '. Downloads will be available once the layers are published.' : '. Le téléchargement sera offert une fois les couches publiées.'}
+          </p>
         </section>
       )}
 
