@@ -165,13 +165,12 @@ export default function SdmMap({ slug, period, onPeriodChange }: { slug?: string
             </div>
             {showOcc && (
               <>
-                {([[OCC_IN, lang === 'EN' ? 'GBIF record inside IUCN range' : "Mention GBIF dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'GBIF record outside it (widens the clip)' : 'Mention GBIF hors aire (élargit le découpage)']] as const).map(([c, label]) => (
+                {([[OCC_IN, lang === 'EN' ? 'Records inside IUCN range' : "Observations dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'Records outside IUCN range' : "Observations hors de l'aire UICN"]] as const).map(([c, label]) => (
                   <div key={c} className="flex items-center gap-2 mt-1">
                     <span className="inline-block w-6 text-center"><span className="inline-block w-1.5 h-1.5 rounded-full border border-gray-800" style={{ background: c }} /></span>
                     <span>{label}</span>
                   </div>
                 ))}
-                <div className="mt-1 text-gray-400">{lang === 'EN' ? 'Records of any year, 1 km grid' : 'Mentions de toutes années, grille de 1 km'}</div>
               </>
             )}
           </>
