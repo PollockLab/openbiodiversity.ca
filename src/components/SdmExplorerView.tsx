@@ -1,17 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Compass, Info, Filter, Search, Layers, HelpCircle, CheckCircle, Sliders, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Compass, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
 import { loadSdmSpecies } from '../data/sdmModels';
 import { SDMModel } from '../types';
 import SdmMap from './SdmMap';
+import SdmSidebar from './SdmSidebar';
 import { SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
-const GROUPS: SDMModel['taxonGroup'][] = ['Mammal', 'Bird', 'Reptile', 'Amphibian'];
-
 const DEFAULT_SPECIES = 'rangifer-tarandus';
-const MAX_MATCHES = 50;
-// Lowercase and strip diacritics so "epervier" matches "Épervier"
-const norm = (s?: string) => (s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 // Species live in the hash as #sdm-explorer?sp=<id>; App.tsx routes on the part before "?"
 const speciesFromHash = () => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('sp') || DEFAULT_SPECIES;
 
@@ -30,14 +26,10 @@ export default function SdmExplorerView() {
   const [species, setSpecies] = useState<SDMModel[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [taxon, setTaxon] = useState<string>('All');
-  const [typed, setTyped] = useState<string | null>(null); // null = show the selected name
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
-  const comboRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const [period, setPeriod] = useState<SdmPeriod>('current');
-  
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   useEffect(() => {
     loadSdmSpecies()
       .then(list => {
@@ -52,71 +44,27 @@ export default function SdmExplorerView() {
     window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}`);
   }, [selectedSdmId]);
 
+  // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
+  useEffect(() => {
+    if (!isExpanded) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsExpanded(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isExpanded]);
+
   // Collapsible accordion state
   const [isMethodologyOpen, setIsMethodologyOpen] = useState<boolean>(false);
 
   const translateGroup = (grp: string) => {
     if (lang === 'EN') return grp;
-    switch (grp) {
-      case 'All': return 'Tous';
-      case 'Mammal': return 'Mammifère';
-      case 'Bird': return 'Oiseau';
-      case 'Reptile': return 'Reptile';
-      case 'Amphibian': return 'Amphibien';
-      case 'Butterfly': return 'Papillon';
-      case 'Tree': return 'Arbre';
-      case 'Plant': return 'Plante';
-      default: return grp;
-    }
+    return ({ Mammal: 'Mammifère', Bird: 'Oiseau', Reptile: 'Reptile', Amphibian: 'Amphibien' } as Record<string, string>)[grp] ?? grp;
   };
 
   const nameOf = (s: SDMModel) => (lang === 'FR' && s.commonNameFr ? s.commonNameFr : s.commonName);
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { All: species.length };
-    species.forEach(s => { c[s.taxonGroup] = (c[s.taxonGroup] || 0) + 1; });
-    return c;
-  }, [species]);
-  const index = useMemo(() => species.map(s => ({ s, names: [s.commonName, s.commonNameFr, s.scientificName].map(norm).filter(Boolean) })), [species]);
-  const filtered = useMemo(() => {
-    const q = norm(typed ?? '').trim();
-    const rows = index.filter(r => (taxon === 'All' || r.s.taxonGroup === taxon) && (!q || r.names.some(n => n.includes(q))));
-    if (!q) return rows.map(r => r.s);
-    const rank = (r: typeof rows[number]) => (r.names.some(n => n.startsWith(q)) ? 0 : 1);
-    return rows.map(r => ({ r, k: rank(r) })).sort((x, y) => x.k - y.k).map(x => x.r.s);
-  }, [index, taxon, typed]);
-  const shown = filtered.slice(0, MAX_MATCHES);
 
   const selectedSpecies = species.find(s => s.id === selectedSdmId);
-  const choose = (s: SDMModel) => {
-    setSelectedSdmId(s.id);
-    setOpen(false);
-    setTyped(null);
-    setActive(-1);
-  };
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (!open) { setOpen(true); return; }
-      if (!shown.length) return;
-      const step = e.key === 'ArrowDown' ? 1 : -1;
-      setActive(i => (i + step + shown.length) % shown.length);
-    } else if (e.key === 'Enter') {
-      if (open && shown.length) { e.preventDefault(); choose(shown[Math.max(active, 0)]); }
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-      setTyped(null);
-      setActive(-1);
-    }
-  };
-  const onBlur = (e: React.FocusEvent) => {
-    if (comboRef.current?.contains(e.relatedTarget as Node)) return;
-    setOpen(false);
-    setTyped(null);
-    setActive(-1);
-  };
   const iucn = selectedSpecies?.iucnStatus ? IUCN_LABELS[selectedSpecies.iucnStatus] : undefined;
   const selectedName = selectedSpecies && nameOf(selectedSpecies);
-  const rawQuery = (typed ?? '').trim();
 
   return (
     <div className="space-y-8 pb-16">
@@ -135,87 +83,35 @@ export default function SdmExplorerView() {
         </div>
       </section>
 
-      {/* Map visualizer fully spanning horizontally */}
-      <section className="w-full">
-        {loadError && (
-          <p role="alert" className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 font-sans">
-            {lang === 'EN' ? `Could not load the species list (${loadError}).` : `Impossible de charger la liste des espèces (${loadError}).`}
-          </p>
+      {loadError && (
+        <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 font-sans">
+          {lang === 'EN' ? `Could not load the species list (${loadError}).` : `Impossible de charger la liste des espèces (${loadError}).`}
+        </p>
+      )}
+
+      {/* Map with the species sidebar floating over it; expand mode fills the screen */}
+      <section className={isExpanded
+        ? 'fixed inset-0 z-50 w-screen h-screen bg-white'
+        : 'relative w-full h-[640px] sm:h-[680px] rounded-2xl overflow-hidden card-shadow border border-gray-200 bg-white'}>
+        {!isSidebarOpen && (
+          <button type="button" onClick={() => setIsSidebarOpen(true)}
+            title={lang === 'EN' ? 'Open species sidebar' : 'Ouvrir le panneau des espèces'}
+            aria-label={lang === 'EN' ? 'Open species sidebar' : 'Ouvrir le panneau des espèces'}
+            className="absolute top-3 left-3 z-30 w-8 h-8 bg-white/95 hover:bg-white rounded-lg shadow-md border border-gray-200 cursor-pointer flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-sage-500">
+            <ChevronRight className="w-4 h-4 text-sage-700" />
+          </button>
         )}
-        <div className="mb-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-2 font-sans">
-            <span className="flex items-center gap-1 text-xs text-gray-500 mr-1">
-              <Filter className="w-3.5 h-3.5" /> {lang === 'EN' ? 'Taxon:' : 'Taxon :'}
-            </span>
-            {['All', ...GROUPS].map(g => (
-              <button
-                key={g}
-                onClick={() => setTaxon(g)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${taxon === g ? 'bg-sage-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-              >
-                {translateGroup(g)} ({counts[g] || 0})
-              </button>
-            ))}
-          </div>
-          <div ref={comboRef} onBlur={onBlur} className="relative w-full sm:max-w-xl font-sans">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              ref={inputRef}
-              type="text"
-              role="combobox"
-              aria-expanded={open}
-              aria-controls="sdm-listbox"
-              aria-autocomplete="list"
-              aria-activedescendant={open && active >= 0 ? `sdm-opt-${active}` : undefined}
-              aria-label={lang === 'EN' ? 'Search species' : 'Rechercher une espèce'}
-              autoComplete="off"
-              disabled={loading}
-              value={loading ? (lang === 'EN' ? 'Loading…' : 'Chargement…') : (typed ?? selectedName ?? '')}
-              onChange={e => { setTyped(e.target.value); setOpen(true); setActive(-1); }}
-              onFocus={e => { setOpen(true); e.currentTarget.select(); }}
-              onClick={() => setOpen(true)}
-              onKeyDown={onKeyDown}
-              placeholder={lang === 'EN' ? 'Search by common or scientific name…' : 'Rechercher par nom vernaculaire ou scientifique…'}
-              className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-9 py-2 text-sm font-sans text-wood-900 truncate"
-            />
-            <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            {open && (
-              <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                <ul id="sdm-listbox" role="listbox" aria-label={lang === 'EN' ? 'Species' : 'Espèce'} className="max-h-72 overflow-y-auto">
-                  {shown.map((s, i) => (
-                    <li
-                      key={s.id}
-                      id={`sdm-opt-${i}`}
-                      role="option"
-                      aria-selected={i === active}
-                      ref={el => { if (i === active) el?.scrollIntoView({ block: 'nearest' }); }}
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={() => { choose(s); inputRef.current?.focus(); }}
-                      onMouseMove={() => active !== i && setActive(i)}
-                      className={`px-3 py-2 cursor-pointer flex items-baseline justify-between gap-3 ${i === active ? 'bg-sage-50' : ''} ${s.id === selectedSdmId ? 'font-semibold' : ''}`}
-                    >
-                      <span className="min-w-0 truncate text-sm text-wood-900">
-                        {nameOf(s)} <span className="italic font-mono text-xs text-gray-500">{s.scientificName}</span>
-                      </span>
-                      <span className="shrink-0 text-[10px] uppercase tracking-wider text-gray-400 font-mono">{translateGroup(s.taxonGroup)}</span>
-                    </li>
-                  ))}
-                </ul>
-                {!shown.length && (
-                  <p role="status" className="px-3 py-3 text-sm text-gray-500">
-                    {lang === 'EN' ? `No species match "${rawQuery}"` : `Aucune espèce ne correspond à « ${rawQuery} »`}
-                  </p>
-                )}
-                {filtered.length > MAX_MATCHES && (
-                  <p className="px-3 py-1.5 text-xs text-gray-400 border-t border-gray-100">
-                    {lang === 'EN' ? `Showing ${MAX_MATCHES} of ${filtered.length}` : `${MAX_MATCHES} sur ${filtered.length}`}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+        <div className={`absolute inset-y-0 left-0 z-20 w-72 sm:w-[310px] md:w-[350px] transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <SdmSidebar lang={lang} species={species} loading={loading} selectedId={selectedSdmId} onSelect={setSelectedSdmId} onCollapse={() => setIsSidebarOpen(false)} />
         </div>
-        <SdmMap slug={selectedSpecies?.ecccSlug ?? selectedSdmId} period={period} onPeriodChange={setPeriod} />
+        <SdmMap
+          slug={selectedSpecies?.ecccSlug ?? selectedSdmId}
+          period={period}
+          onPeriodChange={setPeriod}
+          isExpanded={isExpanded}
+          onToggleExpand={() => setIsExpanded(v => !v)}
+          isSidebarOpen={isSidebarOpen}
+        />
       </section>
 
       {/* Selected Species attributes metadata and license below the map */}
