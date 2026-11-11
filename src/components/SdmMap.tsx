@@ -8,8 +8,8 @@ import { useLanguage } from '../lib/LanguageContext';
 
 const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
-// The models are fit with a ~500 km buffer into Mexico; only Canada and the US are shown. Fill matches the basemap land.
-const MASK = 'mexico-mask';
+// The models are fit with a ~500 km buffer south of the US border; only Canada and the US are shown. Fill matches the basemap land; a sea-colored coastal band hides raster pixels past the Natural Earth coast.
+const MASK = 'outside-ca-us-mask';
 const RANGE = 'iucn-range';
 const OCC = 'gbif-occurrences';
 const OCC_IN = '#ffffff';
@@ -57,8 +57,8 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
     mapRef.current = map;
     map.setPadding({ left: sidebarRef.current ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 });
     map.on('load', () => {
-      map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}mexico.geojson` });
-      map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': '#fbfaf8' } });
+      map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}outside-ca-us.geojson` });
+      map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#e8590c', 'line-width': 1.5, 'line-opacity': 0.9 } });
       map.addSource(OCC, { type: 'geojson', data: EMPTY });
