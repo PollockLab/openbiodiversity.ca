@@ -7,8 +7,8 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      // Pages serves the site from https://pollocklab.github.io/openbiodiversity.ca/
-      base: '/openbiodiversity.ca/',
+      // Pages serves the site from the custom domain root (public/CNAME)
+      base: '/',
       server: {
         port: 3000,
         host: '0.0.0.0',
