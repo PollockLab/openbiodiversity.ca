@@ -38,6 +38,8 @@ async function vernacular(key) {
 
 const URL = 'https://object-arbutus.alliancecan.ca/swift/v1/4903c6264e0c4191a74a54c93b6fe1d9/def-pollock-eckert/vertebrates_NA/ECCC_2026/manifest.json';
 const OUT = new globalThis.URL('../public/sdm-species.json', import.meta.url);
+// Species with no GBIF record in Canada or the US (from find-non-ca-us-species.py) are not listed
+const NON_CA_US = new globalThis.URL('./non-ca-us-species.json', import.meta.url);
 const first = (v) => (Array.isArray(v) ? v[0] : v);
 const clean = (v) => { const s = String(first(v) ?? '').trim(); return s === '' || s === 'NA' ? undefined : s; };
 
@@ -83,8 +85,10 @@ try {
   }
   if (failed.size) console.error(`GBIF fetch failed for ${failed.size} keys (${failSpecies} species): ${[...new Set(failed.values())].join('; ')}`);
   if (failSpecies > rows.length * 0.05) throw new Error(`${failSpecies}/${rows.length} species failed GBIF fetch (>5%)`);
-  await writeFile(OUT, JSON.stringify(rows));
-  console.log(`wrote ${rows.length} species to public/sdm-species.json (en ${rows.filter((r) => r.common).length}, fr ${rows.filter((r) => r.fr).length}, kept manifest name ${kept}, fetch failures ${failSpecies})`);
+  const nonCaUs = new Set(JSON.parse(await readFile(NON_CA_US, 'utf8')));
+  const listed = rows.filter((r) => !nonCaUs.has(r.slug));
+  await writeFile(OUT, JSON.stringify(listed));
+  console.log(`wrote ${listed.length} species to public/sdm-species.json (en ${rows.filter((r) => r.common).length}, fr ${rows.filter((r) => r.fr).length}, kept manifest name ${kept}, fetch failures ${failSpecies})`);
 } catch (err) {
   console.error(`sdm-species-index: ${err.message}`);
   process.exit(1);
