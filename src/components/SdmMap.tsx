@@ -57,10 +57,11 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
     mapRef.current = map;
     map.setPadding({ left: sidebarRef.current ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 });
     map.on('load', () => {
-      map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}outside-ca-us.geojson` });
-      map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#e8590c', 'line-width': 1.5, 'line-opacity': 0.9 } });
+      // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
+      map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}outside-ca-us.geojson` });
+      map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
       map.addSource(OCC, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#1f2937', 'circle-stroke-width': 1 } });
     });
@@ -105,7 +106,7 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
       if (map.getSource(SRC)) map.removeSource(SRC);
       if (!slug) return;
       map.addSource(SRC, { type: 'raster', tiles: [sdmTileUrl(sdmCogUrl(slug, period))], tileSize: 256, bounds: [-180, 24.4, -52.6, 83.2] });
-      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': 0.85 } }, map.getLayer(MASK) ? MASK : undefined);
+      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': 0.85 } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.isStyleLoaded()) apply(); else map.once('load', apply);
     return () => { map.off('load', apply); };
@@ -140,7 +141,9 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
       if (!slug || !showOcc) return;
       // Records outside the expert range are what widen the clip; without a range, points stay uncolored
       import('../data/sdmRange').then(async (m) => {
-        const points = await m.fetchLaeaFgb(sdmOccurrenceUrl(slug));
+        const all = await m.fetchLaeaFgb(sdmOccurrenceUrl(slug));
+        const mask: GeoJSON.FeatureCollection = await (await fetch(`${import.meta.env.BASE_URL}outside-ca-us.geojson`)).json();
+        const points = { ...all, features: m.markInsideRange(all, mask).features.filter((f) => !f.properties?.inside) };
         const range = await m.fetchLaeaFgb(sdmRangeUrl(slug)).catch(() => null);
         return range ? m.markInsideRange(points, range) : points;
       }).then((fc) => { if (live && mapRef.current === map) src.setData(fc); })
