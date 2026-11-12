@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Send, CheckCircle2, Globe, ArrowRight, Instagram } from 'lucide-react';
+import LogoIcon from './LogoIcon';
 import { useLanguage } from '../lib/LanguageContext';
 
 export default function ContactView() {
@@ -99,7 +100,7 @@ export default function ContactView() {
               </span>
               <div className="flex items-center gap-2 text-xs font-medium text-sage-600 bg-sage-50/50 border border-sage-100/40 px-3.5 py-2.5 rounded-xl w-fit">
                 <Mail className="w-4 h-4 text-sage-500 shrink-0" />
-                <a href="mailto:blitzthegap@gmail.com" className="hover:underline hover:text-sage-700 transition-all font-semibold font-mono">
+                <a href="mailto:blitzthegap@gmail.com" className="hover:underline hover:text-sage-700 transition-all font-semibold font-sans">
                   blitzthegap@gmail.com
                 </a>
               </div>
@@ -133,46 +134,62 @@ export default function ContactView() {
           </form>
         )}
 
-        {/* Clicking Icons Box UNDERNEATH message box at the bottom (within the card wrapper representation) */}
+        {/* Connect with our biodiversity network with hover indicators */}
         <div className="mt-8 pt-6 border-t border-gray-150 flex flex-col sm:flex-row items-center justify-between gap-4 font-sans text-xs text-gray-500">
           <span className="font-medium text-wood-850 text-center sm:text-left">
             {lang === 'EN' ? "Connect with our biodiversity network:" : "Connectez-vous avec notre réseau de biodiversité :"}
           </span>
           <div className="flex items-center gap-3">
-            {/* Clickable iNaturalist Canada Logo Link (Custom inline Leaf/World representation) */}
-            <a 
-              href="https://www.inaturalist.ca" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-9 h-9 rounded-full bg-gray-50 border border-gray-200 hover:border-sage-400 hover:bg-white text-gray-500 hover:text-sage-600 shadow-3xs flex items-center justify-center transition-all cursor-pointer"
-              title="iNaturalist Canada"
-            >
-              <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 fill-current">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-              </svg>
-            </a>
+            {/* 1. Globe icon -> Quantitative Biodiversity Lab (qbiodiversity.org) */}
+            <div className="relative group/tip flex flex-col items-center">
+              <a 
+                href="https://qbiodiversity.org/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 hover:border-sage-500 hover:bg-sage-50 text-gray-600 hover:text-sage-700 shadow-3xs flex items-center justify-center transition-all cursor-pointer"
+                title="Quantitative Biodiversity Lab (qbiodiversity.org)"
+                aria-label="Quantitative Biodiversity Lab Website"
+              >
+                <Globe className="w-5 h-5" />
+              </a>
+              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-wood-900 px-2 py-1 text-[10px] font-sans font-medium text-white opacity-0 shadow-xs transition-opacity duration-200 group-hover/tip:opacity-100 z-30">
+                Quantitative Biodiversity Lab (qbiodiversity.org)
+              </span>
+            </div>
 
-            {/* Blitz the Gap (btg.org) Website Link */}
-            <a 
-              href="https://blitzthegap.org" // or your actual btg domain
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-9 h-9 rounded-full bg-gray-50 border border-gray-200 hover:border-sage-400 hover:bg-white text-gray-500 hover:text-sage-600 shadow-3xs flex items-center justify-center transition-all cursor-pointer"
-              title="Blitz the Gap (btg.org)"
-            >
-              <Globe className="w-4.5 h-4.5" />
-            </a>
+            {/* 2. BTG Logo -> Blitz the Gap (blitzthegap.org) */}
+            <div className="relative group/tip flex flex-col items-center">
+              <a 
+                href="https://blitzthegap.org"
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 hover:border-sage-500 hover:bg-sage-50 text-gray-600 hover:text-sage-700 shadow-3xs flex items-center justify-center transition-all cursor-pointer p-1.5"
+                title="Blitz the Gap (blitzthegap.org)"
+                aria-label="Blitz the Gap Website"
+              >
+                <LogoIcon className="w-6 h-6" />
+              </a>
+              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-wood-900 px-2 py-1 text-[10px] font-sans font-medium text-white opacity-0 shadow-xs transition-opacity duration-200 group-hover/tip:opacity-100 z-30">
+                Blitz the Gap (blitzthegap.org)
+              </span>
+            </div>
 
-            {/* Instagram Profile Link */}
-            <a 
-              href="https://www.instagram.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-9 h-9 rounded-full bg-gray-50 border border-gray-200 hover:border-sage-400 hover:bg-white text-gray-500 hover:text-sage-600 shadow-3xs flex items-center justify-center transition-all cursor-pointer"
-              title="Instagram"
-            >
-              <Instagram className="w-4.5 h-4.5" />
-            </a>
+            {/* 3. Instagram -> Quantitative Biodiversity Lab Instagram */}
+            <div className="relative group/tip flex flex-col items-center">
+              <a 
+                href="https://www.instagram.com/quantitativebiodiversitylab/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 hover:border-sage-500 hover:bg-sage-50 text-gray-600 hover:text-sage-700 shadow-3xs flex items-center justify-center transition-all cursor-pointer"
+                title="Quantitative Biodiversity Lab Instagram (@quantitativebiodiversitylab)"
+                aria-label="Quantitative Biodiversity Lab on Instagram"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
+              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-wood-900 px-2 py-1 text-[10px] font-sans font-medium text-white opacity-0 shadow-xs transition-opacity duration-200 group-hover/tip:opacity-100 z-30">
+                Instagram (@quantitativebiodiversitylab)
+              </span>
+            </div>
           </div>
         </div>
       </div>
