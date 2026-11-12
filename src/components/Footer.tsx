@@ -27,7 +27,7 @@ export default function Footer({ setActiveTab }: FooterProps) {
                 ? "Canada's open-access biodiversity data platform."
                 : "La plateforme de données sur la biodiversité en libre accès du Canada."}
             </p>
-            <div className="text-[10px] font-mono text-gray-400">
+            <div className="text-[10px] font-sans text-gray-400">
               {lang === 'EN'
                 ? "Developed by the Quantitative Biodiversity Lab, McGill University."
                 : "Développée par le Laboratoire de biodiversité quantitative, Université McGill."}

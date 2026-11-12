@@ -7,7 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 const getMapStyle = (type: 'topo' | 'satellite' | 'terrain') => {
   const dpr = typeof window !== 'undefined' && window.devicePixelRatio >= 2 ? '@2x' : '';
   let tilesUrls: string[] = [];
-  let attribution = '© <a href="https://carto.com/attributions">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  let attribution = '© <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
 
   if (type === 'satellite') {
     // Esri raster tile servers distributed to ensure redundancy and avoid rate limits
@@ -25,7 +25,7 @@ const getMapStyle = (type: 'topo' | 'satellite' | 'terrain') => {
       'https://c.tile.opentopomap.org/{z}/{x}/{y}.png',
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
     ];
-    attribution = '© <a href="https://opentopomap.org">OpenTopoMap</a>, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    attribution = '© <a href="https://opentopomap.org" target="_blank" rel="noopener noreferrer">OpenTopoMap</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
   } else {
     // Topo style (CARTO Voyager with multiple subdomains and standard openstreetmap as direct backup)
     tilesUrls = [
@@ -441,7 +441,7 @@ export default function GlobePlaceholder({
         if (cell.kba) {
           return 'bg-amber-600/60 shadow-lg shadow-amber-600/30 border border-amber-300';
         }
-        return cell.value && cell.val > 70 ? 'bg-rose-500/50 border border-rose-300' : 'bg-sage-600/10';
+        return cell.val !== undefined && cell.val > 70 ? 'bg-rose-500/50 border border-rose-300' : 'bg-sage-600/10';
       }
       if (selectedCaseStudyId === 'newfoundland') {
         const isEastCoast = cell.x > 65;
@@ -753,10 +753,10 @@ export default function GlobePlaceholder({
           <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1 opacity-80 text-wood-950 pointer-events-none">
             <div className="relative w-12 h-12 rounded-full border border-wood-500/50 flex items-center justify-center bg-white/70 backdrop-blur-xs shadow-sm">
               <Compass className="w-8 h-8 text-wood-800 transition-transform duration-100" style={{ transform: `rotate(${rotation}deg)` }} />
-              <span className="absolute -top-3.5 text-[9px] font-mono font-bold text-wood-950">N</span>
-              <span className="absolute -bottom-3.5 text-[9px] font-mono font-bold text-gray-500">S</span>
-              <span className="absolute -left-3.5 text-[9px] font-mono font-bold text-gray-500">W</span>
-              <span className="absolute -right-3.5 text-[9px] font-mono font-bold text-gray-500">E</span>
+              <span className="absolute -top-3.5 text-[9px] font-sans font-bold text-wood-950">N</span>
+              <span className="absolute -bottom-3.5 text-[9px] font-sans font-bold text-gray-500">S</span>
+              <span className="absolute -left-3.5 text-[9px] font-sans font-bold text-gray-500">W</span>
+              <span className="absolute -right-3.5 text-[9px] font-sans font-bold text-gray-500">E</span>
             </div>
           </div>
         </div>
@@ -769,7 +769,7 @@ export default function GlobePlaceholder({
             Observation Grid Overlays Enabled {!webGlSupported && " (Aesthetic Vector Sandbox Mode)"}
           </div>
  
-          <div className="flex flex-wrap items-center gap-3.5 text-[11px] font-mono text-gray-500">
+          <div className="flex flex-wrap items-center gap-3.5 text-[11px] font-sans text-gray-500">
             <div className="bg-white/80 border border-gray-200 rounded-lg px-2.5 py-1 text-xs">
               {hoveredCoords ? (
                 <span>Cell Probe: <span className="text-wood-950 font-semibold">{hoveredCoords.lat}, {hoveredCoords.lng}</span> &bull; <span className="text-sage-600 font-bold">{hoveredCoords.value}</span></span>
