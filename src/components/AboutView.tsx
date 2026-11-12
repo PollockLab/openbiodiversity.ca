@@ -67,7 +67,7 @@ export default function AboutView() {
     { name: "Peter Soroye", organization: "WCS Canada", role: lang === 'EN' ? "KBA Assessment and Outreach Coordinator" : "Coordonnateur de l'évaluation et de la sensibilisation des KBA", tag: "KBA", photo: peter_photo, scale: 1.45, objectPosition: "center 32%" },
     { name: "Guillaume Larocque", organization: "QCBS, GEOBON, Biodiversité Québec", role: lang === 'EN' ? "Research Professional" : "Professionnel de recherche", tag: "WCS", photo: guillaume_photo },
     { name: "James Pagé", organization: "Canadian Wildlife Federation", role: lang === 'EN' ? "Species at Risk and Biodiversity Specialist" : "Spécialiste des espèces en péril et de la biodiversité", tag: "CWF", photo: james_photo, scale: 1.4, objectPosition: "center 32%" },
-    { name: "Wietze Sujiker", organization: "MILA", role: lang === 'EN' ? "Research Engineer" : "Ingénieur de recherche", tag: "iNAT", photo: wietze_photo },
+    { name: "Wietze Suijker", organization: "Mila", role: lang === 'EN' ? "Research Engineer" : "Ingénieur de recherche", tag: "iNAT", photo: wietze_photo },
     { name: "Joseph Bowden", organization: "Natural Resources Canada", role: lang === 'EN' ? "Research Scientist" : "Chercheur scientifique", tag: "BCP", photo: joseph_photo, scale: 1.4, objectPosition: "center 22%" }
   ];
 
