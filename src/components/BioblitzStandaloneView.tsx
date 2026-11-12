@@ -90,7 +90,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
               <span className="font-display font-extrabold text-sm">OB</span>
             </div>
             <div>
-              <span className="text-xs font-mono font-bold uppercase tracking-widest text-sage-600">openbiodiversity.ca toolkit</span>
+              <span className="text-xs font-sans font-bold uppercase tracking-widest text-sage-600">openbiodiversity.ca toolkit</span>
               <h1 className="text-xl font-bold font-display tracking-tight text-wood-900 leading-tight">
                 {lang === 'EN' ? "BioBlitz Gamification Analyser" : "Analyseur de ludification de BioBlitz"}
               </h1>
@@ -144,7 +144,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
         {submitting && (
           <div className="text-center py-20 bg-white border border-sage-100 rounded-2xl shadow-xs space-y-4">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-sage-500 border-t-transparent" />
-            <p className="text-sm font-semibold text-gray-500 font-mono">
+            <p className="text-sm font-semibold text-gray-500 font-sans">
               {lang === 'EN' 
                 ? "Running spatial bias algorithms, trails intersecting masks, and SDM standardizations..."
                 : "Exécution des algorithmes de biais spatial, des masques d'intersection des sentiers et des standardisations des MDE..."}
@@ -159,7 +159,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
             {/* Main Header Result block */}
             <div className="bg-gradient-to-r from-sage-600 to-sage-700 text-white rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div className="space-y-2">
-                <span className="text-[10px] font-mono font-bold tracking-widest text-[#d8ebd2] uppercase">
+                <span className="text-[10px] font-sans font-bold tracking-widest text-[#d8ebd2] uppercase">
                   {lang === 'EN' ? "Project Report" : "Rapport de projet"}
                 </span>
                 <h2 className="text-2xl font-bold font-display tracking-tight text-white leading-tight">
@@ -173,7 +173,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
               </div>
 
               <div className="bg-white/10 backdrop-blur-xs rounded-xl p-4.5 border border-white/20 text-center shrink-0 w-full md:w-auto">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-sage-200 block">
+                <span className="text-[10px] font-sans uppercase tracking-wider text-sage-200 block">
                   {lang === 'EN' ? "Achievement Standard" : "Niveau d'accomplissement"}
                 </span>
                 <span className="text-sm font-bold font-display mt-1 text-white block">
@@ -188,14 +188,14 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
               {/* Box 1: Progress meter */}
               <div className="bg-white rounded-2xl p-5 shadow-md shadow-gray-300 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
+                  <span className="text-xs font-sans text-gray-400 uppercase tracking-wider">
                     {lang === 'EN' ? "Doubling Target Progress" : "Progression vers le doublement"}
                   </span>
                   <Percent className="w-5 h-5 text-sage-600" />
                 </div>
                 <div className="text-center py-2">
-                  <span className="text-4xl font-extrabold font-mono text-wood-950">{analysisResult.progressPercent}%</span>
-                  <div className="text-[10px] text-gray-400 mt-1 uppercase font-mono font-bold tracking-wider">
+                  <span className="text-4xl font-extrabold font-sans text-wood-950">{analysisResult.progressPercent}%</span>
+                  <div className="text-[10px] text-gray-400 mt-1 uppercase font-sans font-bold tracking-wider">
                     {lang === 'EN' ? "of Double-Record objective" : "de l'objectif de doublement"}
                   </div>
                 </div>
@@ -218,7 +218,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
               {/* Box 2: Spatial Completeness Scores */}
               <div className="bg-white rounded-2xl p-5 shadow-md shadow-gray-300 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
+                  <span className="text-xs font-sans text-gray-400 uppercase tracking-wider">
                     {lang === 'EN' ? "Gap-Climber Scorecard" : "Fiche Gap-Climber"}
                   </span>
                   <Target className="w-5 h-5 text-sage-600" />
@@ -230,7 +230,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
                       <span className="font-semibold text-wood-900">
                         {lang === 'EN' ? "M1: Explorer Coverage" : "M1 : Couverture d'exploration"}
                       </span>
-                      <strong className="text-emerald-600 font-mono">{analysisResult.explorerScore}%</strong>
+                      <strong className="text-emerald-600 font-sans">{analysisResult.explorerScore}%</strong>
                     </div>
                     <div className="h-2 bg-gray-50 rounded-full overflow-hidden border border-gray-150">
                       <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${analysisResult.explorerScore}%` }} />
@@ -242,7 +242,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
                       <span className="font-semibold text-wood-900">
                         {lang === 'EN' ? "M2: Under-Surveyed Taxa Found" : "M2 : Taxons sous-étudiés trouvés"}
                       </span>
-                      <strong className="text-indigo-600 font-mono">{analysisResult.taxonomicVariety} {lang === 'EN' ? 'taxa' : 'taxons'}</strong>
+                      <strong className="text-indigo-600 font-sans">{analysisResult.taxonomicVariety} {lang === 'EN' ? 'taxa' : 'taxons'}</strong>
                     </div>
                     <div className="h-2 bg-gray-50 rounded-full overflow-hidden border border-gray-150">
                       <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${Math.min(100, (analysisResult.taxonomicVariety / 150) * 100)}%` }} />
@@ -254,7 +254,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
                       <span className="font-semibold text-wood-900">
                         {lang === 'EN' ? "M3: Unified VOI Quality" : "M3 : Qualité VOI unifiée"}
                       </span>
-                      <strong className="text-amber-600 font-mono">{analysisResult.voiScore}/100</strong>
+                      <strong className="text-amber-600 font-sans">{analysisResult.voiScore}/100</strong>
                     </div>
                     <div className="h-2 bg-gray-50 rounded-full overflow-hidden border border-gray-150">
                       <div className="bg-amber-500 h-full rounded-full" style={{ width: `${analysisResult.voiScore}%` }} />
@@ -266,18 +266,18 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
               {/* Box 3: Campaign Priorities overview */}
               <div className="bg-white rounded-2xl p-5 shadow-md shadow-gray-300 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
+                  <span className="text-xs font-sans text-gray-400 uppercase tracking-wider">
                     {lang === 'EN' ? "Priority Gaps Identified" : "Lacunes prioritaires identifiées"}
                   </span>
                   <Trophy className="w-5 h-5 text-sage-600" />
                 </div>
                 <div className="text-center py-2">
-                  <span className="text-4xl font-extrabold font-mono text-[#c88d22]">{analysisResult.gapSectorsIdentified}</span>
-                  <div className="text-[10px] text-gray-400 mt-1 uppercase font-mono font-bold tracking-wider">
+                  <span className="text-4xl font-extrabold font-sans text-[#c88d22]">{analysisResult.gapSectorsIdentified}</span>
+                  <div className="text-[10px] text-gray-400 mt-1 uppercase font-sans font-bold tracking-wider">
                     {lang === 'EN' ? "1km grid cells with absolute 0 records" : "mailles de 1 km avec absolument 0 mention"}
                   </div>
                 </div>
-                <div className="p-3 bg-sage-50/50 text-sage-800 rounded-xl border border-sage-100 text-2xs leading-relaxed font-mono">
+                <div className="p-3 bg-sage-50/50 text-sage-800 rounded-xl border border-sage-100 text-2xs leading-relaxed font-sans">
                   {lang === 'EN' 
                     ? <><strong>SYSTEM METRIC ADVISORY:</strong> Directing sampling towards these specific {analysisResult.gapSectorsIdentified} empty sectors yields a 2.5x score multiplier for all volunteers.</>
                     : <><strong>CONSEIL DU SYSTÈME :</strong> Diriger l'échantillonnage vers ces {analysisResult.gapSectorsIdentified} secteurs vides spécifiques génère un multiplicateur de score de 2,5x pour les bénévoles.</>}
@@ -300,7 +300,7 @@ export default function BioblitzStandaloneView({ initialUrl = '' }: BioblitzStan
               <ul className="space-y-3 font-sans">
                 {(lang === 'EN' ? analysisResult.targetedActionListEn : analysisResult.targetedActionListFr).map((action: string, idx: number) => (
                   <li key={idx} className="flex gap-2.5 items-start text-xs text-wood-700 leading-relaxed">
-                    <span className="w-5 h-5 rounded-full shrink-0 bg-sage-50 text-sage-600 border border-sage-100 flex items-center justify-center font-bold font-mono text-[9px] mt-0.5">
+                    <span className="w-5 h-5 rounded-full shrink-0 bg-sage-50 text-sage-600 border border-sage-100 flex items-center justify-center font-bold font-sans text-[9px] mt-0.5">
                       {idx + 1}
                     </span>
                     <span>{action}</span>

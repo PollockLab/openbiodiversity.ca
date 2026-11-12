@@ -6,7 +6,7 @@
 <title>10 Useful Layers — Canada</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg-deep:#eef0ed;
@@ -60,7 +60,7 @@
     padding:18px 18px 16px 18px;
     border-bottom:1px solid var(--line);
     position:relative;
-    overflow:hidden;
+    overflow:visible;
     min-height:24px;
   }
   .sidebar-header::before{
@@ -71,10 +71,6 @@
       repeating-radial-gradient(circle at 85% -10%, transparent 0, transparent 22px, rgba(63,143,82,0.06) 23px, transparent 24px);
     pointer-events:none;
   }
-  .brand-mark{
-    width:22px; height:22px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-  }
   .brand-text{
     display:flex; flex-direction:column;
     white-space:nowrap;
@@ -83,14 +79,14 @@
   }
   .sidebar.collapsed .brand-text{ opacity:0; pointer-events:none; }
   .brand-title{
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Inter',system-ui,sans-serif;
     font-weight:600;
     font-size:15px;
     letter-spacing:0.01em;
     line-height:1.2;
   }
   .brand-sub{
-    font-family:'IBM Plex Mono',monospace;
+    font-family:'Inter',system-ui,sans-serif;
     font-size:10px;
     color:var(--text-dim);
     letter-spacing:0.04em;
@@ -101,20 +97,21 @@
   .collapse-btn{
     position:absolute;
     top:16px;
-    right:-13px;
-    width:26px; height:26px;
+    right:-14px;
+    width:28px; height:28px;
     border-radius:50%;
-    background:var(--bg-panel-raised);
+    background:#ffffff;
     border:1px solid var(--line);
+    box-shadow:0 2px 6px rgba(0,0,0,0.18);
     color:var(--text-muted);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
-    z-index:30;
+    z-index:100;
     transition:background .15s ease, color .15s ease, transform .28s cubic-bezier(.4,0,.2,1);
   }
   .collapse-btn:hover{ background:var(--bg-panel-hover); color:var(--accent); }
   .sidebar.collapsed .collapse-btn{ transform:rotate(180deg); }
-  .collapse-btn svg{ width:13px; height:13px; }
+  .collapse-btn svg{ width:14px; height:14px; }
 
   .layer-list{
     list-style:none;
@@ -130,7 +127,7 @@
   .layer-list::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
 
   .list-eyebrow{
-    font-family:'IBM Plex Mono',monospace;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
     font-size:10px;
     letter-spacing:0.08em;
     text-transform:uppercase;
@@ -179,7 +176,7 @@
   .layer-row.disabled .layer-name{ font-weight:400; }
 
   .soon-tag{
-    font-family:'IBM Plex Mono',monospace;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
     font-size:9px;
     letter-spacing:0.03em;
     text-transform:uppercase;
@@ -248,7 +245,7 @@
   .sidebar-footer{
     padding:12px 18px;
     border-top:1px solid var(--line);
-    font-family:'IBM Plex Mono',monospace;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
     font-size:9.5px;
     color:var(--text-dim);
     letter-spacing:0.02em;
@@ -284,7 +281,7 @@
     pointer-events:none;
   }
   .map-topbar .eyebrow{
-    font-family:'IBM Plex Mono',monospace;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
     font-size:9.5px;
     letter-spacing:0.08em;
     text-transform:uppercase;
@@ -292,7 +289,7 @@
     margin-bottom:3px;
   }
   .map-topbar .title{
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
     font-size:16px;
     font-weight:600;
   }
@@ -315,7 +312,7 @@
     width:230px;
   }
   .legend-label{
-    font-family:'IBM Plex Mono',monospace;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
     font-size:9.5px;
     letter-spacing:0.06em;
     text-transform:uppercase;
@@ -332,7 +329,7 @@
     display:flex;
     justify-content:space-between;
     margin-top:6px;
-    font-family:'IBM Plex Mono',monospace;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
     font-size:10.5px;
     color:var(--text-muted);
   }
@@ -361,7 +358,7 @@
     margin-bottom:6px;
   }
   .empty-state .msg{
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
     font-size:15px;
     color:var(--text-muted);
   }
@@ -377,12 +374,7 @@
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="brand-mark">
-        <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
-          <path d="M3 17 L9 10 L13 14 L21 5" stroke="#3f8f52" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M15 5 L21 5 L21 11" stroke="#3f8f52" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
+
       <div class="brand-text">
         <div class="brand-title">10 Useful Layers</div>
       </div>
@@ -393,7 +385,7 @@
 
     <ul class="layer-list" id="layerList"></ul>
 
-    <div class="sidebar-footer">EPSG custom LAEA · 300m grid</div>
+    
   </aside>
 
   <main class="map-area">

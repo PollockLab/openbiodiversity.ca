@@ -36,7 +36,7 @@ export const getGreyStyle = (isRetina: boolean) => ({
       ],
       tileSize: 256,
       attribution:
-        '© <a href="https://carto.com/attributions">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        '© <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
     },
   },
   layers: [
@@ -62,7 +62,7 @@ const getSatelliteStyle = () => ({
       ],
       tileSize: 256,
       attribution:
-        'Tiles © <a href="https://www.esri.com/">Esri</a> — Source: Esri, Maxar, Earthstar Geographics',
+        'Tiles © <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> — Source: Esri, Maxar, Earthstar Geographics',
     },
   },
   layers: [{ id: 'esri-satellite', type: 'raster' as const, source: 'esri' }],
@@ -563,10 +563,10 @@ export default function BaseMap() {
       <div className="absolute bottom-3 right-3 flex flex-col items-center gap-1 opacity-90 text-slate-800 pointer-events-none z-10">
         <div className="relative w-11 h-11 rounded-full flex items-center justify-center bg-white/90 backdrop-blur-md shadow-xl border-none">
           <Compass className="w-7 h-7 text-slate-700 transition-transform duration-100" style={{ transform: `rotate(${bearing}deg)` }} />
-          <span className="absolute -top-3 text-[8px] font-mono font-bold text-slate-900">N</span>
-          <span className="absolute -bottom-3 text-[8px] font-mono font-bold text-slate-400">S</span>
-          <span className="absolute -left-3 text-[8px] font-mono font-bold text-slate-400">W</span>
-          <span className="absolute -right-3 text-[8px] font-mono font-bold text-slate-400">E</span>
+          <span className="absolute -top-3 text-[8px] font-sans font-bold text-slate-900">N</span>
+          <span className="absolute -bottom-3 text-[8px] font-sans font-bold text-slate-400">S</span>
+          <span className="absolute -left-3 text-[8px] font-sans font-bold text-slate-400">W</span>
+          <span className="absolute -right-3 text-[8px] font-sans font-bold text-slate-400">E</span>
         </div>
       </div>
 
@@ -574,9 +574,9 @@ export default function BaseMap() {
       {densityEnabled && (
         <div className="absolute bottom-3 left-16 z-10 pointer-events-auto bg-white/95 backdrop-blur-md rounded-lg p-2 flex items-center gap-2.5 font-sans shadow-xl border-none">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-mono font-bold text-gray-500 uppercase">Density Scale</span>
+            <span className="text-[9px] font-sans font-bold text-gray-500 uppercase">Density Scale</span>
             <div className="flex items-center gap-1">
-              <span className="text-[8px] text-gray-400 font-mono">Low</span>
+              <span className="text-[8px] text-gray-400 font-sans">Low</span>
               {/* Visual gradient showing the magma colormap used by TiTiler */}
               <div 
                 className="w-24 h-2 rounded" 
@@ -584,7 +584,7 @@ export default function BaseMap() {
                   background: 'linear-gradient(to right, #000004, #3b0f70, #8c2981, #de4968, #fe9f6d, #fcfdbf)' 
                 }} 
               />
-              <span className="text-[8px] text-gray-400 font-mono">High</span>
+              <span className="text-[8px] text-gray-400 font-sans">High</span>
             </div>
           </div>
         </div>

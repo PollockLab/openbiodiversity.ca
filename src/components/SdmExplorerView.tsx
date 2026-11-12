@@ -55,11 +55,6 @@ export default function SdmExplorerView() {
   // Collapsible accordion state
   const [isMethodologyOpen, setIsMethodologyOpen] = useState<boolean>(false);
 
-  const translateGroup = (grp: string) => {
-    if (lang === 'EN') return grp;
-    return ({ Mammal: 'Mammifère', Bird: 'Oiseau', Reptile: 'Reptile', Amphibian: 'Amphibien' } as Record<string, string>)[grp] ?? grp;
-  };
-
   const nameOf = (s: SDMModel) => (lang === 'FR' && s.commonNameFr ? s.commonNameFr : s.commonName);
 
   const selectedSpecies = species.find(s => s.id === selectedSdmId);
@@ -73,7 +68,7 @@ export default function SdmExplorerView() {
       <section className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 card-shadow">
         <div>
           <h1 className="font-display font-semibold text-2xl sm:text-3xl text-wood-900 tracking-tight">
-            {lang === 'EN' ? "Canada Terrestrial Vertebrate & Flora SDM Explorer" : "Explorateur de MDE des vertébrés terrestres et de la flore du Canada"}
+            {lang === 'EN' ? "Species Distribution Models" : "Modèles de distribution d'espèces"}
           </h1>
           <p className="text-sm text-gray-500 mt-1 leading-relaxed font-sans">
             {lang === 'EN' 
@@ -119,19 +114,16 @@ export default function SdmExplorerView() {
         <section className="bg-white rounded-2xl p-6 space-y-5 shadow-md shadow-gray-300 animate-fadeIn">
           <div className="flex justify-between items-start gap-4 flex-wrap">
             <div>
-              <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
-                <span>{lang === 'EN' ? "Taxonomic Class:" : "Classe taxonomique :"} {translateGroup(selectedSpecies.taxonGroup)}</span>
-              </div>
-              <h3 className="font-display font-semibold text-xl text-wood-900 mt-1">
+              <h3 className="font-display font-semibold text-xl text-wood-900">
                 {selectedName}
               </h3>
-              <p className="font-mono text-sm italic text-sage-500 font-semibold mt-0.5">
+              <p className="font-sans text-sm italic text-sage-600 font-semibold mt-0.5">
                 {selectedSpecies.scientificName}
               </p>
             </div>
             
             {selectedSpecies.iucnStatus && (
-              <span className="bg-amber-50 text-amber-900 text-xs px-2.5 py-1 rounded-full font-mono font-bold border border-amber-200">
+              <span className="bg-amber-50 text-amber-900 text-xs px-2.5 py-1 rounded-full font-sans font-bold border border-amber-200">
                 IUCN: {selectedSpecies.iucnStatus}{iucn && ` ${iucn[lang === 'EN' ? 0 : 1]}`}
               </span>
             )}
@@ -141,21 +133,15 @@ export default function SdmExplorerView() {
           {selectedSpecies.habitatType && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-sans">
             <div className="bg-gray-50/70 p-3 rounded-lg border border-gray-100 text-xs text-gray-500">
-              <span className="block text-[10px] text-gray-400 uppercase tracking-wider font-mono">
+              <span className="block text-[10px] text-gray-500 uppercase tracking-wider font-sans">
                 {lang === 'EN' ? "Preferential Habitat" : "Habitat préférentiel"}
               </span>
-              <strong className="text-wood-900 mt-0.5 block truncate" title={lang === 'FR' && selectedSpecies.habitatTypeFr ? selectedSpecies.habitatTypeFr : selectedSpecies.habitatType}>
+              <strong className="text-wood-900 mt-0.5 block truncate font-sans" title={lang === 'FR' && selectedSpecies.habitatTypeFr ? selectedSpecies.habitatTypeFr : selectedSpecies.habitatType}>
                 {lang === 'FR' && selectedSpecies.habitatTypeFr ? selectedSpecies.habitatTypeFr : selectedSpecies.habitatType}
               </strong>
             </div>
           </div>
           )}
-
-          <p className="border-t border-gray-100 pt-5 text-xs text-gray-500 font-sans">
-            {lang === 'EN' ? 'Models by the Pollock Lab, licensed under ' : 'Modèles du laboratoire Pollock, sous licence '}
-            <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline hover:text-sage-600">CC BY-NC 4.0</a>
-            {lang === 'EN' ? '. Downloads will be available once the layers are published.' : '. Le téléchargement sera offert une fois les couches publiées.'}
-          </p>
         </section>
       )}
 
@@ -163,7 +149,7 @@ export default function SdmExplorerView() {
       <section className="bg-white rounded-2xl overflow-hidden shadow-md shadow-gray-300">
         <button
           onClick={() => setIsMethodologyOpen(!isMethodologyOpen)}
-          className="w-full flex justify-between items-center px-6 py-4.5 text-left font-display font-semibold text-wood-950 transition-colors hover:bg-gray-50 focus:outline-none"
+          className="w-full flex justify-between items-center px-6 py-4.5 text-left font-display font-semibold text-wood-950 transition-colors hover:bg-gray-50 focus:outline-none cursor-pointer"
         >
           <div className="flex items-center gap-2 text-sm sm:text-base">
             <Compass className="w-4.5 h-4.5 text-sage-600" />
@@ -171,9 +157,9 @@ export default function SdmExplorerView() {
           </div>
           <div>
             {isMethodologyOpen ? (
-              <ChevronUp className="w-4 h-4 text-gray-450" />
+              <ChevronUp className="w-4 h-4 text-gray-400" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-455" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             )}
           </div>
         </button>

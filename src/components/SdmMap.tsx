@@ -52,7 +52,7 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
       style: { ...getGreyStyle(isRetina), projection: { type: 'mercator' } },
       center: [-96, 58],
       zoom: 2.6,
-      attributionControl: { compact: true, customAttribution: 'SDMs: Pollock Lab, <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>' },
+      attributionControl: { compact: true },
     });
     mapRef.current = map;
     map.setPadding({ left: sidebarRef.current ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 });
@@ -63,7 +63,7 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
       map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}outside-ca-us.geojson` });
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
       map.addSource(OCC, { type: 'geojson', data: EMPTY });
-      map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#1f2937', 'circle-stroke-width': 1 } });
+      map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5 } });
     });
 
     map.on('click', async (e) => {
@@ -188,6 +188,10 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
           ))}
         </div>
       </div>
+      <div className={`absolute bottom-3 ${isSidebarOpen ? LEFT_OPEN : 'left-3'} max-w-[calc(100%-240px)] bg-white/90 rounded-lg px-3 py-1.5 text-[11px] font-sans text-gray-600 shadow-sm border border-gray-200 z-10 transition-all duration-300 flex items-center gap-1.5 flex-wrap`}>
+        <span>{lang === 'EN' ? 'Models: Pollock Lab, licensed under ' : 'Modèles : Laboratoire Pollock, sous licence '}</span>
+        <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline text-sage-700 hover:text-sage-900 font-medium">CC BY-NC 4.0</a>
+      </div>
       {period === '2100' && (
         <p className={`absolute top-12 ${isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} max-w-xs bg-white/90 rounded-lg px-3 py-2 text-xs font-sans text-gray-700 shadow-sm pointer-events-none z-10 transition-all duration-300`}>
           {lang === 'EN'
@@ -195,27 +199,27 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
             : "Contrairement à la carte actuelle, non découpée selon l'aire connue. La convenance hors de l'aire actuelle n'est pas forcément un gain d'aire."}
         </p>
       )}
-      <div className="absolute bottom-7 right-3 bg-white/95 rounded-xl px-3 py-2 text-[10px] font-mono text-gray-600 shadow-lg border border-gray-200 pointer-events-none z-10">
-        <div className="mb-1">{period === '2100'
+      <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-[11px] font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-10 max-w-[210px] sm:max-w-xs">
+        <div className="mb-1 text-gray-600 font-semibold">{period === '2100'
           ? (lang === 'EN' ? 'Ensemble, 2071-2100, 1 km (unclipped)' : 'Ensemble, 2071-2100, 1 km (non découpé)')
           : (lang === 'EN' ? 'Ensemble (clipped), 1980-2010, 1 km' : 'Ensemble (découpé), 1980-2010, 1 km')}</div>
         {slug && (
           <>
             <div className="h-2 w-40 rounded-sm" style={{ background: 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' }} />
-            <div className="flex justify-between w-40 mt-0.5">
+            <div className="flex justify-between w-40 mt-0.5 text-gray-500 text-[10px]">
               <span>0</span>
               <span>{lang === 'EN' ? 'Suitability (%)' : 'Convenance (%)'}</span>
               <span>100</span>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="inline-block w-6 border-t" style={{ borderColor: '#e8590c' }} />
+            <div className="flex items-center gap-2 mt-1.5 pt-1 border-t border-gray-100 text-[10px]">
+              <span className="inline-block w-5 border-t-2" style={{ borderColor: '#e8590c' }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
             {showOcc && (
               <>
                 {([[OCC_IN, lang === 'EN' ? 'Records inside IUCN range' : "Observations dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'Records outside IUCN range' : "Observations hors de l'aire UICN"]] as const).map(([c, label]) => (
-                  <div key={c} className="flex items-center gap-2 mt-1">
-                    <span className="inline-block w-6 text-center"><span className="inline-block w-1.5 h-1.5 rounded-full border border-gray-800" style={{ background: c }} /></span>
+                  <div key={c} className="flex items-center gap-2 mt-1 text-[10px]">
+                    <span className="inline-block w-5 text-center"><span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: c, border: '0.5px solid #374151' }} /></span>
                     <span>{label}</span>
                   </div>
                 ))}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Globe, MapPinned, Info, Mail, Compass } from 'lucide-react';
+import { Menu, X, Layers, Info, Mail, Compass } from 'lucide-react';
+import CanadaMapIcon from './CanadaMapIcon';
 import LogoIcon from './LogoIcon';
-import btgLogo from '../pictures/BTG logo.png';
 import { useLanguage } from '../lib/LanguageContext';
 
 interface HeaderProps {
@@ -45,8 +45,8 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
   const navItems = [
     { id: 'home', label: lang === 'EN' ? 'Home' : 'Accueil', icon: Compass },
     { id: 'blitz-gap', label: 'Blitz the Gap 2026', icon: LogoIcon },
-    { id: 'useful-layers', label: lang === 'EN' ? '10 Useful Layers' : '10 couches utiles', icon: Globe },
-    { id: 'sdm-explorer', label: lang === 'EN' ? 'SDMs' : 'SDMs', icon: MapPinned },
+    { id: 'useful-layers', label: lang === 'EN' ? '10 Useful Layers' : '10 couches utiles', icon: Layers },
+    { id: 'sdm-explorer', label: lang === 'EN' ? 'SDMs' : 'SDMs', icon: CanadaMapIcon },
     { id: 'about', label: lang === 'EN' ? 'About' : 'À propos', icon: Info },
     { id: 'contact', label: lang === 'EN' ? 'Contact' : 'Contact', icon: Mail }
   ];
@@ -57,29 +57,23 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
 
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-                      {/* Left brand column with logo and text */}
-            <div className="flex flex-col items-start py-1 justify-center">
+            {/* Left brand column with cropped contour mark and title/subtitle */}
+            <div className="flex items-center py-1">
               <div
                 onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }}
                 className="flex items-center gap-3 cursor-pointer select-none group"
               >
-                {/* Logo Brand Representation using imported BTG logo image with hover rotation animation */}
-                <div className="relative w-12 h-12 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-transparent">
-                  <img 
-                    src={btgLogo} 
-                    alt="BTG Logo" 
-                    className="w-[230%] h-full max-w-none object-cover transform transition-transform duration-300 group-hover:rotate-6"
-                    style={{ objectPosition: '0% center' }}
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-                
+                <img 
+                  src="/openbiodiversity_mark.png" 
+                  alt="openbiodiversity.ca" 
+                  className="h-11 sm:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                />
                 <div className="flex flex-col">
-                  <span className="font-display font-bold tracking-tight text-wood-900 text-lg leading-tight">
+                  <span className="font-display font-bold tracking-tight text-wood-900 text-lg sm:text-xl leading-none">
                     openbiodiversity<span className="text-sage-600">.ca</span>
                   </span>
-                  <span className="text-[10px] font-mono tracking-widest text-[#74926d] uppercase font-semibold leading-normal">
-                    {lang === 'EN' ? 'Biodiversity Layers' : 'Couches de biodiversité'}
+                  <span className="text-[10px] sm:text-[11px] font-sans font-medium tracking-normal text-wood-500 mt-1">
+                    {lang === 'EN' ? 'Canadian Biodiversity Layers' : 'Couches De Biodiversité Canadienne'}
                   </span>
                 </div>
               </div>
@@ -112,7 +106,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
               <div className="flex items-center border border-gray-200/80 rounded-lg p-0.5 bg-gray-50/50">
                 <button
                   onClick={() => setLang('EN')}
-                  className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 text-[10px] font-sans font-bold rounded-md transition-all cursor-pointer ${
                     lang === 'EN'
                       ? 'bg-sage-600 text-white shadow-3xs'
                       : 'text-gray-400 hover:text-gray-600'
@@ -122,7 +116,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
                 </button>
                 <button
                   onClick={() => setLang('FR')}
-                  className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 text-[10px] font-sans font-bold rounded-md transition-all cursor-pointer ${
                     lang === 'FR'
                       ? 'bg-sage-600 text-white shadow-3xs'
                       : 'text-gray-400 hover:text-gray-600'
@@ -138,7 +132,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
               <div className="flex items-center border border-gray-200 rounded-lg p-0.5 bg-gray-50/50">
                 <button
                   onClick={() => setLang('EN')}
-                  className={`px-1.5 py-0.5 text-[10px] font-mono font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-1.5 py-0.5 text-[10px] font-sans font-bold rounded-md transition-all cursor-pointer ${
                     lang === 'EN'
                       ? 'bg-sage-600 text-white shadow-xs'
                       : 'text-gray-400 hover:text-gray-600'
@@ -148,7 +142,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
                 </button>
                 <button
                   onClick={() => setLang('FR')}
-                  className={`px-1.5 py-0.5 text-[10px] font-mono font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-1.5 py-0.5 text-[10px] font-sans font-bold rounded-md transition-all cursor-pointer ${
                     lang === 'FR'
                       ? 'bg-sage-600 text-white shadow-xs'
                       : 'text-gray-400 hover:text-gray-600'

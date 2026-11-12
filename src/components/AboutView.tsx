@@ -56,7 +56,7 @@ export default function AboutView() {
   const teamMembers = [
     { name: "Dr. Laura Pollock", role: lang === 'EN' ? "Principal Investigator" : "Chercheuse principale", tag: "LP", photo: laura_photo },
     { name: "Dr. Katherine Hébert", role: lang === 'EN' ? "Postdoctoral Researcher" : "Chercheuse postdoctorale", tag: "KH", photo: katherine_photo, scale: 1.3, objectPosition: "center 18%" },
-    { name: "Noah Wightman", role: lang === 'EN' ? "Software Developer" : "Développeur de logiciels", tag: "NW", photo: noah_photo },
+    { name: "Noah Wightman", role: lang === 'EN' ? "PhD Candidate" : "Candidat au doctorat", tag: "NW", photo: noah_photo },
     { name: "Isaac Eckert", role: lang === 'EN' ? "PhD Candidate" : "Candidat au doctorat", tag: "IE", photo: isaac_photo, scale: 1.35, objectPosition: "center 22%" },
     { name: "Maho Horikawa", role: lang === 'EN' ? "Research Assistant" : "Assistant de recherche", tag: "MH", photo: maho_photo, scale: 2.2, objectPosition: "center 18%" },
     { name: "Ryan Hull", role: lang === 'EN' ? "Research Assistant" : "Assistant de recherche", tag: "RH", photo: ryan_photo, scale: 1.25, objectPosition: "center 28%", className: "saturate-[0.70] brightness-[1.03]" }
@@ -67,7 +67,7 @@ export default function AboutView() {
     { name: "Peter Soroye", organization: "WCS Canada", role: lang === 'EN' ? "KBA Assessment and Outreach Coordinator" : "Coordonnateur de l'évaluation et de la sensibilisation des KBA", tag: "KBA", photo: peter_photo, scale: 1.45, objectPosition: "center 32%" },
     { name: "Guillaume Larocque", organization: "QCBS, GEOBON, Biodiversité Québec", role: lang === 'EN' ? "Research Professional" : "Professionnel de recherche", tag: "WCS", photo: guillaume_photo },
     { name: "James Pagé", organization: "Canadian Wildlife Federation", role: lang === 'EN' ? "Species at Risk and Biodiversity Specialist" : "Spécialiste des espèces en péril et de la biodiversité", tag: "CWF", photo: james_photo, scale: 1.4, objectPosition: "center 32%" },
-    { name: "Wietze Sujiker", organization: "MILA", role: lang === 'EN' ? "Geospatial Data Engineer" : "Ingénieur de données géospatiales", tag: "iNAT", photo: wietze_photo },
+    { name: "Wietze Suijker", organization: "Mila", role: lang === 'EN' ? "Research Engineer" : "Ingénieur de recherche", tag: "iNAT", photo: wietze_photo },
     { name: "Joseph Bowden", organization: "Natural Resources Canada", role: lang === 'EN' ? "Research Scientist" : "Chercheur scientifique", tag: "BCP", photo: joseph_photo, scale: 1.4, objectPosition: "center 22%" }
   ];
 
@@ -128,14 +128,20 @@ export default function AboutView() {
 
         {/* Quantitative Biodiversity Lab Logo & Edited About Text */}
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 bg-sage-50/40 p-5 rounded-2xl border border-sage-100/50">
-          <div className="w-20 h-20 bg-white border border-sage-200/60 rounded-2xl shadow-3xs flex items-center justify-center shrink-0 p-0 overflow-hidden">
+          <a
+            href="https://qbiodiversity.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Quantitative Biodiversity Lab (opens in new tab)"
+            className="w-20 h-20 bg-white border border-sage-200/60 rounded-2xl shadow-3xs flex items-center justify-center shrink-0 p-0 overflow-hidden hover:scale-105 hover:shadow-md transition-all cursor-pointer"
+          >
             <img
               src={qbiodiversity_lab_logo}
               alt="Quantitative Biodiversity Lab"
               className="w-full h-full object-contain scale-[1.1] border-none outline-none select-none"
               referrerPolicy="no-referrer"
             />
-          </div>
+          </a>
           
           <div className="text-center sm:text-left space-y-2">
             <h4 className="font-display font-bold text-base text-wood-950">
@@ -221,7 +227,7 @@ export default function AboutView() {
                   />
                 ) : (
                   <div className="flex flex-col items-center select-none">
-                    <span className="font-mono text-xs font-bold text-gray-455 select-none">{partner.tag}</span>
+                    <span className="font-sans text-xs font-bold text-gray-500 select-none">{partner.tag}</span>
                     <span className="text-[8px] text-gray-400 font-medium tracking-wider font-sans uppercase mt-0.5">photo</span>
                   </div>
                 )}
