@@ -31,7 +31,9 @@ const rangeBounds = (fc: GeoJSON.FeatureCollection): Box | null => {
   const b: Box = [Infinity, Infinity, -Infinity, -Infinity];
   const walk = (c: any) => {
     if (typeof c[0] !== 'number') return c.forEach(walk);
-    b[0] = Math.min(b[0], c[0]); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], c[0]); b[3] = Math.max(b[3], c[1]);
+    // Eastern longitudes are the Aleutians past the antimeridian; keep them west of Alaska, not a map-width away
+    const x = c[0] > 0 ? c[0] - 360 : c[0];
+    b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], c[1]);
   };
   fc.features.forEach((f) => walk((f.geometry as any).coordinates));
   const dx = (b[2] - b[0]) / 2, dy = (b[3] - b[1]) / 2;
@@ -99,11 +101,13 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     });
 
     // Only moves the user made go in the link, not the fit to a species, a resize or the sidebar
-    map.on('moveend', (e: any) => {
-      if (!e.originalEvent && !e.user) return;
+    const moved = () => {
       const c = map.getCenter();
       onMovedRef.current(`${map.getZoom().toFixed(1)}/${c.lat.toFixed(3)}/${c.lng.toFixed(3)}`);
-    });
+    };
+    map.on('moveend', (e: any) => { if (e.originalEvent || e.user) moved(); });
+    // A shift-drag box zoom ends with a moveend that does not carry the user's event
+    map.on('boxzoomend', moved);
 
     map.on('click', async (e) => {
       const s = slugRef.current;
@@ -128,7 +132,10 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => mapRef.current?.resize());
+    const ro = new ResizeObserver(() => {
+      mapRef.current?.resize();
+      mapRef.current?.setPadding(sidebarPadding(sidebarRef.current, el.clientWidth));
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);

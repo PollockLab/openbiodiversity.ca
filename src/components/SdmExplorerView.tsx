@@ -42,6 +42,8 @@ export default function SdmExplorerView() {
     loadSdmSpecies()
       .then(list => {
         setSpecies(list);
+        // An unknown species in the link falls back to the default, and a linked map position goes with it
+        if (!list.some(s => s.id === speciesFromHash())) setAt(null);
         setSelectedSdmId(id => (list.some(s => s.id === id) ? id : DEFAULT_SPECIES));
       })
       .catch(e => setLoadError(String(e?.message ?? e)))
