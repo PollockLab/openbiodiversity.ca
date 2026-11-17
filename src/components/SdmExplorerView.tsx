@@ -8,8 +8,14 @@ import { SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
 const DEFAULT_SPECIES = 'rangifer-tarandus';
-// Species live in the hash as #sdm-explorer?sp=<id>; App.tsx routes on the part before "?"
-const speciesFromHash = () => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('sp') || DEFAULT_SPECIES;
+// Species and view live in the hash as #sdm-explorer?sp=<id>&view=<2100|model>; App.tsx routes on the part before "?"
+const hashParam = (key: string) => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(key);
+const speciesFromHash = () => hashParam('sp') || DEFAULT_SPECIES;
+// No view, or an unknown one, is the default clipped current map, so links from before the view existed still work
+const periodFromHash = (): SdmPeriod => {
+  const view = hashParam('view');
+  return view === '2100' ? '2100' : view === 'model' ? 'current-model' : 'current';
+};
 
 const IUCN_LABELS: Record<string, [string, string]> = {
   LC: ['Least Concern', 'Préoccupation mineure'],
@@ -26,7 +32,7 @@ export default function SdmExplorerView() {
   const [species, setSpecies] = useState<SDMModel[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<SdmPeriod>('current');
+  const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -41,8 +47,9 @@ export default function SdmExplorerView() {
   }, []);
 
   useEffect(() => {
-    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}`);
-  }, [selectedSdmId]);
+    const view = period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
+    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${view}`);
+  }, [selectedSdmId, period]);
 
   // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
   useEffect(() => {
