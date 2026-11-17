@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Maximize2, Minimize2, Plus, Minus } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -66,6 +66,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const { lang } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const [occBusy, setOccBusy] = useState(false);
   const slugRef = useRef(slug);
   const periodRef = useRef(period);
   const langRef = useRef(lang);
@@ -185,24 +186,26 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    let live = true;
+    // A worker per load: leaving the species or the toggle stops the download and frees the records
+    let worker: Worker | undefined;
+    let blobUrl = '';
     const apply = () => {
       const src = map.getSource(OCC) as maplibregl.GeoJSONSource | undefined;
       if (!src) return;
       src.setData(EMPTY);
       if (!slug || !showOcc) return;
-      // Records outside the expert range are what widen the clip; without a range, points stay uncolored
-      import('../data/sdmRange').then(async (m) => {
-        const all = await m.fetchLaeaFgb(sdmOccurrenceUrl(slug));
-        const mask: GeoJSON.FeatureCollection = await (await fetch(`${import.meta.env.BASE_URL}outside-ca-us.geojson`)).json();
-        const points = { ...all, features: m.markInsideRange(all, mask).features.filter((f) => !f.properties?.inside) };
-        const range = await m.fetchLaeaFgb(sdmRangeUrl(slug)).catch(() => null);
-        return range ? m.markInsideRange(points, range) : points;
-      }).then((fc) => { if (live && mapRef.current === map) src.setData(fc); })
-        .catch((e) => console.warn('GBIF occurrences unavailable', e));
+      setOccBusy(true);
+      worker = new Worker(new URL('../data/sdmOccWorker.ts', import.meta.url), { type: 'module' });
+      worker.onmessage = ({ data }: MessageEvent<Blob | string>) => {
+        setOccBusy(false);
+        if (typeof data === 'string') return console.warn('GBIF occurrences unavailable', data);
+        if (mapRef.current === map) src.setData(blobUrl = URL.createObjectURL(data));
+      };
+      worker.onerror = (e) => { setOccBusy(false); console.warn('GBIF occurrences unavailable', e.message); };
+      worker.postMessage({ occUrl: sdmOccurrenceUrl(slug), rangeUrl: sdmRangeUrl(slug), maskUrl: new URL(`${import.meta.env.BASE_URL}outside-ca-us.geojson`, location.href).href });
     };
     if (map.getSource(OCC)) apply(); else map.once('load', apply);
-    return () => { live = false; map.off('load', apply); };
+    return () => { worker?.terminate(); URL.revokeObjectURL(blobUrl); setOccBusy(false); map.off('load', apply); };
   }, [slug, showOcc]);
 
   return (
@@ -228,8 +231,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         {period === '2100' && (lang === 'EN' ? ' (no clipped version for 2100)' : ' (pas de version découpée pour 2100)')}
       </label>
       {slug && (
-        <button onClick={onToggleOcc} aria-pressed={showOcc}
-          className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+        <button onClick={onToggleOcc} aria-pressed={showOcc} aria-busy={occBusy}
+          className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${occBusy ? 'animate-pulse ' : ''}${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
           {lang === 'EN' ? 'GBIF records' : 'Mentions GBIF'}
         </button>
       )}

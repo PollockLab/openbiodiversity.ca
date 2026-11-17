@@ -34,12 +34,34 @@ async function load(url: string): Promise<GeoJSON.FeatureCollection> {
   return { type: 'FeatureCollection', features };
 }
 
-type Ring = { pts: number[][]; box: [number, number, number, number] };
-const inRing = ({ pts, box }: Ring, x: number, y: number) => {
+// A polygon's edges (outer ring and holes), bucketed by latitude band: a point is tested against the edges at its latitude only.
+// Even-odd over all the rings is "in the outer ring and in no hole". Brute force over every ring froze the page:
+// 2.3 s for the bullfrog (35k points, 30k vertices), minutes for the robin (760k points, 2374 lake holes).
+type Box = [number, number, number, number];
+type Poly = { box: Box; dy: number; bands: number[][] };
+const grow = (box: Box, x: number, y: number) => { box[0] = Math.min(box[0], x); box[1] = Math.min(box[1], y); box[2] = Math.max(box[2], x); box[3] = Math.max(box[3], y); };
+const indexPoly = (rings: number[][][]): Poly => {
+  const box: Box = [Infinity, Infinity, -Infinity, -Infinity];
+  let verts = 0;
+  for (const ring of rings) { verts += ring.length; for (const [x, y] of ring) grow(box, x, y); }
+  const n = Math.max(1, Math.min(4096, verts >> 2));
+  const dy = (box[3] - box[1]) / n || 1;
+  const bands: number[][] = Array.from({ length: n }, () => []);
+  const band = (y: number) => Math.min(n - 1, Math.floor((y - box[1]) / dy));
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      for (let b = band(Math.min(yi, yj)), last = band(Math.max(yi, yj)); b <= last; b++) bands[b].push(xi, yi, xj, yj);
+    }
+  }
+  return { box, dy, bands };
+};
+const inPoly = ({ box, dy, bands }: Poly, x: number, y: number) => {
   if (x < box[0] || x > box[2] || y < box[1] || y > box[3]) return false;
+  const e = bands[Math.min(bands.length - 1, Math.floor((y - box[1]) / dy))];
   let inside = false;
-  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+  for (let k = 0; k < e.length; k += 4) {
+    const xi = e[k], yi = e[k + 1], xj = e[k + 2], yj = e[k + 3];
     if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
   }
   return inside;
@@ -47,20 +69,17 @@ const inRing = ({ pts, box }: Ring, x: number, y: number) => {
 
 // Sets properties.inside on each point: is it within the range polygons (holes respected)?
 // Done once here because MapLibre's `within` re-evaluates per tile and stalls on 90k-vertex ranges.
-// shortcut: brute-force ray cast takes ~1 s on the main thread for caribou (4k points, 90k vertices), move to a worker or grid index if larger species lag.
 export function markInsideRange(points: GeoJSON.FeatureCollection, range: GeoJSON.FeatureCollection): GeoJSON.FeatureCollection {
-  const polys: Ring[][] = [];
+  const polys: Poly[] = [];
+  const all: Box = [Infinity, Infinity, -Infinity, -Infinity];
   for (const f of range.features) {
     const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon;
     for (const poly of g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []) {
-      polys.push(poly.map((pts) => {
-        const box: Ring['box'] = [Infinity, Infinity, -Infinity, -Infinity];
-        for (const [x, y] of pts) { box[0] = Math.min(box[0], x); box[1] = Math.min(box[1], y); box[2] = Math.max(box[2], x); box[3] = Math.max(box[3], y); }
-        return { pts, box };
-      }));
+      const p = indexPoly(poly);
+      polys.push(p); grow(all, p.box[0], p.box[1]); grow(all, p.box[2], p.box[3]);
     }
   }
-  const hit = (x: number, y: number) => polys.some(([outer, ...holes]) => inRing(outer, x, y) && !holes.some((h) => inRing(h, x, y)));
+  const hit = (x: number, y: number) => x >= all[0] && x <= all[2] && y >= all[1] && y <= all[3] && polys.some((p) => inPoly(p, x, y));
   return {
     ...points,
     features: points.features.map((f) => {
