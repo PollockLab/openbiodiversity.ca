@@ -12,6 +12,10 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
+      // A lang in the link (#tab?lang=fr or ?lang=fr) wins over the saved choice for this visit
+      const hashQuery = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+      const linked = (hashQuery.get('lang') ?? new URLSearchParams(window.location.search).get('lang'))?.toUpperCase();
+      if (linked === 'FR' || linked === 'EN') return linked;
       const saved = localStorage.getItem('openbiodiversity_lang');
       if (saved === 'FR' || saved === 'EN') return saved;
     }

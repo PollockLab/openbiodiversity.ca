@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Compass, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
 import { loadSdmSpecies } from '../data/sdmModels';
 import { SDMModel } from '../types';
-import SdmMap from './SdmMap';
+import SdmMap, { parseAt } from './SdmMap';
 import SdmSidebar from './SdmSidebar';
 import { SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
 const DEFAULT_SPECIES = 'rangifer-tarandus';
-// Species and view live in the hash as #sdm-explorer?sp=<id>&view=<2100|model>; App.tsx routes on the part before "?"
+// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=<2100|model>&gbif=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
 const hashParam = (key: string) => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(key);
 const speciesFromHash = () => hashParam('sp') || DEFAULT_SPECIES;
 // No view, or an unknown one, is the default clipped current map, so links from before the view existed still work
@@ -33,6 +33,8 @@ export default function SdmExplorerView() {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
+  const [showOcc, setShowOcc] = useState(() => hashParam('gbif') === '1');
+  const [at, setAt] = useState(() => (parseAt(hashParam('at')) ? hashParam('at') : null));
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -40,6 +42,8 @@ export default function SdmExplorerView() {
     loadSdmSpecies()
       .then(list => {
         setSpecies(list);
+        // An unknown species in the link falls back to the default, and a linked map position goes with it
+        if (!list.some(s => s.id === speciesFromHash())) setAt(null);
         setSelectedSdmId(id => (list.some(s => s.id === id) ? id : DEFAULT_SPECIES));
       })
       .catch(e => setLoadError(String(e?.message ?? e)))
@@ -48,8 +52,8 @@ export default function SdmExplorerView() {
 
   useEffect(() => {
     const view = period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
-    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${view}`);
-  }, [selectedSdmId, period]);
+    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${view}${showOcc ? '&gbif=1' : ''}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
+  }, [selectedSdmId, period, showOcc, at, lang]);
 
   // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
   useEffect(() => {
@@ -104,12 +108,16 @@ export default function SdmExplorerView() {
           </button>
         )}
         <div className={`absolute inset-y-0 left-0 z-20 w-72 sm:w-[310px] md:w-[350px] transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <SdmSidebar lang={lang} species={species} loading={loading} selectedId={selectedSdmId} onSelect={setSelectedSdmId} onCollapse={() => setIsSidebarOpen(false)} />
+          <SdmSidebar lang={lang} species={species} loading={loading} selectedId={selectedSdmId} onSelect={(id) => { setSelectedSdmId(id); setAt(null); }} onCollapse={() => setIsSidebarOpen(false)} />
         </div>
         <SdmMap
           slug={selectedSpecies?.ecccSlug ?? selectedSdmId}
           period={period}
           onPeriodChange={setPeriod}
+          showOcc={showOcc}
+          onToggleOcc={() => setShowOcc(v => !v)}
+          at={at}
+          onMoved={setAt}
           isExpanded={isExpanded}
           onToggleExpand={() => setIsExpanded(v => !v)}
           isSidebarOpen={isSidebarOpen}

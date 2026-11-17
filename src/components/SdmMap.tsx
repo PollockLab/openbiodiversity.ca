@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Maximize2, Minimize2, Plus, Minus } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -15,8 +15,35 @@ const OCC = 'gbif-occurrences';
 const OCC_IN = '#ffffff';
 const OCC_OUT = '#991b1b';
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+type Box = [number, number, number, number];
+// A map position in the link, as zoom/lat/lng
+export const parseAt = (at: string | null) => {
+  const m = /^(\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/.exec(at ?? '');
+  if (!m) return null;
+  const [zoom, lat, lng] = m.slice(1).map(Number);
+  return zoom <= 22 && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { center: [lng, lat] as [number, number], zoom } : null;
+};
+// Extent of the rasters, and the view that shows all of it
+const DATA_BOUNDS: Box = [-180, 24.4, -52.6, 83.2];
+const FULL_VIEW = { center: [-96, 58] as [number, number], zoom: 2.6 };
+// Box around the range, widened by half its size on each side so a shift by 2100 stays in view, and clamped to the rasters
+const rangeBounds = (fc: GeoJSON.FeatureCollection): Box | null => {
+  const b: Box = [Infinity, Infinity, -Infinity, -Infinity];
+  const walk = (c: any) => {
+    if (typeof c[0] !== 'number') return c.forEach(walk);
+    // Eastern longitudes are the Aleutians past the antimeridian; keep them west of Alaska, not a map-width away
+    const x = c[0] > 0 ? c[0] - 360 : c[0];
+    b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], c[1]);
+  };
+  fc.features.forEach((f) => walk((f.geometry as any).coordinates));
+  const dx = (b[2] - b[0]) / 2, dy = (b[3] - b[1]) / 2;
+  const box: Box = [Math.max(b[0] - dx, DATA_BOUNDS[0]), Math.max(b[1] - dy, DATA_BOUNDS[1]), Math.min(b[2] + dx, DATA_BOUNDS[2]), Math.min(b[3] + dy, DATA_BOUNDS[3])];
+  return box[0] < box[2] && box[1] < box[3] ? box : null;
+};
 // Keep in sync with the sidebar widths in SdmSidebar (w-72, sm:w-[310px], md:w-[350px])
 const sidebarWidth = () => (window.innerWidth >= 768 ? 350 : window.innerWidth >= 640 ? 310 : 288);
+// Map padding for the open sidebar. On a phone the sidebar covers almost all of the map, so the view is laid out as if it were closed
+const sidebarPadding = (open: boolean, mapWidth: number) => ({ left: open && mapWidth - sidebarWidth() >= 320 ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 });
 // Left offset of the overlay controls so they clear the open sidebar
 const LEFT_OPEN = 'left-3 sm:left-[322px] md:left-[362px]';
 const LEFT_CLOSED = 'left-13 sm:left-14';
@@ -25,14 +52,18 @@ interface SdmMapProps {
   slug?: string;
   period: SdmPeriod;
   onPeriodChange: (p: SdmPeriod) => void;
+  showOcc: boolean;
+  onToggleOcc: () => void;
+  // Position the user chose, zoom/lat/lng; while it is set the map does not zoom to the species
+  at: string | null;
+  onMoved: (at: string) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
-  const [showOcc, setShowOcc] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const slugRef = useRef(slug);
@@ -41,6 +72,10 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
   slugRef.current = slug;
   periodRef.current = period;
   langRef.current = lang;
+  const atRef = useRef(at);
+  const onMovedRef = useRef(onMoved);
+  atRef.current = at;
+  onMovedRef.current = onMoved;
   const sidebarRef = useRef(isSidebarOpen);
   sidebarRef.current = isSidebarOpen;
 
@@ -50,12 +85,11 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: { ...getGreyStyle(isRetina), projection: { type: 'mercator' } },
-      center: [-96, 58],
-      zoom: 2.6,
+      ...(parseAt(atRef.current) ?? FULL_VIEW),
       attributionControl: { compact: true },
     });
     mapRef.current = map;
-    map.setPadding({ left: sidebarRef.current ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 });
+    map.setPadding(sidebarPadding(sidebarRef.current, containerRef.current.clientWidth));
     map.on('load', () => {
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#e8590c', 'line-width': 1.5, 'line-opacity': 0.9 } });
@@ -65,6 +99,15 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
       map.addSource(OCC, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5 } });
     });
+
+    // Only moves the user made go in the link, not the fit to a species, a resize or the sidebar
+    const moved = () => {
+      const c = map.getCenter();
+      onMovedRef.current(`${map.getZoom().toFixed(1)}/${c.lat.toFixed(3)}/${c.lng.toFixed(3)}`);
+    };
+    map.on('moveend', (e: any) => { if (e.originalEvent || e.user) moved(); });
+    // A shift-drag box zoom ends with a moveend that does not carry the user's event
+    map.on('boxzoomend', moved);
 
     map.on('click', async (e) => {
       const s = slugRef.current;
@@ -89,12 +132,15 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => mapRef.current?.resize());
+    const ro = new ResizeObserver(() => {
+      mapRef.current?.resize();
+      mapRef.current?.setPadding(sidebarPadding(sidebarRef.current, el.clientWidth));
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
   useEffect(() => {
-    mapRef.current?.easeTo({ padding: { left: isSidebarOpen ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 }, duration: 350 });
+    mapRef.current?.easeTo({ padding: sidebarPadding(isSidebarOpen, containerRef.current?.clientWidth ?? 0), duration: 350 });
   }, [isSidebarOpen]);
 
   // Swap the raster when the species changes, without re-creating the map
@@ -105,14 +151,14 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
       if (map.getLayer(LAYER)) map.removeLayer(LAYER);
       if (map.getSource(SRC)) map.removeSource(SRC);
       if (!slug) return;
-      map.addSource(SRC, { type: 'raster', tiles: [sdmTileUrl(sdmCogUrl(slug, period))], tileSize: 256, bounds: [-180, 24.4, -52.6, 83.2] });
+      map.addSource(SRC, { type: 'raster', tiles: [sdmTileUrl(sdmCogUrl(slug, period))], tileSize: 256, bounds: DATA_BOUNDS });
       map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': 0.85 } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.isStyleLoaded()) apply(); else map.once('load', apply);
     return () => { map.off('load', apply); };
   }, [slug, period]);
 
-  // IUCN outline is period-independent: reload on species change only
+  // IUCN outline is period-independent: reload on species change only. The map zooms to it here and nowhere else, so the view holds still when the period, clip or records change. A position the user chose (at) is kept instead
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -121,9 +167,15 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
       if (!src) return;
       src.setData(EMPTY);
       if (!slug) return;
+      const current = () => mapRef.current === map && slugRef.current === slug;
       // flatgeobuf + proj4 load lazily so they stay out of the main bundle
-      import('../data/sdmRange').then((m) => m.fetchLaeaFgb(sdmRangeUrl(slug))).then((fc) => { if (mapRef.current === map && slugRef.current === slug) src.setData(fc); })
-        .catch((e) => console.warn('IUCN range unavailable', e));
+      import('../data/sdmRange').then((m) => m.fetchLaeaFgb(sdmRangeUrl(slug))).then((fc) => {
+        if (!current()) return;
+        src.setData(fc);
+        if (atRef.current) return;
+        const box = rangeBounds(fc);
+        if (box) map.fitBounds(box, { maxZoom: 7 }); else map.easeTo(FULL_VIEW);
+      }).catch((e) => { console.warn('IUCN range unavailable', e); if (current() && !atRef.current) map.easeTo(FULL_VIEW); });
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply);
     return () => { map.off('load', apply); };
@@ -176,7 +228,7 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
         {period === '2100' && (lang === 'EN' ? ' (no clipped version for 2100)' : ' (pas de version découpée pour 2100)')}
       </label>
       {slug && (
-        <button onClick={() => setShowOcc(v => !v)} aria-pressed={showOcc}
+        <button onClick={onToggleOcc} aria-pressed={showOcc}
           className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
           {lang === 'EN' ? 'GBIF records' : 'Mentions GBIF'}
         </button>
@@ -190,7 +242,7 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
           {isExpanded ? <Minimize2 className="w-4 h-4 text-sage-700" /> : <Maximize2 className="w-4 h-4 text-sage-700" />}
         </button>
         <div className="flex flex-col rounded-lg bg-white/95 shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-200">
-          {([[Plus, () => mapRef.current?.zoomIn(), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut(), lang === 'EN' ? 'Zoom out' : 'Zoom arrière']] as const).map(([Icon, fn, label]) => (
+          {([[Plus, () => mapRef.current?.zoomIn({}, { user: true }), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut({}, { user: true }), lang === 'EN' ? 'Zoom out' : 'Zoom arrière']] as const).map(([Icon, fn, label]) => (
             <button key={label} type="button" onClick={fn} title={label} aria-label={label}
               className="w-8 h-8 flex items-center justify-center text-gray-700 hover:bg-gray-50 cursor-pointer">
               <Icon className="w-4 h-4" />
