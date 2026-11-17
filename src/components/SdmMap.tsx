@@ -158,13 +158,23 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
       <div ref={containerRef} className="w-full h-full" />
       <div className={`absolute top-3 ${isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} right-16 flex flex-wrap gap-2 text-xs font-sans z-10 transition-all duration-300`}>
       <div className="flex rounded-lg overflow-hidden shadow-sm border border-gray-200">
-        {([['current', lang === 'EN' ? 'Current (1980-2010)' : 'Actuel (1980-2010)'], ['2100', lang === 'EN' ? '2100 projection (2071-2100)' : 'Projection 2100 (2071-2100)']] as const).map(([k, label]) => (
-          <button key={k} onClick={() => onPeriodChange(k)} aria-pressed={period === k}
-            className={`px-3 py-1.5 cursor-pointer ${period === k ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-            {label}
-          </button>
-        ))}
+        {([['current', lang === 'EN' ? 'Current (1980-2010)' : 'Actuel (1980-2010)'], ['2100', lang === 'EN' ? '2100 projection (2071-2100)' : 'Projection 2100 (2071-2100)']] as const).map(([k, label]) => {
+          const on = (period === '2100') === (k === '2100');
+          // Leaving 2100 keeps the clip off, so the two periods compare like with like
+          return (
+            <button key={k} onClick={() => on || onPeriodChange(k === '2100' ? '2100' : 'current-model')} aria-pressed={on}
+              className={`px-3 py-1.5 cursor-pointer ${on ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              {label}
+            </button>
+          );
+        })}
       </div>
+      <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 bg-white ${period === '2100' ? 'text-gray-400' : 'text-gray-600 cursor-pointer'}`}>
+        <input type="checkbox" className="accent-sage-500" checked={period === 'current'} disabled={period === '2100'}
+          onChange={e => onPeriodChange(e.target.checked ? 'current' : 'current-model')} />
+        {lang === 'EN' ? 'Clip to known range' : "Découper selon l'aire connue"}
+        {period === '2100' && (lang === 'EN' ? ' (no clipped version for 2100)' : ' (pas de version découpée pour 2100)')}
+      </label>
       {slug && (
         <button onClick={() => setShowOcc(v => !v)} aria-pressed={showOcc}
           className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
@@ -192,17 +202,10 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
         <span>{lang === 'EN' ? 'Models: Pollock Lab, licensed under ' : 'Modèles : Laboratoire Pollock, sous licence '}</span>
         <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline text-sage-700 hover:text-sage-900 font-medium">CC BY-NC 4.0</a>
       </div>
-      {period === '2100' && (
-        <p className={`absolute top-12 ${isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} max-w-xs bg-white/90 rounded-lg px-3 py-2 text-xs font-sans text-gray-700 shadow-sm pointer-events-none z-10 transition-all duration-300`}>
-          {lang === 'EN'
-            ? 'Not clipped to the known range, unlike the current map. Suitability outside today\'s range may not be a range gain.'
-            : "Contrairement à la carte actuelle, non découpée selon l'aire connue. La convenance hors de l'aire actuelle n'est pas forcément un gain d'aire."}
-        </p>
-      )}
       <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-[11px] font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-10 max-w-[210px] sm:max-w-xs">
-        <div className="mb-1 text-gray-600 font-semibold">{period === '2100'
-          ? (lang === 'EN' ? 'Ensemble, 2071-2100, 1 km (unclipped)' : 'Ensemble, 2071-2100, 1 km (non découpé)')
-          : (lang === 'EN' ? 'Ensemble (clipped), 1980-2010, 1 km' : 'Ensemble (découpé), 1980-2010, 1 km')}</div>
+        <div className="mb-1 text-gray-600 font-semibold">{period === 'current'
+          ? (lang === 'EN' ? 'Ensemble (clipped to the known range), 1980-2010, 1 km' : 'Ensemble (découpé selon l\'aire connue), 1980-2010, 1 km')
+          : (lang === 'EN' ? `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (model only, not clipped)` : `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (modèle seul, non découpé)`)}</div>
         {slug && (
           <>
             <div className="h-2 w-40 rounded-sm" style={{ background: 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' }} />
