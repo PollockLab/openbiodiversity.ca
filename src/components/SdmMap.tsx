@@ -40,6 +40,8 @@ const rangeBounds = (fc: GeoJSON.FeatureCollection): Box | null => {
 };
 // Keep in sync with the sidebar widths in SdmSidebar (w-72, sm:w-[310px], md:w-[350px])
 const sidebarWidth = () => (window.innerWidth >= 768 ? 350 : window.innerWidth >= 640 ? 310 : 288);
+// Map padding for the open sidebar. On a phone the sidebar covers almost all of the map, so the view is laid out as if it were closed
+const sidebarPadding = (open: boolean, mapWidth: number) => ({ left: open && mapWidth - sidebarWidth() >= 320 ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 });
 // Left offset of the overlay controls so they clear the open sidebar
 const LEFT_OPEN = 'left-3 sm:left-[322px] md:left-[362px]';
 const LEFT_CLOSED = 'left-13 sm:left-14';
@@ -85,7 +87,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       attributionControl: { compact: true },
     });
     mapRef.current = map;
-    map.setPadding({ left: sidebarRef.current ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 });
+    map.setPadding(sidebarPadding(sidebarRef.current, containerRef.current.clientWidth));
     map.on('load', () => {
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#e8590c', 'line-width': 1.5, 'line-opacity': 0.9 } });
@@ -131,7 +133,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     return () => ro.disconnect();
   }, []);
   useEffect(() => {
-    mapRef.current?.easeTo({ padding: { left: isSidebarOpen ? sidebarWidth() : 0, top: 0, right: 0, bottom: 0 }, duration: 350 });
+    mapRef.current?.easeTo({ padding: sidebarPadding(isSidebarOpen, containerRef.current?.clientWidth ?? 0), duration: 350 });
   }, [isSidebarOpen]);
 
   // Swap the raster when the species changes, without re-creating the map
