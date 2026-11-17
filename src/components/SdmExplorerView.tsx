@@ -8,7 +8,7 @@ import { SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 
 const DEFAULT_SPECIES = 'rangifer-tarandus';
-// Species and view live in the hash as #sdm-explorer?sp=<id>&view=<2100|model>; App.tsx routes on the part before "?"
+// Species, view and GBIF records live in the hash as #sdm-explorer?sp=<id>&view=<2100|model>&gbif=1; App.tsx routes on the part before "?"
 const hashParam = (key: string) => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(key);
 const speciesFromHash = () => hashParam('sp') || DEFAULT_SPECIES;
 // No view, or an unknown one, is the default clipped current map, so links from before the view existed still work
@@ -33,6 +33,7 @@ export default function SdmExplorerView() {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
+  const [showOcc, setShowOcc] = useState(() => hashParam('gbif') === '1');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -48,8 +49,8 @@ export default function SdmExplorerView() {
 
   useEffect(() => {
     const view = period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
-    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${view}`);
-  }, [selectedSdmId, period]);
+    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${view}${showOcc ? '&gbif=1' : ''}`);
+  }, [selectedSdmId, period, showOcc]);
 
   // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
   useEffect(() => {
@@ -110,6 +111,8 @@ export default function SdmExplorerView() {
           slug={selectedSpecies?.ecccSlug ?? selectedSdmId}
           period={period}
           onPeriodChange={setPeriod}
+          showOcc={showOcc}
+          onToggleOcc={() => setShowOcc(v => !v)}
           isExpanded={isExpanded}
           onToggleExpand={() => setIsExpanded(v => !v)}
           isSidebarOpen={isSidebarOpen}

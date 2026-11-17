@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Maximize2, Minimize2, Plus, Minus } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -25,14 +25,15 @@ interface SdmMapProps {
   slug?: string;
   period: SdmPeriod;
   onPeriodChange: (p: SdmPeriod) => void;
+  showOcc: boolean;
+  onToggleOcc: () => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
-  const [showOcc, setShowOcc] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const slugRef = useRef(slug);
@@ -176,7 +177,7 @@ export default function SdmMap({ slug, period, onPeriodChange, isExpanded, onTog
         {period === '2100' && (lang === 'EN' ? ' (no clipped version for 2100)' : ' (pas de version découpée pour 2100)')}
       </label>
       {slug && (
-        <button onClick={() => setShowOcc(v => !v)} aria-pressed={showOcc}
+        <button onClick={onToggleOcc} aria-pressed={showOcc}
           className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
           {lang === 'EN' ? 'GBIF records' : 'Mentions GBIF'}
         </button>
