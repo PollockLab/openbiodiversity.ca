@@ -15,6 +15,29 @@ const OCC = 'gbif-occurrences';
 const OCC_IN = '#ffffff';
 const OCC_OUT = '#991b1b';
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+type Box = [number, number, number, number];
+// A map position in the link, as zoom/lat/lng
+export const parseAt = (at: string | null) => {
+  const m = /^(\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/.exec(at ?? '');
+  if (!m) return null;
+  const [zoom, lat, lng] = m.slice(1).map(Number);
+  return zoom <= 22 && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { center: [lng, lat] as [number, number], zoom } : null;
+};
+// Extent of the rasters, and the view that shows all of it
+const DATA_BOUNDS: Box = [-180, 24.4, -52.6, 83.2];
+const FULL_VIEW = { center: [-96, 58] as [number, number], zoom: 2.6 };
+// Box around the range, widened by half its size on each side so a shift by 2100 stays in view, and clamped to the rasters
+const rangeBounds = (fc: GeoJSON.FeatureCollection): Box | null => {
+  const b: Box = [Infinity, Infinity, -Infinity, -Infinity];
+  const walk = (c: any) => {
+    if (typeof c[0] !== 'number') return c.forEach(walk);
+    b[0] = Math.min(b[0], c[0]); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], c[0]); b[3] = Math.max(b[3], c[1]);
+  };
+  fc.features.forEach((f) => walk((f.geometry as any).coordinates));
+  const dx = (b[2] - b[0]) / 2, dy = (b[3] - b[1]) / 2;
+  const box: Box = [Math.max(b[0] - dx, DATA_BOUNDS[0]), Math.max(b[1] - dy, DATA_BOUNDS[1]), Math.min(b[2] + dx, DATA_BOUNDS[2]), Math.min(b[3] + dy, DATA_BOUNDS[3])];
+  return box[0] < box[2] && box[1] < box[3] ? box : null;
+};
 // Keep in sync with the sidebar widths in SdmSidebar (w-72, sm:w-[310px], md:w-[350px])
 const sidebarWidth = () => (window.innerWidth >= 768 ? 350 : window.innerWidth >= 640 ? 310 : 288);
 // Left offset of the overlay controls so they clear the open sidebar
@@ -27,12 +50,15 @@ interface SdmMapProps {
   onPeriodChange: (p: SdmPeriod) => void;
   showOcc: boolean;
   onToggleOcc: () => void;
+  // Position the user chose, zoom/lat/lng; while it is set the map does not zoom to the species
+  at: string | null;
+  onMoved: (at: string) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -42,6 +68,10 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   slugRef.current = slug;
   periodRef.current = period;
   langRef.current = lang;
+  const atRef = useRef(at);
+  const onMovedRef = useRef(onMoved);
+  atRef.current = at;
+  onMovedRef.current = onMoved;
   const sidebarRef = useRef(isSidebarOpen);
   sidebarRef.current = isSidebarOpen;
 
@@ -51,8 +81,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: { ...getGreyStyle(isRetina), projection: { type: 'mercator' } },
-      center: [-96, 58],
-      zoom: 2.6,
+      ...(parseAt(atRef.current) ?? FULL_VIEW),
       attributionControl: { compact: true },
     });
     mapRef.current = map;
@@ -65,6 +94,13 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
       map.addSource(OCC, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5 } });
+    });
+
+    // Only moves the user made go in the link, not the fit to a species, a resize or the sidebar
+    map.on('moveend', (e: any) => {
+      if (!e.originalEvent && !e.user) return;
+      const c = map.getCenter();
+      onMovedRef.current(`${map.getZoom().toFixed(1)}/${c.lat.toFixed(3)}/${c.lng.toFixed(3)}`);
     });
 
     map.on('click', async (e) => {
@@ -106,14 +142,14 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (map.getLayer(LAYER)) map.removeLayer(LAYER);
       if (map.getSource(SRC)) map.removeSource(SRC);
       if (!slug) return;
-      map.addSource(SRC, { type: 'raster', tiles: [sdmTileUrl(sdmCogUrl(slug, period))], tileSize: 256, bounds: [-180, 24.4, -52.6, 83.2] });
+      map.addSource(SRC, { type: 'raster', tiles: [sdmTileUrl(sdmCogUrl(slug, period))], tileSize: 256, bounds: DATA_BOUNDS });
       map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': 0.85 } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.isStyleLoaded()) apply(); else map.once('load', apply);
     return () => { map.off('load', apply); };
   }, [slug, period]);
 
-  // IUCN outline is period-independent: reload on species change only
+  // IUCN outline is period-independent: reload on species change only. The map zooms to it here and nowhere else, so the view holds still when the period, clip or records change. A position the user chose (at) is kept instead
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -122,9 +158,15 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (!src) return;
       src.setData(EMPTY);
       if (!slug) return;
+      const current = () => mapRef.current === map && slugRef.current === slug;
       // flatgeobuf + proj4 load lazily so they stay out of the main bundle
-      import('../data/sdmRange').then((m) => m.fetchLaeaFgb(sdmRangeUrl(slug))).then((fc) => { if (mapRef.current === map && slugRef.current === slug) src.setData(fc); })
-        .catch((e) => console.warn('IUCN range unavailable', e));
+      import('../data/sdmRange').then((m) => m.fetchLaeaFgb(sdmRangeUrl(slug))).then((fc) => {
+        if (!current()) return;
+        src.setData(fc);
+        if (atRef.current) return;
+        const box = rangeBounds(fc);
+        if (box) map.fitBounds(box, { maxZoom: 7 }); else map.easeTo(FULL_VIEW);
+      }).catch((e) => { console.warn('IUCN range unavailable', e); if (current() && !atRef.current) map.easeTo(FULL_VIEW); });
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply);
     return () => { map.off('load', apply); };
@@ -191,7 +233,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           {isExpanded ? <Minimize2 className="w-4 h-4 text-sage-700" /> : <Maximize2 className="w-4 h-4 text-sage-700" />}
         </button>
         <div className="flex flex-col rounded-lg bg-white/95 shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-200">
-          {([[Plus, () => mapRef.current?.zoomIn(), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut(), lang === 'EN' ? 'Zoom out' : 'Zoom arrière']] as const).map(([Icon, fn, label]) => (
+          {([[Plus, () => mapRef.current?.zoomIn({}, { user: true }), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut({}, { user: true }), lang === 'EN' ? 'Zoom out' : 'Zoom arrière']] as const).map(([Icon, fn, label]) => (
             <button key={label} type="button" onClick={fn} title={label} aria-label={label}
               className="w-8 h-8 flex items-center justify-center text-gray-700 hover:bg-gray-50 cursor-pointer">
               <Icon className="w-4 h-4" />
