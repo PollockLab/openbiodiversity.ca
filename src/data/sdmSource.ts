@@ -2,13 +2,17 @@ const ARBUTUS_BASE = 'https://object-arbutus.alliancecan.ca/swift/v1/4903c6264e0
 // Biodiversité Québec's titiler: reprojects the bucket's LAEA COGs on the fly, so no Web Mercator copies are needed
 export const TITILER_BASE = 'https://tiler2.biodiversite-quebec.ca/cog';
 
-export type SdmPeriod = 'current' | '2100';
+export type SdmPeriod = 'current' | 'current-model' | '2100';
 
-// No clipped product exists for the future period
+// Only 1980-2010 has a clipped product; 'current-model' is its unclipped twin, the like-for-like match for 2100
+const SDM_FILES: Record<SdmPeriod, string> = {
+  current: 'sdm-ensemble-clipped_1km_na_1980-2010',
+  'current-model': 'sdm-ensemble_1km_na_1980-2010',
+  '2100': 'sdm-ensemble_1km_na_2071-2100',
+};
+
 export const sdmCogUrl = (slug: string, period: SdmPeriod = 'current') =>
-  period === '2100'
-    ? `${ARBUTUS_BASE}/${slug}_sdm-ensemble_1km_na_2071-2100_sett1.tif`
-    : `${ARBUTUS_BASE}/${slug}_sdm-ensemble-clipped_1km_na_1980-2010_sett1.tif`;
+  `${ARBUTUS_BASE}/${slug}_${SDM_FILES[period]}_sett1.tif`;
 
 // Byte 0..99 suitability %, nodata 255
 export const sdmTileUrl = (cogUrl: string) =>
