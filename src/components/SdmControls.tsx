@@ -6,6 +6,8 @@ import Timeline from './SdmTimeline';
 import type { View } from './SdmMap';
 
 type L = [string, string]; // EN, FR
+// The prototype Change view is unlisted: its button shows only when the page was opened from a view=categories link
+const PROTO = window.location.hash.includes('view=categories');
 // One-line plain-language explanations of Laura's categories (names unchanged)
 export const CAT_TIPS: Record<Category, L> = {
   expected: ['Suitable now and in 2100, near observations', "Favorable aujourd'hui et en 2100, près des observations"],
@@ -40,9 +42,9 @@ export default function SdmControls({ lang, left, view, onViewChange, period, on
     <div className={`absolute top-3 ${left} right-16 flex flex-wrap items-start gap-2 text-xs font-sans z-10 transition-all duration-300`}>
       <div className="flex rounded-lg overflow-hidden shadow-sm border border-gray-200">
         {views.map((v) => <button key={v.k} onClick={v.go} aria-pressed={v.on} {...tip(`v${v.k}`, v.tip)} className={seg(v.on)}>{v.label}</button>)}
-        <button onClick={() => onViewChange('categories')} aria-pressed={cats} {...tip('vcat', t('Compares today with 2100 and sorts every place into four groups', "Compare aujourd'hui et 2100 et classe chaque lieu en quatre groupes"))} className={seg(cats)}>
+        {PROTO && <button onClick={() => onViewChange('categories')} aria-pressed={cats} {...tip('vcat', t('Compares today with 2100 and sorts every place into four groups', "Compare aujourd'hui et 2100 et classe chaque lieu en quatre groupes"))} className={seg(cats)}>
           {t('Change, today to 2100', "Changement, aujourd'hui à 2100")} <span className="ml-1 text-[9px] uppercase opacity-70">{t('prototype', 'prototype')}</span>
-        </button>
+        </button>}
       </div>
       {view === 'suitability' && (
         <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 bg-white ${period === '2100' ? 'text-gray-400' : 'text-gray-600 cursor-pointer'}`}>
