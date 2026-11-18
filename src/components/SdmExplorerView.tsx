@@ -50,7 +50,9 @@ export default function SdmExplorerView() {
   const [evidence, setEvidence] = useState<Evidence>(evidenceFromHash);
   const [span, setSpan] = useState<Span>(spanFromHash);
   const [showOcc, setShowOcc] = useState(() => hashParam('gbif') === '1');
-  const [showObs, setShowObs] = useState(() => hashParam('obs') === '1');
+  // By year is on in the categories view unless the link says obs=0, and off elsewhere unless it says obs=1
+  const [obsChoice, setObsChoice] = useState<boolean | null>(() => { const o = hashParam('obs'); return o === '1' ? true : o === '0' ? false : null; });
+  const showObs = obsChoice ?? view === 'categories';
   const [at, setAt] = useState(() => (parseAt(hashParam('at')) ? hashParam('at') : null));
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -72,7 +74,7 @@ export default function SdmExplorerView() {
     const v = cats ? '&view=categories' : period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
     const ev = cats && evidence !== 'medium' ? `&ev=${evidence}` : '';
     const sp = (cats || showObs) && span.join() !== DEFAULT_SPAN.join() ? `&span=${span.join('-')}` : '';
-    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${ev}${sp}${showOcc ? '&gbif=1' : ''}${showObs ? '&obs=1' : ''}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
+    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${ev}${sp}${showOcc ? '&gbif=1' : ''}${showObs === (view === 'categories') ? '' : `&obs=${+showObs}`}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
   }, [selectedSdmId, period, view, evidence, span, showOcc, showObs, at, lang]);
 
   // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
@@ -137,7 +139,7 @@ export default function SdmExplorerView() {
           showOcc={showOcc}
           onToggleOcc={() => setShowOcc(v => !v)}
           showObs={showObs}
-          onToggleObs={() => setShowObs(v => !v)}
+          onToggleObs={() => setObsChoice(!showObs)}
           view={view}
           onViewChange={setView}
           evidence={evidence}

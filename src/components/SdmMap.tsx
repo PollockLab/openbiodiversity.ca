@@ -6,7 +6,7 @@ import { getGreyStyle } from './BaseMap';
 import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, Evidence, hex, registerCategoryProtocol, SUITABLE } from '../data/sdmCategories';
-import Timeline from './SdmTimeline';
+import SdmControls, { CAT_TIPS } from './SdmControls';
 import { bindRecordPopups } from './sdmPopup';
 import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, NewStats, Span, FIRST_YEAR, LAST_YEAR } from '../data/sdmTemporal';
 
@@ -23,7 +23,6 @@ const OCC_OUT = '#991b1b';
 const CAT_LABELS: Record<Category, [string, string]> = {
   expected: ['Expected', 'Attendu'], frontier: ['Frontier', 'Frontière'], 'climate-risk': ['Climate risk', 'Risque climatique'], 'newly-suitable': ['Newly suitable', 'Nouvellement favorable'],
 };
-const EVIDENCE_LABELS: Record<Evidence, [string, string]> = { none: ['None', 'Aucune'], medium: ['Medium', 'Moyenne'], high: ['High', 'Élevée'] };
 const YEARS = Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
 const sciName = (slug: string) => slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
 export type View = 'suitability' | 'categories';
@@ -329,61 +328,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   return (
     <div className="relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
       <div ref={containerRef} className="w-full h-full" />
-      <div className={`absolute top-3 ${isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} right-16 flex flex-wrap gap-2 text-xs font-sans z-10 transition-all duration-300`}>
-      <div className="flex rounded-lg overflow-hidden shadow-sm border border-gray-200">
-        {([['current', lang === 'EN' ? 'Current (1980-2010)' : 'Actuel (1980-2010)'], ['2100', lang === 'EN' ? '2100 projection (2071-2100)' : 'Projection 2100 (2071-2100)']] as const).map(([k, label]) => {
-          const on = view === 'suitability' && (period === '2100') === (k === '2100');
-          // Leaving 2100 keeps the clip off, so the two periods compare like with like
-          return (
-            <button key={k} onClick={() => { onViewChange('suitability'); on || onPeriodChange(k === '2100' ? '2100' : 'current-model'); }} aria-pressed={on}
-              className={`px-3 py-1.5 cursor-pointer ${on ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-              {label}
-            </button>
-          );
-        })}
-        {slug && (
-          <button onClick={() => onViewChange('categories')} aria-pressed={view === 'categories'}
-            className={`px-3 py-1.5 cursor-pointer ${view === 'categories' ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-            {lang === 'EN' ? 'Categories (prototype)' : 'Catégories (prototype)'}
-          </button>
-        )}
-      </div>
-      {view === 'suitability' && (
-      <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 bg-white ${period === '2100' ? 'text-gray-400' : 'text-gray-600 cursor-pointer'}`}>
-        <input type="checkbox" className="accent-sage-500" checked={period === 'current'} disabled={period === '2100'}
-          onChange={e => onPeriodChange(e.target.checked ? 'current' : 'current-model')} />
-        {lang === 'EN' ? 'Clip to known range' : "Découper selon l'aire connue"}
-        {period === '2100' && (lang === 'EN' ? ' (no clipped version for 2100)' : ' (pas de version découpée pour 2100)')}
-      </label>
-      )}
-      {slug && view === 'categories' && (
-        <div className="flex items-center rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-white" role="group" aria-label={lang === 'EN' ? 'Evidence' : 'Preuves'}>
-          <span className="px-2 text-gray-500">{lang === 'EN' ? 'Evidence' : 'Preuves'}</span>
-          {(['none', 'medium', 'high'] as const).map((e) => (
-            <button key={e} onClick={() => onEvidenceChange(e)} aria-pressed={evidence === e}
-              className={`px-2.5 py-1.5 cursor-pointer ${evidence === e ? 'bg-sage-500 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
-              {EVIDENCE_LABELS[e][lang === 'EN' ? 0 : 1]}
-            </button>
-          ))}
-        </div>
-      )}
-      {slug && (view === 'categories' || showObs) && (
-        <div className="flex items-center gap-1.5 rounded-lg shadow-sm border border-gray-200 bg-white px-2 py-1 text-gray-500">
-          {lang === 'EN' ? 'Evidence' : 'Preuves'}
-          <Timeline from={from} to={to} onChange={onSpanChange} lang={lang} />
-        </div>
-      )}
-      {slug && (<>
-        <button onClick={onToggleOcc} aria-pressed={showOcc} aria-busy={occBusy}
-          className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${occBusy ? 'animate-pulse ' : ''}${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-          {lang === 'EN' ? 'Training records' : "Données d'entraînement"}
-        </button>
-        <button onClick={onToggleObs} aria-pressed={showObs}
-          className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${''}${showObs ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-          {lang === 'EN' ? 'GBIF records by year' : 'Observations GBIF par année'}
-        </button>
-      </>)}
-      </div>
+      <SdmControls lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} period={period} onPeriodChange={onPeriodChange} evidence={evidence} onEvidenceChange={onEvidenceChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
       <div className="absolute top-3 right-3 z-20 flex flex-col gap-2 items-center">
         <button type="button" onClick={onToggleExpand} aria-pressed={isExpanded}
           title={isExpanded ? (lang === 'EN' ? 'Exit expanded view (Esc)' : 'Quitter le mode plein écran (Échap)') : (lang === 'EN' ? 'Expand viewer' : 'Agrandir le visualiseur')}
@@ -405,7 +350,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline text-sage-700 hover:text-sage-900 font-medium">CC BY-NC 4.0</a>
       </div>
       {view === 'categories' && slug && (
-        <p className={`absolute top-24 ${isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} max-w-xs bg-amber-50/95 border border-amber-300 rounded-lg px-3 py-2 text-xs font-sans text-amber-900 shadow-sm pointer-events-none z-10 transition-all duration-300`}>
+        <p className={`absolute bottom-14 ${isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} max-w-xs bg-amber-50/95 border border-amber-300 rounded-lg px-3 py-2 text-xs font-sans text-amber-900 shadow-sm pointer-events-none z-10 transition-all duration-300`}>
           {lang === 'EN'
             ? 'Prototype for discussion. Thresholds are provisional and the categories are not peer reviewed; do not use for decisions.'
             : "Prototype à des fins de discussion. Les seuils sont provisoires et les catégories n'ont pas été évaluées par des pairs; ne pas utiliser pour prendre des décisions."}
@@ -419,7 +364,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
             {CATEGORIES.map((c) => {
               const row = newStats?.byCat[c];
               return (
-                <div key={c} className="flex items-center gap-2 mt-0.5 text-[10px]">
+                <div key={c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} aria-description={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className="flex items-center gap-2 mt-0.5 text-[10px] pointer-events-auto cursor-help">
                   <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
                   <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
                   {newStats && <span className="tabular-nums text-gray-500">{row?.[0] ?? 0} / {row?.[1] ?? 0}</span>}
@@ -430,8 +375,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-600">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-white border border-gray-600 mr-1" />
                 {lang === 'EN'
-                  ? `White: records ${from}–${to}. Coloured: records since ${to + 1} where none existed, coloured by the category they fell in; ringed = over 10 km from any white dot. ${newStats?.byCat.unsuitable?.[0] ?? 0} of ${newStats?.total ?? 0} fell below ${SUITABLE}% suitability (hollow grey).`
-                  : `Blanc : mentions ${from}–${to}. Couleur : mentions depuis ${to + 1} là où il n'y en avait pas, selon la catégorie où elles tombent; cerclé = à plus de 10 km d'un point blanc. ${newStats?.byCat.unsuitable?.[0] ?? 0} sur ${newStats?.total ?? 0} sous ${SUITABLE} % de convenance (cercle gris vide).`}
+                  ? `White dots: GBIF observations ${from}–${to} (By year). Coloured dots: places first observed since ${to + 1}, coloured by the group they fall in; ringed = over 10 km from any white dot. ${newStats?.byCat.unsuitable?.[0] ?? 0} of ${newStats?.total ?? 0} fell below ${SUITABLE}% suitability (hollow grey).`
+                  : `Points blancs : observations GBIF ${from}–${to} (Par année). Points colorés : lieux observés pour la première fois depuis ${to + 1}, selon le groupe où ils tombent; cerclé = à plus de 10 km d'un point blanc. ${newStats?.byCat.unsuitable?.[0] ?? 0} sur ${newStats?.total ?? 0} sous ${SUITABLE} % de convenance (cercle gris vide).`}
               </div>
             )}
             {yearly && (
@@ -454,7 +399,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               </div>
             )}
             <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-500">
-              {lang === 'EN' ? 'Evidence sets transparency only; categories never change. Medium: full inside the IUCN range, fading to faint over 100 km outside it. High: also fades with distance from the evidence records (20 km).' : "Les preuves ne règlent que la transparence; les catégories ne changent pas. Moyenne : pleine dans l'aire UICN, s'estompe sur 100 km au-delà. Élevée : s'estompe aussi avec la distance aux mentions (20 km)."}
+              {lang === 'EN' ? 'Trust sets transparency only; the groups never change. Known range: full inside the IUCN range, fading to faint over 100 km outside it. Near observations: also fades with distance from the observations (20 km).' : "La confiance ne règle que la transparence; les catégories ne changent pas. Aire connue : pleine dans l'aire UICN, s'estompe sur 100 km au-delà. Près des observations : s'estompe aussi avec la distance aux observations (20 km)."}
             </div>
           </>
         ) : (<>
