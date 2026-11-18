@@ -196,26 +196,10 @@ export function registerCategoryProtocol() {
 }
 
 // Category of the cell under a point, read from the same raw tiles at a fixed zoom (512 px z6 ≈ 850 m pixels at 45°N, so records share tiles)
-export async function categoryAt(slug: string, lon: number, lat: number, key = recordsKey(slug), z = 6): Promise<Category | null> {
+export async function categoryAt(slug: string, lon: number, lat: number, key: string, z = 6): Promise<Category | null> {
   const n = 2 ** z, fx = (lon + 180) / 360 * n, fy = (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2 * n;
   const x = Math.floor(fx), y = Math.floor(fy), i = (Math.floor((fy - y) * T) * T + Math.floor((fx - x) * T)) * 4;
   const [u, f] = await pair(slug, z, x, y);
   if (!u || !f || !u.v[i + 3] || !f.v[i + 3]) return null;
   return categorize(u.v[i], f.v[i], distanceToTrainingKm(key, lon, lat));
-}
-
-// Records added to GBIF after the models' training download (15 Dec 2025)
-export const TRAINING_CUTOFF = '2025-12-15';
-export async function fetchNewRecords(sci: string, max = 1500): Promise<{ lon: number; lat: number; date?: string }[]> {
-  const match = await (await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(sci)}`)).json();
-  if (!match.usageKey) return [];
-  const out: { lon: number; lat: number; date?: string }[] = [];
-  const today = new Date().toISOString().slice(0, 10);
-  for (let offset = 0; offset < max; offset += 300) {
-    const q = `taxonKey=${match.usageKey}&country=CA&country=US&hasCoordinate=true&hasGeospatialIssue=false&occurrenceStatus=PRESENT&eventDate=2025-12-16,${today}&limit=300&offset=${offset}`;
-    const page = await (await fetch(`https://api.gbif.org/v1/occurrence/search?${q}`)).json();
-    for (const r of page.results ?? []) out.push({ lon: r.decimalLongitude, lat: r.decimalLatitude, date: r.eventDate });
-    if (page.endOfRecords) break;
-  }
-  return out;
 }

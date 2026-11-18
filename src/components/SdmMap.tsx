@@ -5,9 +5,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
 import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
-import { CATEGORIES, Category, Evidence, hex, registerCategoryProtocol, setTrainingRecords, hasTrainingRecords, distanceToTrainingKm, categoryAt, fetchNewRecords, recordsKey, TRAINING_CUTOFF, SUITABLE } from '../data/sdmCategories';
+import { CATEGORIES, Category, Evidence, hex, registerCategoryProtocol, SUITABLE } from '../data/sdmCategories';
 import Timeline from './SdmTimeline';
-import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, NewStats, Span, DEFAULT_SPAN, FIRST_YEAR, LAST_YEAR } from '../data/sdmTemporal';
+import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, NewStats, Span, FIRST_YEAR, LAST_YEAR } from '../data/sdmTemporal';
 
 const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
@@ -24,10 +24,6 @@ const CAT_LABELS: Record<Category, [string, string]> = {
 const EVIDENCE_LABELS: Record<Evidence, [string, string]> = { none: ['None', 'Aucune'], medium: ['Medium', 'Moyenne'], high: ['High', 'Élevée'] };
 const YEARS = Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
 const sciName = (slug: string) => slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
-// Training records feed the high-evidence weight and the new / discovery split
-const loadTraining = (slug: string) => hasTrainingRecords(recordsKey(slug)) ? Promise.resolve() :
-  import('../data/sdmRange').then((m) => m.fetchLaeaFgb(sdmOccurrenceUrl(slug))).then((fc) =>
-    setTrainingRecords(recordsKey(slug), fc.features.map((f) => (f.geometry as GeoJSON.Point).coordinates as [number, number])));
 export type View = 'suitability' | 'categories';
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 type Box = [number, number, number, number];
@@ -69,13 +65,13 @@ interface SdmMapProps {
   onPeriodChange: (p: SdmPeriod) => void;
   showOcc: boolean;
   onToggleOcc: () => void;
-  // Categories view: its evidence level, and the GBIF evidence period in inclusive years (null = the model's training records)
+  // Categories view: its evidence level, and the GBIF evidence period in inclusive years
   view: View;
   onViewChange: (v: View) => void;
   evidence: Evidence;
   onEvidenceChange: (e: Evidence) => void;
-  span: Span | null;
-  onSpanChange: (s: Span | null) => void;
+  span: Span;
+  onSpanChange: (s: Span) => void;
   // Position the user chose, zoom/lat/lng; while it is set the map does not zoom to the species
   at: string | null;
   onMoved: (at: string) => void;
@@ -87,8 +83,8 @@ interface SdmMapProps {
 export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, view, onViewChange, evidence, onEvidenceChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
   const [newStats, setNewStats] = useState<NewStats | null>(null);
-  const [from, to] = span ?? DEFAULT_SPAN;
-  const spanKey = span && spanSet(span);
+  const [from, to] = span;
+  const spanKey = spanSet(span);
   const [yearly, setYearly] = useState<Record<number, NewStats> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -190,12 +186,10 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (map.getSource(SRC)) map.removeSource(SRC);
       if (!slug) return;
       const cats = view === 'categories';
-      let set = 'training';
-      if (cats && !span) await loadTraining(slug).catch((e) => console.warn('Training records unavailable', e));
-      if (cats && span) { evidenceKey(slug, await fetchCells(sciName(slug)), span); set = spanSet(span); }
+      if (cats) evidenceKey(slug, await fetchCells(sciName(slug)), span);
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
-      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${evidence}/${set}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
+      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${evidence}/${spanKey}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
       map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 1 : 0.85 } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.isStyleLoaded()) apply(); else map.once('load', apply);
@@ -214,21 +208,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       src.setData(EMPTY);
       if (!slug || view !== 'categories') return;
       let features: GeoJSON.Feature[] = [], stats: NewStats = { total: 0, discovery: 0, byCat: {} };
-      if (span) { if (span[1] < LAST_YEAR) ({ features, stats } = await classifyNew(slug, await fetchCells(sciName(slug)), span, [span[1] + 1, LAST_YEAR])); }
-      else {
-        await loadTraining(slug);
-        const key = recordsKey(slug);
-        await Promise.all((await fetchNewRecords(sciName(slug))).map(async ({ lon, lat, date }) => {
-          const d = distanceToTrainingKm(key, lon, lat);
-          if (d < 1) return; // same 1 km cell as a training record: not new
-          const category = (await categoryAt(slug, lon, lat)) ?? 'unsuitable';
-          const discovery = d >= 10;
-          const row = stats.byCat[category] ??= [0, 0];
-          row[0]++; stats.total++;
-          if (discovery) { row[1]++; stats.discovery++; }
-          features.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { category, discovery, date } });
-        }));
-      }
+      if (span[1] < LAST_YEAR) ({ features, stats } = await classifyNew(slug, await fetchCells(sciName(slug)), span, [span[1] + 1, LAST_YEAR]));
       if (!live || mapRef.current !== map) return;
       src.setData({ type: 'FeatureCollection', features });
       setNewStats(stats);
@@ -241,7 +221,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const len = to - from + 1;
   useEffect(() => {
     setYearly(null);
-    if (!slug || view !== 'categories' || !span) return;
+    if (!slug || view !== 'categories') return;
     let live = true;
     fetchCells(sciName(slug)).then(async (cells) => {
       const out: Record<number, NewStats> = {};
@@ -249,7 +229,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (live) setYearly(out);
     }).catch((e) => console.warn('GBIF yearly records unavailable', e));
     return () => { live = false; };
-  }, [slug, view, span == null, len]);
+  }, [slug, view, len]);
 
   // IUCN outline is period-independent: reload on species change only. The map zooms to it here and nowhere else, so the view holds still when the period, clip or records change. A position the user chose (at) is kept instead
   useEffect(() => {
@@ -286,9 +266,9 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       const src = map.getSource(OCC) as maplibregl.GeoJSONSource | undefined;
       if (!src) return;
       src.setData(EMPTY);
-      const windowed = view === 'categories' && span;
+      const windowed = view === 'categories' ? span : null;
       if (!slug || !(showOcc || windowed)) return;
-      // With a GBIF evidence period, show its records (white dots): the same points the fade and frontier are computed from
+      // In the categories view, show the evidence records (white dots): the same points the fade and frontier are computed from
       if (windowed) {
         import('../data/sdmRange').then(async (m) => {
           const cells = evidenceCells(await fetchCells(sciName(slug)), windowed);
@@ -358,14 +338,10 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       {slug && view === 'categories' && (
         <div className="flex items-center gap-1.5 rounded-lg shadow-sm border border-gray-200 bg-white px-2 py-1 text-gray-500">
           {lang === 'EN' ? 'Evidence' : 'Preuves'}
-          <select value={span ? 'gbif' : 'model'} onChange={(e) => onSpanChange(e.target.value === 'gbif' ? DEFAULT_SPAN : null)} aria-label={lang === 'EN' ? 'Evidence source' : 'Source des preuves'} className="text-gray-700 bg-transparent cursor-pointer">
-            <option value="gbif">{lang === 'EN' ? 'GBIF records' : 'Mentions GBIF'}</option>
-            <option value="model">{lang === 'EN' ? 'model training data' : "données d'entraînement"}</option>
-          </select>
-          {span && <Timeline from={from} to={to} onChange={onSpanChange} lang={lang} />}
+          <Timeline from={from} to={to} onChange={onSpanChange} lang={lang} />
         </div>
       )}
-      {slug && !(view === 'categories' && span) && (
+      {slug && !(view === 'categories') && (
         <button onClick={onToggleOcc} aria-pressed={showOcc} aria-busy={occBusy}
           className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${occBusy ? 'animate-pulse ' : ''}${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
           {lang === 'EN' ? 'GBIF records' : 'Mentions GBIF'}
@@ -414,19 +390,12 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
                 </div>
               );
             })}
-            {span && (
+            {(
               <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-600">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-white border border-gray-600 mr-1" />
                 {lang === 'EN'
                   ? `White: records ${from}–${to}. Coloured: records since ${to + 1} where none existed, coloured by the category they fell in; ringed = over 10 km from any white dot. ${newStats?.byCat.unsuitable?.[0] ?? 0} of ${newStats?.total ?? 0} fell below ${SUITABLE}% suitability (hollow grey).`
                   : `Blanc : mentions ${from}–${to}. Couleur : mentions depuis ${to + 1} là où il n'y en avait pas, selon la catégorie où elles tombent; cerclé = à plus de 10 km d'un point blanc. ${newStats?.byCat.unsuitable?.[0] ?? 0} sur ${newStats?.total ?? 0} sous ${SUITABLE} % de convenance (cercle gris vide).`}
-              </div>
-            )}
-            {newStats && !span && (
-              <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-500">
-                {lang === 'EN'
-                  ? `${newStats.total} new ${span ? 'cells' : 'records'} / ${newStats.discovery} discoveries (≥ 10 km from ${span ? 'evidence' : 'training records'}); ${newStats.byCat.unsuitable?.[0] ?? 0} fell in unsuitable cells. Bold ring = discovery.`
-                  : `${newStats.total} nouvelles mentions / ${newStats.discovery} découvertes (≥ 10 km des mentions d'entraînement); ${newStats.byCat.unsuitable?.[0] ?? 0} en zone non favorable. Anneau foncé = découverte.`}
               </div>
             )}
             {yearly && (

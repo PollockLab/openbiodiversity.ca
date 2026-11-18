@@ -10,17 +10,16 @@ import { Span, DEFAULT_SPAN, LAST_YEAR, TIMELINE_START } from '../data/sdmTempor
 import { useLanguage } from '../lib/LanguageContext';
 
 const DEFAULT_SPECIES = 'rangifer-tarandus';
-// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=<2100|model|categories>&ev=<none|high>&span=<2016-2020|model>&gbif=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
+// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=<2100|model|categories>&ev=<none|high>&span=<2016-2020>&gbif=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
 const hashParam = (key: string) => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(key);
 const speciesFromHash = () => hashParam('sp') || DEFAULT_SPECIES;
 // No view, or an unknown one, is the default clipped current map, so links from before the view existed still work
 const viewFromHash = (): View => (hashParam('view') === 'categories' ? 'categories' : 'suitability');
 // Medium is the default evidence and is left out of the link
 const evidenceFromHash = (): Evidence => { const ev = hashParam('ev'); return ev === 'none' || ev === 'high' ? ev : 'medium'; };
-// span=model is the training-data source; years are clamped to the timeline, and a reversed or unreadable span is the default
-const spanFromHash = (): Span | null => {
+// Years are clamped to the timeline; a reversed or unreadable span (including the retired span=model) is the default
+const spanFromHash = (): Span => {
   const sp = hashParam('span');
-  if (sp === 'model') return null;
   const m = /^(\d{4})-(\d{4})$/.exec(sp ?? '');
   if (!m || +m[1] > +m[2]) return DEFAULT_SPAN;
   const clamp = (y: number) => Math.min(Math.max(y, TIMELINE_START), LAST_YEAR - 1);
@@ -49,7 +48,7 @@ export default function SdmExplorerView() {
   const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
   const [view, setView] = useState<View>(viewFromHash);
   const [evidence, setEvidence] = useState<Evidence>(evidenceFromHash);
-  const [span, setSpan] = useState<Span | null>(spanFromHash);
+  const [span, setSpan] = useState<Span>(spanFromHash);
   const [showOcc, setShowOcc] = useState(() => hashParam('gbif') === '1');
   const [at, setAt] = useState(() => (parseAt(hashParam('at')) ? hashParam('at') : null));
   const [isExpanded, setIsExpanded] = useState(false);
@@ -71,7 +70,7 @@ export default function SdmExplorerView() {
     const cats = view === 'categories';
     const v = cats ? '&view=categories' : period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
     const ev = cats && evidence !== 'medium' ? `&ev=${evidence}` : '';
-    const sp = cats && (span ? span.join() !== DEFAULT_SPAN.join() : true) ? `&span=${span ? span.join('-') : 'model'}` : '';
+    const sp = cats && span.join() !== DEFAULT_SPAN.join() ? `&span=${span.join('-')}` : '';
     window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${ev}${sp}${showOcc ? '&gbif=1' : ''}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
   }, [selectedSdmId, period, view, evidence, span, showOcc, at, lang]);
 
