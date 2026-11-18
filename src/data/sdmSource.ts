@@ -14,9 +14,6 @@ const SDM_FILES: Record<SdmPeriod, string> = {
 export const sdmCogUrl = (slug: string, period: SdmPeriod = 'current') =>
   `${ARBUTUS_BASE}/${slug}_${SDM_FILES[period]}_sett1.tif`;
 
-// Present-day model output before the evidence clip; clipped / unclipped is the evidence weight
-export const sdmCurrentUnclippedUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_sdm-ensemble_1km_na_1980-2010_sett1.tif`;
-
 // Byte 0..99 suitability %, nodata 255
 export const sdmTileUrl = (cogUrl: string) =>
   `${TITILER_BASE}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(cogUrl)}&colormap_name=viridis&rescale=0,99&nodata=255`;

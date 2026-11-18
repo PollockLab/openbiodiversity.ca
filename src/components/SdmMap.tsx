@@ -193,7 +193,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (cats && !span) await loadTraining(slug).catch((e) => console.warn('Training records unavailable', e));
       if (cats && span) { evidenceKey(slug, await fetchCells(sciName(slug)), span); set = spanSet(span); }
       if (!live || map.getSource(SRC)) return;
-      // Category tiles are composed client-side from three COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
+      // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
       map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${evidence}/${set}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
       map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 1 : 0.85 } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
@@ -448,7 +448,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               </div>
             )}
             <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-500">
-              {lang === 'EN' ? 'Evidence sets transparency only; categories never change.' : 'Les preuves ne règlent que la transparence; les catégories ne changent pas.'}
+              {lang === 'EN' ? 'Evidence sets transparency only; categories never change. Medium: full inside the IUCN range, fading to faint over 100 km outside it. High: also fades with distance from the evidence records (20 km).' : "Les preuves ne règlent que la transparence; les catégories ne changent pas. Moyenne : pleine dans l'aire UICN, s'estompe sur 100 km au-delà. Élevée : s'estompe aussi avec la distance aux mentions (20 km)."}
             </div>
           </>
         ) : (<>
