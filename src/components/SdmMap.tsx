@@ -7,6 +7,7 @@ import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmP
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, Evidence, hex, registerCategoryProtocol, SUITABLE } from '../data/sdmCategories';
 import Timeline from './SdmTimeline';
+import { bindRecordPopups } from './sdmPopup';
 import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, NewStats, Span, FIRST_YEAR, LAST_YEAR } from '../data/sdmTemporal';
 
 const SRC = 'sdm-source';
@@ -152,9 +153,14 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     // A shift-drag box zoom ends with a moveend that does not carry the user's event
     map.on('boxzoomend', moved);
 
+    // Clicking a GBIF dot opens its records instead (sdmPopup)
+    const unbind = bindRecordPopups(map, { new: NEW, evidence: OBS, test: OBS, training: OCC }, () => {
+      const { slug: s, span: sp, lang: l } = popupRef.current;
+      return { slug: s, sci: sciName(s ?? ''), fr: l === 'FR', span: sp, label: (c) => CAT_LABELS[c as Category]?.[l === 'EN' ? 0 : 1] ?? c };
+    });
     map.on('click', async (e) => {
       const s = slugRef.current;
-      if (!s) return;
+      if (!s || map.queryRenderedFeatures(e.point, { layers: [NEW, OBS, OCC].filter((l) => map.getLayer(l)) }).length) return;
       const fr = langRef.current === 'FR';
       let text = fr ? 'Aucune prédiction' : 'No prediction';
       if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {
@@ -168,7 +174,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat).setText(text).addTo(map);
     });
 
-    return () => { map.remove(); mapRef.current = null; };
+    return () => { unbind(); map.remove(); mapRef.current = null; };
   }, []);
 
   // Resize with the container (expand mode) and re-center in the space the sidebar leaves free

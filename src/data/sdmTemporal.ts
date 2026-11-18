@@ -7,17 +7,30 @@ import { categoryAt, distanceToTrainingKm, hasTrainingRecords, recordsKey, setTr
 const Z = 3, EXTENT = 512;
 // Tiles covering Canada and the US (lon -180..-45, lat 0..85)
 const TILES = [0, 1, 2].flatMap((x) => [0, 1, 2].map((y) => [x, y]));
-const BASIS = ['HUMAN_OBSERVATION', 'MACHINE_OBSERVATION', 'OBSERVATION', 'OCCURRENCE', 'PRESERVED_SPECIMEN', 'MATERIAL_SAMPLE'];
+export const BASIS = ['HUMAN_OBSERVATION', 'MACHINE_OBSERVATION', 'OBSERVATION', 'OCCURRENCE', 'PRESERVED_SPECIMEN', 'MATERIAL_SAMPLE'];
 export const FIRST_YEAR = 2015;
 export const LAST_YEAR = new Date().getFullYear();
 
 export type Cell = { lon: number; lat: number; first: number; years: Record<number, number> };
 
 const taxonKeys = new Map<string, Promise<number | null>>();
-const taxonKey = (sci: string) => {
+export const taxonKey = (sci: string) => {
   if (!taxonKeys.has(sci)) taxonKeys.set(sci, fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(sci)}`)
     .then((r) => r.json()).then((m) => m.usageKey ?? null));
   return taxonKeys.get(sci)!;
+};
+
+// A cell's bounds [west, south, east, north], the inverse of how load() places its centre
+export function cellBox(c: Cell): [number, number, number, number] {
+  const n = EXTENT * 2 ** Z, wy = (1 - Math.log(Math.tan(Math.PI / 4 + c.lat * Math.PI / 360)) / Math.PI) / 2;
+  const lat = (w: number) => Math.atan(Math.sinh(Math.PI * (1 - 2 * w))) * 180 / Math.PI;
+  return [c.lon - 180 / n, lat(wy + 0.5 / n), c.lon + 180 / n, lat(wy - 0.5 / n)];
+}
+// The cell a map point belongs to: the nearest centre, if it is within a cell
+export const cellAt = (cells: Cell[], lon: number, lat: number) => {
+  let best: Cell | null = null, d = 0.1; // degrees; cells are < 0.1 across
+  for (const c of cells) { const e = Math.hypot(c.lon - lon, c.lat - lat); if (e < d) { d = e; best = c; } }
+  return best;
 };
 
 const cellCache = new Map<string, Promise<Cell[]>>();
