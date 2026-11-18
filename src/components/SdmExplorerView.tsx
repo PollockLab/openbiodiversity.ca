@@ -2,16 +2,30 @@ import React, { useEffect, useState } from 'react';
 import { Compass, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
 import { loadSdmSpecies } from '../data/sdmModels';
 import { SDMModel } from '../types';
-import SdmMap, { parseAt } from './SdmMap';
+import SdmMap, { parseAt, View } from './SdmMap';
 import SdmSidebar from './SdmSidebar';
 import { SdmPeriod } from '../data/sdmSource';
+import { Evidence } from '../data/sdmCategories';
+import { Span, DEFAULT_SPAN, LAST_YEAR, TIMELINE_START } from '../data/sdmTemporal';
 import { useLanguage } from '../lib/LanguageContext';
 
 const DEFAULT_SPECIES = 'rangifer-tarandus';
-// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=<2100|model>&gbif=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
+// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=<2100|model|categories>&ev=<none|high>&span=<2016-2020|model>&gbif=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
 const hashParam = (key: string) => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(key);
 const speciesFromHash = () => hashParam('sp') || DEFAULT_SPECIES;
 // No view, or an unknown one, is the default clipped current map, so links from before the view existed still work
+const viewFromHash = (): View => (hashParam('view') === 'categories' ? 'categories' : 'suitability');
+// Medium is the default evidence and is left out of the link
+const evidenceFromHash = (): Evidence => { const ev = hashParam('ev'); return ev === 'none' || ev === 'high' ? ev : 'medium'; };
+// span=model is the training-data source; years are clamped to the timeline, and a reversed or unreadable span is the default
+const spanFromHash = (): Span | null => {
+  const sp = hashParam('span');
+  if (sp === 'model') return null;
+  const m = /^(\d{4})-(\d{4})$/.exec(sp ?? '');
+  if (!m || +m[1] > +m[2]) return DEFAULT_SPAN;
+  const clamp = (y: number) => Math.min(Math.max(y, TIMELINE_START), LAST_YEAR - 1);
+  return [clamp(+m[1]), clamp(+m[2])];
+};
 const periodFromHash = (): SdmPeriod => {
   const view = hashParam('view');
   return view === '2100' ? '2100' : view === 'model' ? 'current-model' : 'current';
@@ -33,6 +47,9 @@ export default function SdmExplorerView() {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
+  const [view, setView] = useState<View>(viewFromHash);
+  const [evidence, setEvidence] = useState<Evidence>(evidenceFromHash);
+  const [span, setSpan] = useState<Span | null>(spanFromHash);
   const [showOcc, setShowOcc] = useState(() => hashParam('gbif') === '1');
   const [at, setAt] = useState(() => (parseAt(hashParam('at')) ? hashParam('at') : null));
   const [isExpanded, setIsExpanded] = useState(false);
@@ -51,9 +68,12 @@ export default function SdmExplorerView() {
   }, []);
 
   useEffect(() => {
-    const view = period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
-    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${view}${showOcc ? '&gbif=1' : ''}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
-  }, [selectedSdmId, period, showOcc, at, lang]);
+    const cats = view === 'categories';
+    const v = cats ? '&view=categories' : period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
+    const ev = cats && evidence !== 'medium' ? `&ev=${evidence}` : '';
+    const sp = cats && (span ? span.join() !== DEFAULT_SPAN.join() : true) ? `&span=${span ? span.join('-') : 'model'}` : '';
+    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${ev}${sp}${showOcc ? '&gbif=1' : ''}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
+  }, [selectedSdmId, period, view, evidence, span, showOcc, at, lang]);
 
   // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
   useEffect(() => {
@@ -116,6 +136,12 @@ export default function SdmExplorerView() {
           onPeriodChange={setPeriod}
           showOcc={showOcc}
           onToggleOcc={() => setShowOcc(v => !v)}
+          view={view}
+          onViewChange={setView}
+          evidence={evidence}
+          onEvidenceChange={setEvidence}
+          span={span}
+          onSpanChange={setSpan}
           at={at}
           onMoved={setAt}
           isExpanded={isExpanded}

@@ -50,6 +50,7 @@ async function load(sci: string): Promise<Cell[]> {
 }
 
 export type Span = [number, number]; // inclusive years
+export const TIMELINE_START = 1990; // earliest evidence year the timeline offers
 // Default evidence period: the last 10 full years (the IUCN Red List's recent-presence span)
 export const DEFAULT_SPAN: Span = [LAST_YEAR - 10, LAST_YEAR - 1];
 const inSpan = (c: Cell, [a, b]: Span) => Object.keys(c.years).some((y) => +y >= a && +y <= b);

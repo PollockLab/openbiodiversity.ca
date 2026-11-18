@@ -6,7 +6,7 @@ import { getGreyStyle } from './BaseMap';
 import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, Evidence, hex, registerCategoryProtocol, setTrainingRecords, hasTrainingRecords, distanceToTrainingKm, categoryAt, fetchNewRecords, recordsKey, TRAINING_CUTOFF, SUITABLE } from '../data/sdmCategories';
-import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, NewStats, Span, DEFAULT_SPAN, FIRST_YEAR, LAST_YEAR } from '../data/sdmTemporal';
+import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, NewStats, Span, DEFAULT_SPAN, FIRST_YEAR, LAST_YEAR, TIMELINE_START } from '../data/sdmTemporal';
 
 const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
@@ -27,6 +27,7 @@ const sciName = (slug: string) => slug.replace(/-/g, ' ').replace(/^./, (c) => c
 const loadTraining = (slug: string) => hasTrainingRecords(recordsKey(slug)) ? Promise.resolve() :
   import('../data/sdmRange').then((m) => m.fetchLaeaFgb(sdmOccurrenceUrl(slug))).then((fc) =>
     setTrainingRecords(recordsKey(slug), fc.features.map((f) => (f.geometry as GeoJSON.Point).coordinates as [number, number])));
+export type View = 'suitability' | 'categories';
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 type Box = [number, number, number, number];
 // A map position in the link, as zoom/lat/lng
@@ -67,6 +68,13 @@ interface SdmMapProps {
   onPeriodChange: (p: SdmPeriod) => void;
   showOcc: boolean;
   onToggleOcc: () => void;
+  // Categories view: its evidence level, and the GBIF evidence period in inclusive years (null = the model's training records)
+  view: View;
+  onViewChange: (v: View) => void;
+  evidence: Evidence;
+  onEvidenceChange: (e: Evidence) => void;
+  span: Span | null;
+  onSpanChange: (s: Span | null) => void;
   // Position the user chose, zoom/lat/lng; while it is set the map does not zoom to the species
   at: string | null;
   onMoved: (at: string) => void;
@@ -75,13 +83,9 @@ interface SdmMapProps {
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, view, onViewChange, evidence, onEvidenceChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
-  const [view, setView] = useState<'suitability' | 'categories'>('suitability');
-  const [evidence, setEvidence] = useState<Evidence>('medium');
   const [newStats, setNewStats] = useState<NewStats | null>(null);
-  // GBIF evidence period (inclusive years), or null for the model's training records
-  const [span, setSpan] = useState<Span | null>(DEFAULT_SPAN);
   const [from, to] = span ?? DEFAULT_SPAN;
   const spanKey = span && spanSet(span);
   const [yearly, setYearly] = useState<Record<number, NewStats> | null>(null);
@@ -318,14 +322,14 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           const on = view === 'suitability' && (period === '2100') === (k === '2100');
           // Leaving 2100 keeps the clip off, so the two periods compare like with like
           return (
-            <button key={k} onClick={() => { setView('suitability'); on || onPeriodChange(k === '2100' ? '2100' : 'current-model'); }} aria-pressed={on}
+            <button key={k} onClick={() => { onViewChange('suitability'); on || onPeriodChange(k === '2100' ? '2100' : 'current-model'); }} aria-pressed={on}
               className={`px-3 py-1.5 cursor-pointer ${on ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               {label}
             </button>
           );
         })}
         {slug && (
-          <button onClick={() => setView('categories')} aria-pressed={view === 'categories'}
+          <button onClick={() => onViewChange('categories')} aria-pressed={view === 'categories'}
             className={`px-3 py-1.5 cursor-pointer ${view === 'categories' ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
             {lang === 'EN' ? 'Categories (prototype)' : 'Catégories (prototype)'}
           </button>
@@ -343,7 +347,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         <div className="flex items-center rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-white" role="group" aria-label={lang === 'EN' ? 'Evidence' : 'Preuves'}>
           <span className="px-2 text-gray-500">{lang === 'EN' ? 'Evidence' : 'Preuves'}</span>
           {(['none', 'medium', 'high'] as const).map((e) => (
-            <button key={e} onClick={() => setEvidence(e)} aria-pressed={evidence === e}
+            <button key={e} onClick={() => onEvidenceChange(e)} aria-pressed={evidence === e}
               className={`px-2.5 py-1.5 cursor-pointer ${evidence === e ? 'bg-sage-500 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
               {EVIDENCE_LABELS[e][lang === 'EN' ? 0 : 1]}
             </button>
@@ -353,11 +357,11 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       {slug && view === 'categories' && (
         <div className="flex items-center gap-1.5 rounded-lg shadow-sm border border-gray-200 bg-white px-2 py-1 text-gray-500">
           {lang === 'EN' ? 'Evidence' : 'Preuves'}
-          <select value={span ? 'gbif' : 'model'} onChange={(e) => setSpan(e.target.value === 'gbif' ? DEFAULT_SPAN : null)} aria-label={lang === 'EN' ? 'Evidence source' : 'Source des preuves'} className="text-gray-700 bg-transparent cursor-pointer">
+          <select value={span ? 'gbif' : 'model'} onChange={(e) => onSpanChange(e.target.value === 'gbif' ? DEFAULT_SPAN : null)} aria-label={lang === 'EN' ? 'Evidence source' : 'Source des preuves'} className="text-gray-700 bg-transparent cursor-pointer">
             <option value="gbif">{lang === 'EN' ? 'GBIF records' : 'Mentions GBIF'}</option>
             <option value="model">{lang === 'EN' ? 'model training data' : "données d'entraînement"}</option>
           </select>
-          {span && <Timeline from={from} to={to} onChange={setSpan} lang={lang} />}
+          {span && <Timeline from={from} to={to} onChange={onSpanChange} lang={lang} />}
         </div>
       )}
       {slug && !(view === 'categories' && span) && (
@@ -431,7 +435,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
                   {YEARS.map((y) => {
                     const st = yearly[y], max = Math.max(1, st.total);
                     return (
-                      <button key={y} type="button" onClick={() => setSpan([y - len, y - 1])} title={`${y}: ${st.total} new`} aria-label={`${y}: ${st.total} new`}
+                      <button key={y} type="button" onClick={() => onSpanChange([y - len, y - 1])} title={`${y}: ${st.total} new`} aria-label={`${y}: ${st.total} new`}
                         className={`flex-1 flex flex-col-reverse h-full cursor-pointer ${y > to ? 'outline outline-1 outline-gray-700' : ''}`}>
                         {[...CATEGORIES, 'unsuitable'].map((c) => (
                           <span key={c} style={{ height: `${(st.byCat[c]?.[0] ?? 0) / max * 100}%`, background: c === 'unsuitable' ? '#d1d5db' : hex(c as Category) }} />
@@ -489,7 +493,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
 }
 
 // Two-handle year range: the shaded span is the evidence period, everything after it is the test period
-const T0 = 1990;
+const T0 = TIMELINE_START;
 function Timeline({ from, to, onChange, lang }: { from: number; to: number; onChange: (s: Span) => void; lang: string }) {
   const pct = (y: number) => `${(y - T0) / (LAST_YEAR - T0) * 100}%`;
   const thumb = 'absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sage-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-sage-600';
