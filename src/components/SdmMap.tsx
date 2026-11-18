@@ -15,6 +15,7 @@ const LAYER = 'sdm-layer';
 const MASK = 'outside-ca-us-mask';
 const RANGE = 'iucn-range';
 const OCC = 'gbif-occurrences';
+const OBS = 'gbif-by-year';
 const NEW = 'new-records';
 const OCC_IN = '#ffffff';
 const OCC_OUT = '#991b1b';
@@ -65,6 +66,9 @@ interface SdmMapProps {
   onPeriodChange: (p: SdmPeriod) => void;
   showOcc: boolean;
   onToggleOcc: () => void;
+  // GBIF records by year: the dated GBIF cells in the timeline's span (and, in categories, the new records)
+  showObs: boolean;
+  onToggleObs: () => void;
   // Categories view: its evidence level, and the GBIF evidence period in inclusive years
   view: View;
   onViewChange: (v: View) => void;
@@ -80,7 +84,7 @@ interface SdmMapProps {
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, view, onViewChange, evidence, onEvidenceChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, evidence, onEvidenceChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
   const [newStats, setNewStats] = useState<NewStats | null>(null);
   const [from, to] = span;
@@ -99,6 +103,10 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const onMovedRef = useRef(onMoved);
   atRef.current = at;
   onMovedRef.current = onMoved;
+  const showObsRef = useRef(showObs);
+  showObsRef.current = showObs;
+  const popupRef = useRef({ slug, span, lang });
+  popupRef.current = { slug, span, lang };
   const sidebarRef = useRef(isSidebarOpen);
   sidebarRef.current = isSidebarOpen;
 
@@ -122,7 +130,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
       map.addSource(OCC, { type: 'geojson', data: EMPTY });
       map.addSource(NEW, { type: 'geojson', data: EMPTY });
-      map.addLayer({ id: NEW, type: 'circle', source: NEW, paint: {
+      map.addSource(OBS, { type: 'geojson', data: EMPTY });
+      map.addLayer({ id: NEW, type: 'circle', source: NEW, layout: { visibility: showObsRef.current ? 'visible' : 'none' }, paint: {
         // Records below the suitability threshold are hollow grey rings: kept visible as model misses, but recessive
         'circle-radius': ['case', ['==', ['get', 'category'], 'unsuitable'], 2, ['get', 'discovery'], 4.5, 3],
         'circle-color': ['match', ['get', 'category'], 'expected', hex('expected'), 'frontier', hex('frontier'), 'climate-risk', hex('climate-risk'), 'newly-suitable', hex('newly-suitable'), '#9ca3af'],
@@ -130,7 +139,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         'circle-stroke-color': ['case', ['==', ['get', 'category'], 'unsuitable'], '#6b7280', ['get', 'discovery'], '#111827', '#ffffff'],
         'circle-stroke-width': ['case', ['==', ['get', 'category'], 'unsuitable'], 1, ['get', 'discovery'], 1.5, 0.8] } });
       map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': ['case', ['has', 'evidence'], 2, 2.5], 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5, 'circle-stroke-opacity': ['case', ['has', 'evidence'], 0.35, 1] } });
-      map.moveLayer(OCC, NEW); // evidence under the new records
+      map.addLayer({ id: OBS, type: 'circle', source: OBS, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['has', 'test'], '#f59e0b', OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5 } });
+      map.moveLayer(OBS, NEW); // dated records under the new ones
     });
 
     // Only moves the user made go in the link, not the fit to a species, a resize or the sidebar
@@ -254,7 +264,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     return () => { map.off('load', apply); };
   }, [slug]);
 
-  // Occurrences load only while the toggle is on
+  // The model's training records load only while the toggle is on
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -266,20 +276,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       const src = map.getSource(OCC) as maplibregl.GeoJSONSource | undefined;
       if (!src) return;
       src.setData(EMPTY);
-      const windowed = view === 'categories' ? span : null;
-      if (!slug || !(showOcc || windowed)) return;
-      // In the categories view, show the evidence records (white dots): the same points the fade and frontier are computed from
-      if (windowed) {
-        import('../data/sdmRange').then(async (m) => {
-          const cells = evidenceCells(await fetchCells(sciName(slug)), windowed);
-          const mask: GeoJSON.FeatureCollection = await (await fetch(`${import.meta.env.BASE_URL}outside-ca-us.geojson`)).json();
-          const all: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: cells.map((c) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [c.lon, c.lat] }, properties: { evidence: true } })) };
-          // Points over the sea mask are dropped; the rest carry no `inside`, so they draw white
-          return { ...all, features: m.markInsideRange(all, mask).features.filter((f) => !f.properties?.inside).map((f) => ({ ...f, properties: { evidence: true } })) };
-        }).then((fc) => { if (live && mapRef.current === map) src.setData(fc); })
-          .catch((e) => console.warn('GBIF evidence records unavailable', e));
-        return;
-      }
+      if (!slug || !showOcc) return;
       setOccBusy(true);
       worker = new Worker(new URL('../data/sdmOccWorker.ts', import.meta.url), { type: 'module' });
       worker.onmessage = ({ data }: MessageEvent<Blob | string>) => {
@@ -292,7 +289,36 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     };
     if (map.getSource(OCC)) apply(); else map.once('load', apply);
     return () => { live = false; worker?.terminate(); URL.revokeObjectURL(blobUrl); setOccBusy(false); map.off('load', apply); };
-  }, [slug, showOcc, view, spanKey]);
+  }, [slug, showOcc]);
+
+  // Dated GBIF cells in the timeline's span (white); in the suitability views the later test-period cells too (amber), in categories those are the coloured new records
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    let live = true;
+    const apply = () => {
+      const src = map.getSource(OBS) as maplibregl.GeoJSONSource | undefined;
+      if (!src) return;
+      src.setData(EMPTY);
+      if (!slug || !showObs) return;
+      import('../data/sdmRange').then(async (m) => {
+        const cells = await fetchCells(sciName(slug)), later: Span = [to + 1, LAST_YEAR];
+        const mask: GeoJSON.FeatureCollection = await (await fetch(`${import.meta.env.BASE_URL}outside-ca-us.geojson`)).json();
+        const pts = (cs: typeof cells, properties: GeoJSON.GeoJsonProperties): GeoJSON.Feature[] => cs.map((c) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [c.lon, c.lat] }, properties }));
+        const test = view === 'categories' ? [] : evidenceCells(cells, later).filter((c) => !evidenceCells([c], span).length);
+        const all: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [...pts(evidenceCells(cells, span), {}), ...pts(test, { test: true })] };
+        // Points over the sea mask are dropped; markInsideRange flags them `inside`
+        return { ...all, features: m.markInsideRange(all, mask).features.filter((f) => !f.properties?.inside).map((f) => ({ ...f, properties: f.properties?.test ? { test: true } : {} })) };
+      }).then((fc) => { if (live && mapRef.current === map) src.setData(fc); })
+        .catch((e) => console.warn('GBIF records by year unavailable', e));
+    };
+    if (map.getSource(OBS)) apply(); else map.once('load', apply);
+    return () => { live = false; map.off('load', apply); };
+  }, [slug, showObs, view, spanKey]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map?.getLayer(NEW)) map.setLayoutProperty(NEW, 'visibility', showObs ? 'visible' : 'none');
+  }, [showObs]);
 
   return (
     <div className="relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
@@ -335,18 +361,22 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           ))}
         </div>
       )}
-      {slug && view === 'categories' && (
+      {slug && (view === 'categories' || showObs) && (
         <div className="flex items-center gap-1.5 rounded-lg shadow-sm border border-gray-200 bg-white px-2 py-1 text-gray-500">
           {lang === 'EN' ? 'Evidence' : 'Preuves'}
           <Timeline from={from} to={to} onChange={onSpanChange} lang={lang} />
         </div>
       )}
-      {slug && !(view === 'categories') && (
+      {slug && (<>
         <button onClick={onToggleOcc} aria-pressed={showOcc} aria-busy={occBusy}
           className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${occBusy ? 'animate-pulse ' : ''}${showOcc ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-          {lang === 'EN' ? 'GBIF records' : 'Mentions GBIF'}
+          {lang === 'EN' ? 'Training records' : "Données d'entraînement"}
         </button>
-      )}
+        <button onClick={onToggleObs} aria-pressed={showObs}
+          className={`px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 cursor-pointer ${''}${showObs ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+          {lang === 'EN' ? 'GBIF records by year' : 'Observations GBIF par année'}
+        </button>
+      </>)}
       </div>
       <div className="absolute top-3 right-3 z-20 flex flex-col gap-2 items-center">
         <button type="button" onClick={onToggleExpand} aria-pressed={isExpanded}
@@ -390,7 +420,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
                 </div>
               );
             })}
-            {(
+            {showObs && (
               <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-600">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-white border border-gray-600 mr-1" />
                 {lang === 'EN'
@@ -437,16 +467,15 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               <span className="inline-block w-5 border-t-2" style={{ borderColor: '#e8590c' }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
-            {showOcc && (
-              <>
-                {([[OCC_IN, lang === 'EN' ? 'Records inside IUCN range' : "Observations dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'Records outside IUCN range' : "Observations hors de l'aire UICN"]] as const).map(([c, label]) => (
-                  <div key={c} className="flex items-center gap-2 mt-1 text-[10px]">
-                    <span className="inline-block w-5 text-center"><span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: c, border: '0.5px solid #374151' }} /></span>
-                    <span>{label}</span>
-                  </div>
-                ))}
-              </>
-            )}
+            {([
+              ...(showObs ? [[OCC_IN, lang === 'EN' ? `GBIF records ${from}–${to}` : `Observations GBIF ${from}–${to}`], ['#f59e0b', lang === 'EN' ? `GBIF records since ${to + 1}` : `Observations GBIF depuis ${to + 1}`]] : []),
+              ...(showOcc ? [[OCC_IN, lang === 'EN' ? 'Records inside IUCN range' : "Observations dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'Records outside IUCN range' : "Observations hors de l'aire UICN"]] : []),
+            ] as [string, string][]).map(([c, label]) => (
+              <div key={label} className="flex items-center gap-2 mt-1 text-[10px]">
+                <span className="inline-block w-5 text-center"><span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: c, border: '0.5px solid #374151' }} /></span>
+                <span>{label}</span>
+              </div>
+            ))}
           </>
         )}
         </>)}
