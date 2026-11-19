@@ -10,8 +10,10 @@ type L = [string, string]; // EN, FR
 const PROTO = window.location.hash.includes('view=categories');
 // One-line plain-language explanations of Laura's categories (names unchanged)
 export const CAT_TIPS: Record<Category, L> = {
-  expected: ['Suitable now and in 2100, near observations', "Favorable aujourd'hui et en 2100, près des observations"],
-  frontier: ['Suitable now and in 2100, but far (>40 km) from any observation', "Favorable aujourd'hui et en 2100, mais loin (>40 km) de toute observation"],
+  confirmed: ['Suitable now and in 2100, inside the known range and near observations', "Favorable aujourd'hui et en 2100, dans l'aire connue et près des observations"],
+  'in-range': ['Suitable now and in 2100, inside the known range, but no observation within 40 km', "Favorable aujourd'hui et en 2100, dans l'aire connue, mais sans observation à moins de 40 km"],
+  'range-gap': ['Suitable now and in 2100 and observed, but outside the known range: the range map may need redrawing', "Favorable aujourd'hui et en 2100 et observé, mais hors de l'aire connue : la carte de l'aire est peut-être à revoir"],
+  frontier: ['Suitable now and in 2100, outside the known range and far (>40 km) from any observation: worth a survey', "Favorable aujourd'hui et en 2100, hors de l'aire connue et loin (>40 km) de toute observation : à inventorier"],
   'climate-risk': ['Suitable now, not in 2100', "Favorable aujourd'hui, pas en 2100"],
   'newly-suitable': ['Not suitable now, suitable in 2100', "Non favorable aujourd'hui, favorable en 2100"],
 };
@@ -30,15 +32,15 @@ export default function SdmControls({ lang, left, view, onViewChange, period, on
   const seg = (on: boolean) => `px-3 py-1.5 cursor-pointer ${on ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`;
   const cats = view === 'categories';
   const views = [
-    { k: 'current', on: view === 'suitability' && period !== '2100', label: t('Today (1980-2010)', "Aujourd'hui (1980-2010)"), tip: t('Where conditions are suitable today, from 1980-2010 climate', "Où les conditions sont favorables aujourd'hui, selon le climat 1980-2010"), go: () => { onViewChange('suitability'); if (period === '2100') onPeriodChange('current-model'); } },
-    { k: '2100', on: view === 'suitability' && period === '2100', label: t('2100 (2071-2100)', '2100 (2071-2100)'), tip: t('Where conditions are predicted to be suitable at the end of the century', 'Où les conditions devraient être favorables à la fin du siècle'), go: () => { onViewChange('suitability'); onPeriodChange('2100'); } },
+    { k: 'current', on: view === 'suitability' && period !== '2100', label: t('Current (1980-2010)', 'Actuel (1980-2010)'), tip: t('Where conditions are suitable today, from 1980-2010 climate', "Où les conditions sont favorables aujourd'hui, selon le climat 1980-2010"), go: () => { onViewChange('suitability'); if (period === '2100') onPeriodChange('current-model'); } },
+    { k: '2100', on: view === 'suitability' && period === '2100', label: t('Future (2071-2100)', 'Futur (2071-2100)'), tip: t('Where conditions are predicted to be suitable at the end of the century', 'Où les conditions devraient être favorables à la fin du siècle'), go: () => { onViewChange('suitability'); onPeriodChange('2100'); } },
   ];
   return (
     <div className={`absolute top-3 ${left} right-16 flex flex-wrap items-start gap-2 text-xs font-sans z-10 transition-all duration-300`}>
       <div className="flex rounded-lg overflow-hidden shadow-sm border border-gray-200">
         {views.map((v) => <button key={v.k} onClick={v.go} aria-pressed={v.on} {...tip(`v${v.k}`, v.tip)} className={seg(v.on)}>{v.label}</button>)}
-        {PROTO && <button onClick={() => onViewChange('categories')} aria-pressed={cats} {...tip('vcat', t('Compares today with 2100 and sorts every place into four groups', "Compare aujourd'hui et 2100 et classe chaque lieu en quatre groupes"))} className={seg(cats)}>
-          {t('Change, today to 2100', "Changement, aujourd'hui à 2100")} <span className="ml-1 text-[9px] uppercase opacity-70">{t('prototype', 'prototype')}</span>
+        {PROTO && <button onClick={() => onViewChange('categories')} aria-pressed={cats} {...tip('vcat', t('Compares today with 2100 and sorts every place into zones', "Compare aujourd'hui et 2100 et classe chaque lieu en zones"))} className={seg(cats)}>
+          {t('Zones, current to future', 'Zones, actuel à futur')} <span className="ml-1 text-[9px] uppercase opacity-70">{t('prototype', 'prototype')}</span>
         </button>}
       </div>
       {view === 'suitability' && (

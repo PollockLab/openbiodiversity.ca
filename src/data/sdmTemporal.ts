@@ -1,6 +1,6 @@
 import { VectorTile } from '@mapbox/vector-tile';
 import Pbf from 'pbf';
-import { categoryAt, distanceToTrainingKm, hasTrainingRecords, recordsKey, setTrainingRecords } from './sdmCategories';
+import { CATEGORIES, T, categoryAt, distanceToTrainingKm, hasTrainingRecords, recordsKey, setTrainingRecords, zoneTile } from './sdmCategories';
 
 // GBIF density tiles carry per-year counts for every cell, so one pass gives the full dated record history (no 100k
 // search cap, no sampling). z3 tiles with a 512 extent are ~9.8 km cells at the equator, ~7 km at 45°N.
@@ -73,6 +73,23 @@ export function evidenceKey(slug: string, cells: Cell[], span: Span) {
   const key = recordsKey(slug, spanSet(span));
   if (!hasTrainingRecords(key)) setTrainingRecords(key, evidenceCells(cells, span).map((c) => [c.lon, c.lat]));
   return key;
+}
+
+// Share of the mapped area in each zone (keyed like CATEGORIES), from the same z3 tiles as the records.
+// Web Mercator pixels shrink on the ground by cos²(lat), so each row is weighted by it.
+export async function zoneShares(slug: string, cells: Cell[], span: Span): Promise<number[]> {
+  evidenceKey(slug, cells, span);
+  const area = CATEGORIES.map(() => 0);
+  await Promise.all(TILES.map(async ([x, y]) => {
+    const zones = await zoneTile(slug, spanSet(span), Z, x, y);
+    if (!zones) return;
+    for (let r = 0; r < T; r++) {
+      const w = Math.cosh(Math.PI * (1 - 2 * (y + (r + 0.5) / T) / 2 ** Z)) ** -2;
+      for (let c = 0; c < T; c++) { const zone = zones[r * T + c]; if (zone) area[zone - 1] += w; }
+    }
+  }));
+  const sum = area.reduce((a, b) => a + b, 0);
+  return area.map((a) => (sum ? a / sum : 0));
 }
 
 export type NewStats = { total: number; discovery: number; byCat: Record<string, [number, number]> };
