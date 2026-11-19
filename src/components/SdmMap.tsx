@@ -8,7 +8,7 @@ import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, Evidence, hex, registerCategoryProtocol, SUITABLE } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
 import { bindRecordPopups } from './sdmPopup';
-import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, NewStats, Span, FIRST_YEAR, LAST_YEAR } from '../data/sdmTemporal';
+import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
 
 const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
@@ -23,7 +23,6 @@ const OCC_OUT = '#991b1b';
 const CAT_LABELS: Record<Category, [string, string]> = {
   expected: ['Expected', 'Attendu'], frontier: ['Frontier', 'Frontière'], 'climate-risk': ['Climate risk', 'Risque climatique'], 'newly-suitable': ['Newly suitable', 'Nouvellement favorable'],
 };
-const YEARS = Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i);
 const sciName = (slug: string) => slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
 export type View = 'suitability' | 'categories';
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -73,7 +72,6 @@ interface SdmMapProps {
   view: View;
   onViewChange: (v: View) => void;
   evidence: Evidence;
-  onEvidenceChange: (e: Evidence) => void;
   span: Span;
   onSpanChange: (s: Span) => void;
   // Position the user chose, zoom/lat/lng; while it is set the map does not zoom to the species
@@ -84,12 +82,10 @@ interface SdmMapProps {
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, evidence, onEvidenceChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, evidence, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
-  const [newStats, setNewStats] = useState<NewStats | null>(null);
   const [from, to] = span;
   const spanKey = spanSet(span);
-  const [yearly, setYearly] = useState<Record<number, NewStats> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
@@ -216,35 +212,19 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     const map = mapRef.current;
     if (!map) return;
     let live = true;
-    setNewStats(null);
     const apply = async () => {
       const src = map.getSource(NEW) as maplibregl.GeoJSONSource | undefined;
       if (!src) return;
       src.setData(EMPTY);
       if (!slug || view !== 'categories') return;
-      let features: GeoJSON.Feature[] = [], stats: NewStats = { total: 0, discovery: 0, byCat: {} };
-      if (span[1] < LAST_YEAR) ({ features, stats } = await classifyNew(slug, await fetchCells(sciName(slug)), span, [span[1] + 1, LAST_YEAR]));
+      let features: GeoJSON.Feature[] = [];
+      if (span[1] < LAST_YEAR) ({ features } = await classifyNew(slug, await fetchCells(sciName(slug)), span, [span[1] + 1, LAST_YEAR]));
       if (!live || mapRef.current !== map) return;
       src.setData({ type: 'FeatureCollection', features });
-      setNewStats(stats);
     };
     if (map.getSource(NEW)) apply().catch((e) => console.warn('New GBIF records unavailable', e)); else map.once('load', apply);
     return () => { live = false; map.off('load', apply); };
   }, [slug, view, spanKey]);
-
-  // Per-year new cells by category, sliding a period of the chosen length: evidence from the N years before Y, then what Y added
-  const len = to - from + 1;
-  useEffect(() => {
-    setYearly(null);
-    if (!slug || view !== 'categories') return;
-    let live = true;
-    fetchCells(sciName(slug)).then(async (cells) => {
-      const out: Record<number, NewStats> = {};
-      for (const y of YEARS) out[y] = (await classifyNew(slug, cells, [y - len, y - 1], [y, y])).stats;
-      if (live) setYearly(out);
-    }).catch((e) => console.warn('GBIF yearly records unavailable', e));
-    return () => { live = false; };
-  }, [slug, view, len]);
 
   // IUCN outline is period-independent: reload on species change only. The map zooms to it here and nowhere else, so the view holds still when the period, clip or records change. A position the user chose (at) is kept instead
   useEffect(() => {
@@ -328,7 +308,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   return (
     <div className="relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
       <div ref={containerRef} className="w-full h-full" />
-      <SdmControls lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} period={period} onPeriodChange={onPeriodChange} evidence={evidence} onEvidenceChange={onEvidenceChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
+      <SdmControls lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} period={period} onPeriodChange={onPeriodChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
       <div className="absolute top-3 right-3 z-20 flex flex-col gap-2 items-center">
         <button type="button" onClick={onToggleExpand} aria-pressed={isExpanded}
           title={isExpanded ? (lang === 'EN' ? 'Exit expanded view (Esc)' : 'Quitter le mode plein écran (Échap)') : (lang === 'EN' ? 'Expand viewer' : 'Agrandir le visualiseur')}
@@ -359,48 +339,21 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-[11px] font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-10 max-w-[210px] sm:max-w-xs">
         {view === 'categories' && slug ? (
           <>
-            {newStats && <div className="text-right text-[9px] text-gray-400">{lang === 'EN' ? 'new records / ringed (>10 km)' : 'nouvelles / cerclées (>10 km)'}</div>}
-            <div className="mb-1 text-gray-600 font-semibold">{lang === 'EN' ? `Categories, 1980-2010 vs 2071-2100, suitable ≥ ${SUITABLE}%` : `Catégories, 1980-2010 c. 2071-2100, favorable ≥ ${SUITABLE} %`}</div>
-            {CATEGORIES.map((c) => {
-              const row = newStats?.byCat[c];
-              return (
+            <div className="mb-1 text-gray-600 font-semibold">{lang === 'EN' ? 'Today vs 2100' : "Aujourd'hui c. 2100"}</div>
+            {CATEGORIES.map((c) => (
                 <div key={c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} aria-description={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className="flex items-center gap-2 mt-0.5 text-[10px] pointer-events-auto cursor-help">
                   <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
                   <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
-                  {newStats && <span className="tabular-nums text-gray-500">{row?.[0] ?? 0} / {row?.[1] ?? 0}</span>}
                 </div>
-              );
-            })}
+            ))}
             {showObs && (
               <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-600">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-white border border-gray-600 mr-1" />
                 {lang === 'EN'
-                  ? `White dots: GBIF observations ${from}–${to} (By year). Coloured dots: places first observed since ${to + 1}, coloured by the group they fall in; ringed = over 10 km from any white dot. ${newStats?.byCat.unsuitable?.[0] ?? 0} of ${newStats?.total ?? 0} fell below ${SUITABLE}% suitability (hollow grey).`
-                  : `Points blancs : observations GBIF ${from}–${to} (Par année). Points colorés : lieux observés pour la première fois depuis ${to + 1}, selon le groupe où ils tombent; cerclé = à plus de 10 km d'un point blanc. ${newStats?.byCat.unsuitable?.[0] ?? 0} sur ${newStats?.total ?? 0} sous ${SUITABLE} % de convenance (cercle gris vide).`}
+                  ? `White: observed ${from}–${to}. Coloured: new since ${to + 1}, by group.`
+                  : `Blanc : observé ${from}–${to}. Couleur : nouveau depuis ${to + 1}, par groupe.`}
               </div>
             )}
-            {yearly && (
-              <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-500 pointer-events-auto">
-                <div>{lang === 'EN' ? `Where each year's new records landed (%, against the ${len} years before)` : `Où tombent les nouvelles mentions de chaque année (%, c. les ${len} années précédentes)`}</div>
-                <div className="flex items-end gap-px h-12 mt-1">
-                  {YEARS.map((y) => {
-                    const st = yearly[y], max = Math.max(1, st.total);
-                    return (
-                      <button key={y} type="button" onClick={() => onSpanChange([y - len, y - 1])} title={`${y}: ${st.total} new`} aria-label={`${y}: ${st.total} new`}
-                        className={`flex-1 flex flex-col-reverse h-full cursor-pointer ${y > to ? 'outline outline-1 outline-gray-700' : ''}`}>
-                        {[...CATEGORIES, 'unsuitable'].map((c) => (
-                          <span key={c} style={{ height: `${(st.byCat[c]?.[0] ?? 0) / max * 100}%`, background: c === 'unsuitable' ? '#d1d5db' : hex(c as Category) }} />
-                        ))}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex justify-between tabular-nums"><span>{FIRST_YEAR}</span><span>{lang === 'EN' ? 'each bar = 100%; outlined = test period' : 'chaque barre = 100 %; encadré = période test'}</span><span>{LAST_YEAR}</span></div>
-              </div>
-            )}
-            <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-500">
-              {lang === 'EN' ? 'Trust sets transparency only; the groups never change. Known range: full inside the IUCN range, fading to faint over 100 km outside it. Near observations: also fades with distance from the observations (20 km).' : "La confiance ne règle que la transparence; les catégories ne changent pas. Aire connue : pleine dans l'aire UICN, s'estompe sur 100 km au-delà. Près des observations : s'estompe aussi avec la distance aux observations (20 km)."}
-            </div>
           </>
         ) : (<>
         <div className="mb-1 text-gray-600 font-semibold">{period === 'current'

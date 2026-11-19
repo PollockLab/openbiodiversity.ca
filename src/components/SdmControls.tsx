@@ -1,5 +1,5 @@
 import React from 'react';
-import { Category, Evidence } from '../data/sdmCategories';
+import { Category } from '../data/sdmCategories';
 import { SdmPeriod } from '../data/sdmSource';
 import { Span } from '../data/sdmTemporal';
 import Timeline from './SdmTimeline';
@@ -15,19 +15,14 @@ export const CAT_TIPS: Record<Category, L> = {
   'climate-risk': ['Suitable now, not in 2100', "Favorable aujourd'hui, pas en 2100"],
   'newly-suitable': ['Not suitable now, suitable in 2100', "Non favorable aujourd'hui, favorable en 2100"],
 };
-const TRUST: Record<Evidence, { label: L; tip: L }> = {
-  none: { label: ['All', 'Tout'], tip: ['Show every prediction at full strength', 'Afficher toutes les prédictions à pleine intensité'] },
-  medium: { label: ['Known range', 'Aire connue'], tip: ["Fade predictions that lie far outside the species' known (IUCN) range", "Atténuer les prédictions loin de l'aire connue (UICN) de l'espèce"] },
-  high: { label: ['Near observations', 'Près des observations'], tip: ['Also fade predictions far from recent GBIF observations', 'Atténuer aussi les prédictions loin des observations GBIF récentes'] },
-};
 
 interface Props {
   lang: string; left: string; view: View; onViewChange: (v: View) => void; period: SdmPeriod; onPeriodChange: (p: SdmPeriod) => void;
-  evidence: Evidence; onEvidenceChange: (e: Evidence) => void; showOcc: boolean; onToggleOcc: () => void; occBusy: boolean;
+  showOcc: boolean; onToggleOcc: () => void; occBusy: boolean;
   showObs: boolean; onToggleObs: () => void; span: Span; onSpanChange: (s: Span) => void;
 }
 
-export default function SdmControls({ lang, left, view, onViewChange, period, onPeriodChange, evidence, onEvidenceChange, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange }: Props) {
+export default function SdmControls({ lang, left, view, onViewChange, period, onPeriodChange, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange }: Props) {
   const i = lang === 'EN' ? 0 : 1, t = (a: string, b: string) => (i ? b : a);
   // Each control gets a title tooltip and a screen-reader description
   const tips: [string, string][] = [];
@@ -53,16 +48,6 @@ export default function SdmControls({ lang, left, view, onViewChange, period, on
           {t('Clip to known range', "Découper selon l'aire connue")}
           {period === '2100' && t(' (no clipped version for 2100)', ' (pas de version découpée pour 2100)')}
         </label>
-      )}
-      {cats && (
-        <div className="flex items-center rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-white" role="group" aria-label={t('Trust', 'Confiance')}>
-          <span className="px-2 text-gray-500">{t('Trust', 'Confiance')}</span>
-          {(['none', 'medium', 'high'] as const).map((e) => (
-            <button key={e} onClick={() => onEvidenceChange(e)} aria-pressed={evidence === e} {...tip(`t${e}`, TRUST[e].tip[i])} className={`px-2.5 py-1.5 cursor-pointer ${evidence === e ? 'bg-sage-500 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
-              {TRUST[e].label[i]}
-            </button>
-          ))}
-        </div>
       )}
       <fieldset className="rounded-lg shadow-sm border border-gray-200 bg-white px-3 py-1.5 text-gray-600 flex flex-col gap-1">
         <legend className="sr-only">{t('Observations', 'Observations')}</legend>
