@@ -47,7 +47,7 @@ export default function SdmExplorerView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
   const [view, setView] = useState<View>(viewFromHash);
-  const [evidence, setEvidence] = useState<Evidence>(evidenceFromHash);
+  const [evidence] = useState<Evidence>(evidenceFromHash);
   const [span, setSpan] = useState<Span>(spanFromHash);
   const [showOcc, setShowOcc] = useState(() => hashParam('gbif') === '1');
   // By year is on in the categories view unless the link says obs=0, and off elsewhere unless it says obs=1
@@ -143,7 +143,6 @@ export default function SdmExplorerView() {
           view={view}
           onViewChange={setView}
           evidence={evidence}
-          onEvidenceChange={setEvidence}
           span={span}
           onSpanChange={setSpan}
           at={at}
