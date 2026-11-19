@@ -350,8 +350,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-600">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-white border border-gray-600 mr-1" />
                 {lang === 'EN'
-                  ? `White: observed ${from}–${to}. Coloured: new since ${to + 1}, by group.`
-                  : `Blanc : observé ${from}–${to}. Couleur : nouveau depuis ${to + 1}, par groupe.`}
+                  ? `White: observed ${from}–${to}. Coloured: new since ${to + 1}, by group; ringed if >10 km from white, hollow grey if below ${SUITABLE}%.`
+                  : `Blanc : observé ${from}–${to}. Couleur : nouveau depuis ${to + 1}, par groupe; cerclé si >10 km du blanc, gris vide si sous ${SUITABLE} %.`}
               </div>
             )}
           </>
