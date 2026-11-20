@@ -86,6 +86,7 @@ interface SdmMapProps {
   slug?: string;
   period: SdmPeriod;
   onPeriodChange: (p: SdmPeriod) => void;
+  clip2100: boolean;
   showOcc: boolean;
   onToggleOcc: () => void;
   // GBIF records by year: the dated GBIF cells in the timeline's span (and, in categories, the new records)
@@ -104,7 +105,7 @@ interface SdmMapProps {
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, period, onPeriodChange, clip2100, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
   const [from, to] = span;
   const spanKey = spanSet(span);
@@ -391,7 +392,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   return (
     <div ref={(el) => { if (el && !open) setOpen({ layers: el.clientWidth >= 600 && el.clientHeight >= 520, legend: el.clientWidth >= 600 }); }} className="@container relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
       <div ref={containerRef} className="w-full h-full" />
-      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} period={period} onPeriodChange={onPeriodChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
+      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} period={period} onPeriodChange={onPeriodChange} clip2100={clip2100} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
       <div className="absolute top-3 right-3 @[600px]:right-[15.25rem] z-20 flex flex-col gap-2 items-center">
         <button type="button" onClick={onToggleExpand} aria-pressed={isExpanded}
           title={isExpanded ? (lang === 'EN' ? 'Exit expanded view (Esc)' : 'Quitter le mode plein écran (Échap)') : (lang === 'EN' ? 'Expand viewer' : 'Agrandir le visualiseur')}
@@ -488,8 +489,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
             </div>
           </div>
         ) : (<>
-        <div className="mb-1 text-gray-600 font-semibold">{period === 'current'
-          ? (lang === 'EN' ? 'Ensemble (clipped to the known range), 1980-2010, 1 km' : 'Ensemble (découpé selon l\'aire connue), 1980-2010, 1 km')
+        <div className="mb-1 text-gray-600 font-semibold">{period === 'current' || period === '2100-clipped'
+          ? (lang === 'EN' ? `Ensemble (clipped to the known range${period === '2100-clipped' ? ', held at 1980-2010 evidence' : ''}), ${period === '2100-clipped' ? '2071-2100' : '1980-2010'}, 1 km` : `Ensemble (découpé selon l'aire connue${period === '2100-clipped' ? ', figée sur les données 1980-2010' : ''}), ${period === '2100-clipped' ? '2071-2100' : '1980-2010'}, 1 km`)
           : (lang === 'EN' ? `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (model only, not clipped)` : `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (modèle seul, non découpé)`)}</div>
         {slug && (
           <>
