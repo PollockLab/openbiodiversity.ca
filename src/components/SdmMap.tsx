@@ -114,6 +114,9 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  // Sections open by default, sized from the map box (not the window, the map is embedded): a narrow map gets a collapsed bottom sheet, a short one only the legend
+  const [open, setOpen] = useState<{ layers: boolean; legend: boolean } | null>(null);
   const [zoneStats, setZoneStats] = useState<{ thr: number; cells: Awaited<ReturnType<typeof fetchCells>>; features: GeoJSON.Feature[] } | null>(null);
   // The legend bars describe what is on screen: the map's bounds [west, south, east, north] after each move
   const [box, setBox] = useState<number[] | null>(null);
@@ -372,10 +375,10 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   }, [showObs]);
 
   return (
-    <div className="relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
+    <div ref={(el) => { if (el && !open) setOpen({ layers: el.clientWidth >= 600 && el.clientHeight >= 520, legend: el.clientWidth >= 600 }); }} className="@container relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
       <div ref={containerRef} className="w-full h-full" />
-      <SdmControls lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} period={period} onPeriodChange={onPeriodChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
-      <div className="absolute top-3 right-3 z-20 flex flex-col gap-2 items-center">
+      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} period={period} onPeriodChange={onPeriodChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
+      <div className="absolute top-3 right-3 @[600px]:right-[15.25rem] z-20 flex flex-col gap-2 items-center">
         <button type="button" onClick={onToggleExpand} aria-pressed={isExpanded}
           title={isExpanded ? (lang === 'EN' ? 'Exit expanded view (Esc)' : 'Quitter le mode plein écran (Échap)') : (lang === 'EN' ? 'Expand viewer' : 'Agrandir le visualiseur')}
           aria-label={isExpanded ? (lang === 'EN' ? 'Exit expanded view' : 'Quitter le mode plein écran') : (lang === 'EN' ? 'Expand viewer' : 'Agrandir le visualiseur')}
@@ -396,12 +399,16 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         <span>{lang === 'EN' ? 'Models: Pollock Lab, licensed under ' : 'Modèles : Laboratoire Pollock, sous licence '}</span>
         <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline text-sage-700 hover:text-sage-900 font-medium">CC BY-NC 4.0</a>
       </div>
-      {/* z-20 and after the zoom buttons in the DOM: on a phone the open legend reaches them and must stay readable */}
-      <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-20 max-w-[210px] sm:max-w-xs">
+      {/* z-20 and after the zoom buttons in the DOM: the column must stay readable over them. Right column on desktop, bottom sheet on a phone (sections collapsed there) */}
+      <div className="absolute z-20 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 overflow-y-auto overflow-x-hidden inset-x-3 bottom-10 max-h-[60%] @[600px]:inset-x-auto @[600px]:bottom-auto @[600px]:top-3 @[600px]:right-3 @[600px]:w-56 @[600px]:max-h-[calc(100%-1.5rem)]">
+        <details open={!!open?.layers}>
+          <summary className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Layers' : 'Calques'}</summary>
+          <div ref={setSlot} className="mt-1" />
+        </details>
+        <details open={!!open?.legend} className="mt-2 pt-2 border-t border-gray-100">
+          <summary className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Legend' : 'Légende'}</summary>
         {view === 'categories' && slug ? (
-          // Collapsed by default at phone width, where the open legend covers the controls
-          <details open={window.innerWidth >= 640}>
-            <summary className="mb-1 text-gray-600 font-semibold pointer-events-auto cursor-pointer">{lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'}</summary>
+          <div role="group" aria-label={lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'} className="mt-1">
             {/* A row is a button so touch and keyboard users can read the definition that hover gives on desktop; the number is the zone's share of suitable area in view */}
             {LEGEND_ORDER.map((c) => {
               const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
@@ -464,7 +471,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
                 ? 'Prototype: provisional thresholds, not peer reviewed. Not for decisions.'
                 : "Prototype : seuils provisoires, non évalué par des pairs. Pas pour décider."}
             </div>
-          </details>
+          </div>
         ) : (<>
         <div className="mb-1 text-gray-600 font-semibold">{period === 'current'
           ? (lang === 'EN' ? 'Ensemble (clipped to the known range), 1980-2010, 1 km' : 'Ensemble (découpé selon l\'aire connue), 1980-2010, 1 km')
@@ -493,6 +500,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           </>
         )}
         </>)}
+        </details>
       </div>
       {!slug && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/50 pointer-events-none">
