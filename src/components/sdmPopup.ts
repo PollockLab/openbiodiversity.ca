@@ -12,6 +12,14 @@ const BASIS: Record<string, [string, string]> = {
   HUMAN_OBSERVATION: ['Human observation', 'Observation humaine'], MACHINE_OBSERVATION: ['Machine observation', 'Observation automatisée'],
   OBSERVATION: ['Observation', 'Observation'], OCCURRENCE: ['Occurrence', 'Occurrence'], PRESERVED_SPECIMEN: ['Museum specimen', 'Spécimen de musée'], MATERIAL_SAMPLE: ['Material sample', 'Échantillon'],
 };
+// Dots are 4 to 9 px wide: a click within HIT px picks the nearest one, so a near miss does not fall through to the zone card
+const HIT = 8;
+export function nearestDot(map: maplibregl.Map, p: maplibregl.Point, layers: string[]) {
+  const live = layers.filter((l) => map.getLayer(l));
+  if (!live.length) return undefined;
+  const d2 = (f: maplibregl.MapGeoJSONFeature) => { const q = map.project((f.geometry as GeoJSON.Point).coordinates as [number, number]); return (q.x - p.x) ** 2 + (q.y - p.y) ** 2; };
+  return map.queryRenderedFeatures([[p.x - HIT, p.y - HIT], [p.x + HIT, p.y + HIT]], { layers: live }).sort((a, b) => d2(a) - d2(b))[0];
+}
 const el = (tag: string, text = '', style = '') => { const e = document.createElement(tag); e.textContent = text; if (style) e.style.cssText = style; return e; };
 
 export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, string>, ctx: () => PopupCtx) {
@@ -26,16 +34,18 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
     return { kind, lon, lat, cells, cell, box: cell ? cellBox(cell) : [lon - 0.04, lat - 0.03, lon + 0.04, lat + 0.03] as Box, years, props: f.properties };
   };
   const hit = (e: maplibregl.MapLayerMouseEvent) => e.features?.[0];
+  const ids = [...new Set(Object.values(layers))];
 
-  for (const id of new Set(Object.values(layers))) {
+  for (const id of ids) {
     map.on('mouseenter', id, (e) => {
       map.getCanvas().style.cursor = 'pointer';
       const f = hit(e), c = ctx();
       if (f && c.slug) resolve(f, c).then((r) => fetchRecords(c.sci, r.box, r.years)).catch(() => {}); // prefetch: the click reuses it
     });
     map.on('mouseleave', id, () => { map.getCanvas().style.cursor = ''; });
-    map.on('click', id, async (e) => {
-      const f = hit(e), c = ctx();
+  }
+  map.on('click', async (e) => {
+      const f = nearestDot(map, e.point, ids), c = ctx();
       if (!f || !c.slug) return;
       const r = await resolve(f, c), fr = c.fr, t = (a: string, b: string) => (fr ? b : a);
       const box = el('div', '', 'font:12px/1.4 sans-serif;max-width:300px;max-height:260px;overflow:auto');
@@ -82,7 +92,6 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
         }
         refit();
       }).catch(() => { list.textContent = t('Records unavailable', 'Mentions indisponibles'); });
-    });
-  }
+  });
   return () => popup?.remove();
 }
