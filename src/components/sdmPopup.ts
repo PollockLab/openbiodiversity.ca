@@ -58,7 +58,7 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
         list.replaceChildren();
         list.style.color = '';
         if (!records.length) return void (list.textContent = t('No records found', 'Aucune mention trouvée'));
-        list.appendChild(el('div', t(`${records.length} of ${total} records`, `${records.length} de ${total} mentions`), 'color:#6b7280'));
+        list.appendChild(el('div', t(`${records.length} of ${total} record${total === 1 ? '' : 's'}`, `${records.length} de ${total} mention${total === 1 ? '' : 's'}`), 'color:#6b7280'));
         const ul = list.appendChild(el('ul', '', 'margin:4px 0 0;padding:0;list-style:none'));
         ul.className = 'sdm-records';
         for (const rec of records) {

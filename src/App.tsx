@@ -25,6 +25,7 @@ export default function App() {
 
 function AppContent() {
   const { lang } = useLanguage();
+  const [hashQuery, setHashQuery] = useState(() => window.location.hash.split('?')[1] ?? '');
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined' && window.location.hash) {
       const hash = window.location.hash.replace('#', '').split('?')[0];
@@ -63,6 +64,7 @@ function AppContent() {
     if (params.view === 'bioblitz-analyzer') return;
 
     const handleHashChange = () => {
+      setHashQuery(window.location.hash.split('?')[1] ?? '');
       const hash = window.location.hash.replace('#', '').split('?')[0];
       const validTabs = ['home', 'useful-layers', 'sdm-explorer', 'blitz-gap', 'about', 'contact'];
       if (validTabs.includes(hash)) {
@@ -94,7 +96,7 @@ function AppContent() {
       case 'useful-layers':
         return <UsefulLayersView />;
       case 'sdm-explorer':
-        return <SdmExplorerView />;
+        return <SdmExplorerView key={hashQuery} />; // a link opened in this tab starts the explorer from that link
       case 'blitz-gap':
         return <BlitzGapView />;
       case 'about':

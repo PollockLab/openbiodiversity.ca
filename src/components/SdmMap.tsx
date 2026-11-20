@@ -106,6 +106,9 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const { lang } = useLanguage();
   const [from, to] = span;
   const spanKey = spanSet(span);
+  // A popup describes the species, view, years and language it was opened in: close it when any of them changes
+  const closePopups = useRef(() => {});
+  useEffect(() => closePopups.current(), [slug, view, period, spanKey, lang]);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
@@ -181,6 +184,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       return { slug: s, sci: sciName(s ?? ''), fr: l === 'FR', span: sp, label: (c) => CAT_LABELS[c as Category]?.[l === 'EN' ? 0 : 1] ?? c };
     });
     let spot: maplibregl.Popup | null = null;
+    closePopups.current = () => { unbind(); spot?.remove(); };
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') spot?.remove(); };
     window.addEventListener('keydown', esc);
     map.on('click', async (e) => {
