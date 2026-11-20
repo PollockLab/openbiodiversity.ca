@@ -119,7 +119,7 @@ export default function SdmExplorerView() {
       {/* Map with the species sidebar floating over it; expand mode fills the screen */}
       <section className={isExpanded
         ? 'fixed inset-0 z-50 w-screen h-screen bg-white'
-        : 'relative w-full h-[640px] sm:h-[680px] rounded-2xl overflow-hidden card-shadow border border-gray-200 bg-white'}>
+        : 'relative w-full h-[clamp(420px,calc(100dvh-2rem),640px)] sm:h-[clamp(480px,calc(100dvh-2rem),680px)] rounded-2xl overflow-hidden card-shadow border border-gray-200 bg-white'}>
         {!isSidebarOpen && (
           <button type="button" onClick={() => setIsSidebarOpen(true)}
             title={lang === 'EN' ? 'Open species sidebar' : 'Ouvrir le panneau des espèces'}
