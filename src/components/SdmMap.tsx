@@ -21,7 +21,7 @@ const NEW = 'new-records';
 const OCC_IN = '#ffffff';
 const OCC_OUT = '#991b1b';
 const CAT_LABELS: Record<Category, [string, string]> = {
-  confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, observé'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"],
+  confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, avec mentions'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"],
 };
 const UNSUITABLE = '#b9b0a0';
 // Laura draws records outside the range as a branch of Frontier (Horizon), so it is listed under it, indented
