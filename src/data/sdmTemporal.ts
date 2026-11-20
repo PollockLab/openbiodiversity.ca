@@ -45,7 +45,7 @@ async function load(sci: string): Promise<Cell[]> {
   const basis = BASIS.map((b) => `&basisOfRecord=${b}`).join('');
   const cells: Cell[] = [];
   await Promise.all(TILES.map(async ([x, y]) => {
-    const res = await fetch(`https://api.gbif.org/v2/map/occurrence/density/${Z}/${x}/${y}.mvt?srs=EPSG:3857&taxonKey=${key}&year=1600,${LAST_YEAR}${basis}`);
+    const res = await fetch(`https://api.gbif.org/v2/map/occurrence/density/${Z}/${x}/${y}.mvt?srs=EPSG:3857&verbose=true&taxonKey=${key}&year=1600,${LAST_YEAR}${basis}`);
     if (!res.ok) throw new Error(`GBIF map tile ${res.status}`);
     const layer = new VectorTile(new Pbf(new Uint8Array(await res.arrayBuffer()))).layers.occurrence;
     for (let i = 0; i < (layer?.length ?? 0); i++) {
