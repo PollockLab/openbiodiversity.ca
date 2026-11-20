@@ -69,27 +69,37 @@ export const DEFAULT_SPAN: Span = [LAST_YEAR - 10, LAST_YEAR - 1];
 const inSpan = (c: Cell, [a, b]: Span) => Object.keys(c.years).some((y) => +y >= a && +y <= b);
 export const spanSet = ([a, b]: Span) => `${a}-${b}`;
 export const evidenceCells = (cells: Cell[], span: Span) => cells.filter((c) => inSpan(c, span));
+const built = new Map<string, Cell[]>();
 export function evidenceKey(slug: string, cells: Cell[], span: Span) {
   const key = recordsKey(slug, spanSet(span));
-  if (!hasTrainingRecords(key)) setTrainingRecords(key, evidenceCells(cells, span).map((c) => [c.lon, c.lat]));
+  // Rebuilt when the cell list changes: an index built from the empty list of a failed GBIF fetch must not outlive it
+  if (!hasTrainingRecords(key) || built.get(key) !== cells) { setTrainingRecords(key, evidenceCells(cells, span).map((c) => [c.lon, c.lat])); built.set(key, cells); }
   return key;
 }
 
-// Share of the mapped area in each zone (keyed like CATEGORIES), from the same z3 tiles as the records.
+// Ground area in each zone (keyed like CATEGORIES, relative units) inside `box` [west, south, east, north] and on the
+// whole map, and the share of all zoned area that the box holds. From the same z3 tiles as the records.
 // Web Mercator pixels shrink on the ground by cos²(lat), so each row is weighted by it.
-export async function zoneShares(slug: string, cells: Cell[], span: Span): Promise<number[]> {
+export async function zoneShares(slug: string, cells: Cell[], span: Span, box?: number[] | null): Promise<{ area: number[]; whole: number[]; share: number }> {
   evidenceKey(slug, cells, span);
-  const area = CATEGORIES.map(() => 0);
+  const area = CATEGORIES.map(() => 0), whole = CATEGORIES.map(() => 0);
   await Promise.all(TILES.map(async ([x, y]) => {
     const zones = await zoneTile(slug, spanSet(span), Z, x, y);
     if (!zones) return;
     for (let r = 0; r < T; r++) {
-      const w = Math.cosh(Math.PI * (1 - 2 * (y + (r + 0.5) / T) / 2 ** Z)) ** -2;
-      for (let c = 0; c < T; c++) { const zone = zones[r * T + c]; if (zone) area[zone - 1] += w; }
+      const my = Math.PI * (1 - 2 * (y + (r + 0.5) / T) / 2 ** Z), w = Math.cosh(my) ** -2, lat = Math.atan(Math.sinh(my)) * 180 / Math.PI;
+      const rowIn = !box || (lat >= box[1] && lat <= box[3]);
+      for (let c = 0; c < T; c++) {
+        const zone = zones[r * T + c];
+        if (!zone) continue;
+        whole[zone - 1] += w;
+        const lon = (x + (c + 0.5) / T) / 2 ** Z * 360 - 180;
+        if (rowIn && (!box || (lon >= box[0] && lon <= box[2]))) area[zone - 1] += w;
+      }
     }
   }));
-  const sum = area.reduce((a, b) => a + b, 0);
-  return area.map((a) => (sum ? a / sum : 0));
+  const sum = (v: number[]) => v.reduce((a, b) => a + b, 0), all = sum(whole);
+  return { area, whole, share: all ? sum(area) / all : 0 };
 }
 
 export type NewStats = { total: number; discovery: number; byCat: Record<string, [number, number]> };

@@ -51,7 +51,9 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
       if (counts) line(`${t('Records per year', 'Mentions par année')}: ${counts}`, 'color:#4b5563');
       const list = box.appendChild(el('div', t('Loading records…', 'Chargement des mentions…'), 'margin-top:6px;color:#6b7280'));
       popup?.remove();
-      popup = new maplibregl.Popup({ maxWidth: '320px' }).setLngLat([r.lon, r.lat]).setDOMContent(box).addTo(map);
+      const p = popup = new maplibregl.Popup({ maxWidth: '320px' }).setLngLat([r.lon, r.lat]).setDOMContent(box).addTo(map);
+      // The records and photos arrive after the popup opens and make it taller: place it again so it stays inside the map
+      const refit = () => p.setLngLat([r.lon, r.lat]);
       fetchRecords(c.sci, r.box, r.years).then(({ total, records }: RecordList) => {
         list.replaceChildren();
         list.style.color = '';
@@ -63,7 +65,11 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
           const li = ul.appendChild(el('li', '', 'padding:3px 0;border-top:1px solid #e5e7eb'));
           li.appendChild(el('span', `${rec.date?.slice(0, 10) ?? t('no date', 'sans date')} `, 'font-weight:600'));
           li.appendChild(el('span', `${rec.basis ? BASIS[rec.basis]?.[fr ? 1 : 0] ?? rec.basis : ''}${rec.who ? `, ${rec.who}` : ''} `));
-          if (rec.photo) li.appendChild(el('span', t('[photo] ', '[photo] '), 'color:#047857'));
+          if (rec.photo) {
+            // iNaturalist's small size (sdmRecords) keeps this light; a photo that fails to load is dropped
+            const img = li.appendChild(el('img', '', 'display:block;max-width:100%;max-height:140px;border-radius:4px;margin:3px 0')) as HTMLImageElement;
+            img.src = rec.photo; img.loading = 'lazy'; img.alt = t('Photo of this observation', 'Photo de cette observation'); img.onload = refit; img.onerror = () => img.remove();
+          }
           if (rec.src) {
             // The publisher's own page (e.g. iNaturalist) opens directly; gbif.org shows a bot check first
             const a = li.appendChild(el('a', new URL(rec.src).hostname.replace(/^www\./, ''), 'color:#15803d;text-decoration:underline;margin-right:4px')) as HTMLAnchorElement;
@@ -74,6 +80,7 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
             a.href = `https://www.gbif.org/occurrence/${rec.key}`; a.target = '_blank'; a.rel = 'noopener noreferrer';
           }
         }
+        refit();
       }).catch(() => { list.textContent = t('Records unavailable', 'Mentions indisponibles'); });
     });
   }

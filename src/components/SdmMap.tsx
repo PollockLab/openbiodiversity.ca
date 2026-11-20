@@ -8,7 +8,7 @@ import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
 import { bindRecordPopups } from './sdmPopup';
-import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, NewStats, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
+import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
 
 const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
@@ -27,15 +27,20 @@ const UNSUITABLE = '#b9b0a0';
 // Dots take the colour of the zone they fall in
 const ZONE_COLOR = ['match', ['get', 'category'], ...CATEGORIES.flatMap((c) => [c, hex(c)]), UNSUITABLE] as unknown as maplibregl.ExpressionSpecification;
 // One thin stacked bar: how something (area, new cells) splits across the zones
-const Bar = ({ label, parts }: { label: string; parts: [string, string, number][] }) => {
-  const sum = parts.reduce((a, p) => a + p[2], 0);
-  const text = parts.filter((p) => p[2]).map((p) => `${p[0]} ${Math.round(100 * p[2] / sum)}%`).join(', ');
+type Parts = [string, string, number][];
+const strip = (parts: Parts, sum: number) => sum > 0 && parts.map(([name, color, n]) => <span key={name} style={{ width: `${100 * n / sum}%`, background: color }} />);
+// `whole`: the same split for the whole map, drawn as a thin strip under the bar so a zoomed-in view keeps its reference
+const Bar = ({ label, parts, whole, wholeLabel }: { label: string; parts: Parts; whole?: Parts; wholeLabel?: string }) => {
+  const total = (v: Parts) => v.reduce((a, p) => a + p[2], 0), sum = total(parts);
+  const say = (v: Parts) => v.filter((p) => p[2]).map((p) => `${p[0]} ${Math.round(100 * p[2] / total(v))}%`).join(', ');
+  const text = whole ? `${say(parts) || '–'} | ${wholeLabel}: ${say(whole)}` : say(parts);
   return (
     <div className="mt-1 text-[10px] pointer-events-auto" title={text}>
       <div className="text-gray-600">{label}</div>
       <div className="flex h-2 rounded-sm overflow-hidden bg-gray-100" role="img" aria-label={`${label}: ${text}`}>
-        {sum > 0 && parts.map(([name, color, n]) => <span key={name} style={{ width: `${100 * n / sum}%`, background: color }} />)}
+        {strip(parts, sum)}
       </div>
+      {whole && <div className="flex h-1 mt-px rounded-sm overflow-hidden bg-gray-100 opacity-70" aria-hidden>{strip(whole, total(whole))}</div>}
     </div>
   );
 };
@@ -104,7 +109,10 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
-  const [zoneStats, setZoneStats] = useState<{ thr: number; area: number[]; stats?: NewStats } | null>(null);
+  const [zoneStats, setZoneStats] = useState<{ thr: number; cells: Awaited<ReturnType<typeof fetchCells>>; features: GeoJSON.Feature[] } | null>(null);
+  // The legend bars describe what is on screen: the map's bounds [west, south, east, north] after each move
+  const [box, setBox] = useState<number[] | null>(null);
+  const [inView, setInView] = useState<{ area: number[]; whole: number[]; share: number } | null>(null);
   const slugRef = useRef(slug);
   const periodRef = useRef(period);
   const langRef = useRef(lang);
@@ -163,6 +171,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       onMovedRef.current(`${map.getZoom().toFixed(1)}/${c.lat.toFixed(3)}/${c.lng.toFixed(3)}`);
     };
     map.on('moveend', (e: any) => { if (e.originalEvent || e.user) moved(); });
+    map.on('moveend', () => setBox(map.getBounds().toArray().flat()));
     // A shift-drag box zoom ends with a moveend that does not carry the user's event
     map.on('boxzoomend', moved);
 
@@ -171,16 +180,20 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       const { slug: s, span: sp, lang: l } = popupRef.current;
       return { slug: s, sci: sciName(s ?? ''), fr: l === 'FR', span: sp, label: (c) => CAT_LABELS[c as Category]?.[l === 'EN' ? 0 : 1] ?? c };
     });
+    let spot: maplibregl.Popup | null = null;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') spot?.remove(); };
+    window.addEventListener('keydown', esc);
     map.on('click', async (e) => {
       const s = slugRef.current;
       if (!s || map.queryRenderedFeatures(e.point, { layers: [NEW, OBS, OCC].filter((l) => map.getLayer(l)) }).length) return;
       const fr = langRef.current === 'FR';
-      let text = fr ? 'Aucune prédiction' : 'No prediction';
+      let text = fr ? 'Aucune prédiction' : 'No prediction', tip = '', colour = '';
       const zoneSpan = zoneRef.current;
       if (zoneSpan) {
         // The zones compare two periods, so name the zone instead of one period's suitability
         const c = await categoryAt(s, e.lngLat.lng, e.lngLat.lat, evidenceKey(s, await fetchCells(sciName(s)).catch(() => []), zoneSpan)).catch(() => null);
         text = c ? CAT_LABELS[c][fr ? 1 : 0] : fr ? 'Non favorable aux deux périodes' : 'Unsuitable in both periods';
+        if (c) { tip = CAT_TIPS[c][fr ? 1 : 0]; colour = hex(c); }
       } else if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {
         const res = await fetch(sdmPointUrl(sdmCogUrl(s, periodRef.current), e.lngLat.lng, e.lngLat.lat));
         if (res.ok) {
@@ -189,10 +202,17 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         } // non-ok (e.g. outside dataset bounds) falls through to "No prediction"
       } catch { /* network failure: keep "No prediction" */ }
       if (mapRef.current !== map) return;
-      new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat).setText(text).addTo(map);
+      // One small card at a time; it closes on its button, on Escape, on a click elsewhere and when the map moves
+      const card = document.createElement('div');
+      const head = card.appendChild(document.createElement('strong'));
+      if (colour) head.appendChild(Object.assign(document.createElement('i'), { style: `display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;background:${colour}` }));
+      head.append(text);
+      if (tip) card.appendChild(document.createElement('div')).textContent = tip;
+      spot?.remove();
+      spot = new maplibregl.Popup({ closeOnMove: true, className: 'sdm-spot', maxWidth: '240px' }).setLngLat(e.lngLat).setDOMContent(card).addTo(map);
     });
 
-    return () => { unbind(); map.remove(); mapRef.current = null; };
+    return () => { window.removeEventListener('keydown', esc); unbind(); map.remove(); mapRef.current = null; };
   }, []);
 
   // Resize with the container (expand mode) and re-center in the space the sidebar leaves free
@@ -246,12 +266,19 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       const fresh = span[1] < LAST_YEAR ? await classifyNew(slug, cells, span, [span[1] + 1, LAST_YEAR]) : undefined;
       if (!live || mapRef.current !== map) return;
       src.setData({ type: 'FeatureCollection', features: fresh?.features ?? [] });
-      const [thr, area] = await Promise.all([thresholdOf(slug), zoneShares(slug, cells, span)]);
-      if (live) setZoneStats({ thr, area, stats: fresh?.stats });
+      const thr = await thresholdOf(slug);
+      if (live) setZoneStats({ thr, cells, features: fresh?.features ?? [] });
     };
     if (map.getSource(NEW)) apply().catch((e) => console.warn('New GBIF records unavailable', e)); else map.once('load', apply);
     return () => { live = false; map.off('load', apply); };
   }, [slug, view, spanKey]);
+  useEffect(() => {
+    setInView(null);
+    if (!zoneStats || !slug) return;
+    let live = true;
+    zoneShares(slug, zoneStats.cells, span, box).then((v) => { if (live) setInView(v); }).catch(() => {});
+    return () => { live = false; };
+  }, [zoneStats, box]);
 
   // IUCN outline is period-independent: reload on species change only. The map zooms to it here and nowhere else, so the view holds still when the period, clip or records change. A position the user chose (at) is kept instead
   useEffect(() => {
@@ -374,15 +401,29 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               <span className="inline-block w-3 border-t-2" style={{ borderColor: '#e8590c' }} />
               <span>{lang === 'EN' ? 'IUCN range. No colour: unsuitable in both periods' : 'Aire UICN. Sans couleur : non favorable aux deux périodes'}</span>
             </div>
-            {!zoneStats && <div className="mt-1 text-[10px] text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
-            {zoneStats && (() => {
+            {!(zoneStats && inView) && <div className="mt-1 text-[10px] text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
+            {zoneStats && inView && (() => {
               const en = lang === 'EN', name = (c: Category) => CAT_LABELS[c][en ? 0 : 1];
-              const points = (i: 0 | 1): [string, string, number][] => [...CATEGORIES, 'unsuitable' as const].map((c) => [c === 'unsuitable' ? (en ? 'Unsuitable' : 'Non favorable') : name(c), c === 'unsuitable' ? UNSUITABLE : hex(c), zoneStats.stats?.byCat[c]?.[i] ?? 0]);
+              // Nearly everything on screen counts as the whole map, so a snug fit does not read as a partial view
+              const whole = !box || inView.share > 0.98;
+              const all = zoneStats.features, seen = whole ? all : all.filter((f) => { const [x, y] = (f.geometry as GeoJSON.Point).coordinates; return x >= box[0] && x <= box[2] && y >= box[1] && y <= box[3]; });
+              const sets = [seen, seen.filter((f) => f.properties?.discovery)], totals = [all.length, all.filter((f) => f.properties?.discovery).length];
+              const split = (fs: GeoJSON.Feature[]): Parts => [...CATEGORIES, 'unsuitable' as const].map((c) => [c === 'unsuitable' ? (en ? 'Unsuitable' : 'Non favorable') : name(c), c === 'unsuitable' ? UNSUITABLE : hex(c), fs.filter((f) => f.properties?.category === c).length]);
+              const everything = [all, all.filter((f) => f.properties?.discovery)], ref = (v: Parts) => (whole ? {} : { whole: v, wholeLabel: en ? 'whole map' : 'toute la carte' });
+              const n = (i: 0 | 1) => (whole ? `${totals[i]}` : en ? `${sets[i].length} of ${totals[i]}` : `${sets[i].length} sur ${totals[i]}`);
+              const pct = inView.share < 0.01 ? '<1' : `${Math.round(100 * inView.share)}`;
               return (
                 <div className="mt-1 pt-1 border-t border-gray-100">
-                  <Bar label={en ? 'Share of suitable area' : 'Part de la superficie favorable'} parts={CATEGORIES.map((c, i) => [name(c), hex(c), zoneStats.area[i]])} />
-                  {!!zoneStats.stats?.total && <Bar label={en ? `New cells since ${to + 1} (${zoneStats.stats.total})` : `Nouvelles cellules depuis ${to + 1} (${zoneStats.stats.total})`} parts={points(0)} />}
-                  {!!zoneStats.stats?.discovery && <Bar label={en ? `Discoveries, over 10 km from records (${zoneStats.stats.discovery})` : `Découvertes, à plus de 10 km des mentions (${zoneStats.stats.discovery})`} parts={points(1)} />}
+                  <div className="text-[10px] font-medium" role="status">
+                    {whole
+                      ? <span className="text-gray-600">{en ? 'Bars: whole map' : 'Barres : toute la carte'}</span>
+                      : <><span className="rounded px-1 bg-sage-500 text-white">{en ? `This view: ${pct}% of the zoned area` : `Cette vue : ${pct} % de la superficie classée`}</span> <span className="text-gray-600 font-normal">{en ? 'Thin strips: whole map' : 'Bandes minces : toute la carte'}</span></>}
+                  </div>
+                  {inView.share > 0
+                    ? <Bar label={en ? 'Share of suitable area' : 'Part de la superficie favorable'} parts={CATEGORIES.map((c, i) => [name(c), hex(c), inView.area[i]])} {...ref(CATEGORIES.map((c, i) => [name(c), hex(c), inView.whole[i]]))} />
+                    : <div className="mt-1 text-[10px] text-gray-600">{en ? 'No zoned area in this view' : 'Aucune superficie classée dans cette vue'}</div>}
+                  {!!totals[0] && <Bar label={en ? `New cells since ${to + 1} (${n(0)})` : `Nouvelles cellules depuis ${to + 1} (${n(0)})`} parts={split(sets[0])} {...ref(split(everything[0]))} />}
+                  {!!totals[1] && <Bar label={en ? `Discoveries, over 10 km from records (${n(1)})` : `Découvertes, à plus de 10 km des mentions (${n(1)})`} parts={split(sets[1])} {...ref(split(everything[1]))} />}
                   <div className="mt-1 text-[10px] text-gray-600">{en ? `Suitable: at least ${zoneStats.thr}%, the level 90% of training records reach` : `Favorable : au moins ${zoneStats.thr} %, le niveau atteint par 90 % des mentions d'entraînement`}</div>
                 </div>
               );
