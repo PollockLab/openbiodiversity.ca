@@ -9,7 +9,7 @@ import { Span, DEFAULT_SPAN, LAST_YEAR, TIMELINE_START } from '../data/sdmTempor
 import { useLanguage } from '../lib/LanguageContext';
 
 const DEFAULT_SPECIES = 'rangifer-tarandus';
-// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=<2100|model|categories>&ev=<none|high>&span=<2016-2020>&gbif=1&obs=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
+// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=<2100|model|categories>&ev=<none|high>&span=<2016-2020>&train=1&obs=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
 const hashParam = (key: string) => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(key);
 const speciesFromHash = () => hashParam('sp') || DEFAULT_SPECIES;
 // No view, or an unknown one, is the default clipped current map, so links from before the view existed still work
@@ -45,7 +45,7 @@ export default function SdmExplorerView() {
   const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
   const [view, setView] = useState<View>(viewFromHash);
   const [span, setSpan] = useState<Span>(spanFromHash);
-  const [showOcc, setShowOcc] = useState(() => hashParam('gbif') === '1');
+  const [showOcc, setShowOcc] = useState(() => hashParam('train') === '1');
   // By year is on in the categories view unless the link says obs=0, and off elsewhere unless it says obs=1
   const [obsChoice, setObsChoice] = useState<boolean | null>(() => { const o = hashParam('obs'); return o === '1' ? true : o === '0' ? false : null; });
   const showObs = obsChoice ?? view === 'categories';
@@ -69,7 +69,7 @@ export default function SdmExplorerView() {
     const cats = view === 'categories';
     const v = cats ? '&view=categories' : period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
     const sp = (cats || showObs) && span.join() !== DEFAULT_SPAN.join() ? `&span=${span.join('-')}` : '';
-    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${sp}${showOcc ? '&gbif=1' : ''}${showObs === (view === 'categories') ? '' : `&obs=${+showObs}`}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
+    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${sp}${showOcc ? '&train=1' : ''}${showObs === (view === 'categories') ? '' : `&obs=${+showObs}`}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
   }, [selectedSdmId, period, view, span, showOcc, showObs, at, lang]);
 
   // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
