@@ -19,12 +19,12 @@ export const CAT_TIPS: Record<Category, L> = {
 };
 
 interface Props {
-  lang: string; left: string; slot: HTMLElement | null; view: View; onViewChange: (v: View) => void; period: SdmPeriod; onPeriodChange: (p: SdmPeriod) => void;
+  lang: string; left: string; slot: HTMLElement | null; view: View; onViewChange: (v: View) => void; period: SdmPeriod; onPeriodChange: (p: SdmPeriod) => void; clip2100: boolean;
   showOcc: boolean; onToggleOcc: () => void; occBusy: boolean;
   showObs: boolean; onToggleObs: () => void; span: Span; onSpanChange: (s: Span) => void;
 }
 
-export default function SdmControls({ lang, left, slot, view, onViewChange, period, onPeriodChange, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange }: Props) {
+export default function SdmControls({ lang, left, slot, view, onViewChange, period, onPeriodChange, clip2100, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange }: Props) {
   // Read once per mount: the explorer remounts when a new link is opened, and switching views must not hide the button
   const [PROTO] = useState(() => window.location.hash.includes('view=categories'));
   const i = lang === 'EN' ? 0 : 1, t = (a: string, b: string) => (i ? b : a);
@@ -33,9 +33,10 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, peri
   const tip = (id: string, text: string) => { tips.push([id, text]); return { title: text, 'aria-describedby': `sdm-tip-${id}` }; };
   const seg = (on: boolean) => `px-3 py-1.5 cursor-pointer ${on ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`;
   const cats = view === 'categories';
+  const future = period.startsWith('2100'), clipped = period === 'current' || period === '2100-clipped';
   const views = [
-    { k: 'current', on: view === 'suitability' && period !== '2100', label: t('Current (1980-2010)', 'Actuel (1980-2010)'), tip: t('Where conditions are suitable today, from 1980-2010 climate', "Où les conditions sont favorables aujourd'hui, selon le climat 1980-2010"), go: () => { onViewChange('suitability'); if (period === '2100') onPeriodChange('current-model'); } },
-    { k: '2100', on: view === 'suitability' && period === '2100', label: t('Future (2071-2100)', 'Futur (2071-2100)'), tip: t('Where conditions are predicted to be suitable at the end of the century', 'Où les conditions devraient être favorables à la fin du siècle'), go: () => { onViewChange('suitability'); onPeriodChange('2100'); } },
+    { k: 'current', on: view === 'suitability' && !future, label: t('Current (1980-2010)', 'Actuel (1980-2010)'), tip: t('Where conditions are suitable today, from 1980-2010 climate', "Où les conditions sont favorables aujourd'hui, selon le climat 1980-2010"), go: () => { onViewChange('suitability'); if (future) onPeriodChange(clipped ? 'current' : 'current-model'); } },
+    { k: '2100', on: view === 'suitability' && future, label: t('Future (2071-2100)', 'Futur (2071-2100)'), tip: t('Where conditions are predicted to be suitable at the end of the century', 'Où les conditions devraient être favorables à la fin du siècle'), go: () => { onViewChange('suitability'); onPeriodChange(clip2100 && clipped ? '2100-clipped' : '2100'); } },
   ];
   return (
     <div className={`absolute top-3 ${left} right-16 @[600px]:right-[18.5rem] flex flex-wrap items-start gap-2 text-xs font-sans z-10 transition-all duration-300 pointer-events-none [&>*]:pointer-events-auto`}>
@@ -46,11 +47,11 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, peri
         </button>}
       </div>
       {view === 'suitability' && (
-        <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 bg-white ${period === '2100' ? 'text-gray-400' : 'text-gray-600 cursor-pointer'}`}>
-          <input type="checkbox" className="accent-sage-500" checked={period === 'current'} disabled={period === '2100'}
-            onChange={e => onPeriodChange(e.target.checked ? 'current' : 'current-model')} />
+        <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 bg-white ${period === '2100' && !clip2100 ? 'text-gray-400' : 'text-gray-600 cursor-pointer'}`}>
+          <input type="checkbox" className="accent-sage-500" checked={clipped} disabled={period === '2100' && !clip2100}
+            onChange={e => onPeriodChange(future ? (e.target.checked ? '2100-clipped' : '2100') : e.target.checked ? 'current' : 'current-model')} />
           {t('Clip to known range', "Découper selon l'aire connue")}
-          {period === '2100' && t(' (no clipped version for 2100)', ' (pas de version découpée pour 2100)')}
+          {period === '2100' && !clip2100 && t(' (no clipped version for 2100)', ' (pas de version découpée pour 2100)')}
         </label>
       )}
       {/* The layers live in the right-hand column that SdmMap owns */}
