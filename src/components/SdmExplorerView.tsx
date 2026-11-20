@@ -89,20 +89,24 @@ export default function SdmExplorerView() {
   const iucn = selectedSpecies?.iucnStatus ? IUCN_LABELS[selectedSpecies.iucnStatus] : undefined;
   const selectedName = selectedSpecies && nameOf(selectedSpecies);
 
-  return (
-    <div className="space-y-8 pb-16">
-      
-      {/* Intro descriptive card */}
-      <section className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 card-shadow">
-        <div>
-          <h1 className="font-display font-semibold text-2xl sm:text-3xl text-wood-900 tracking-tight">
-            {lang === 'EN' ? "Species Distribution Models" : "Modèles de distribution d'espèces"}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1 leading-relaxed font-sans">
+  const intro = (
+    <p className="text-sm text-gray-500 mt-1 leading-relaxed font-sans">
             {lang === 'EN' 
               ? "Explore species distribution models at 1 km resolution across Canada and the United States. Each map is the mean of three models (boosted regression trees, MaxEnt and random forest). Current maps (1980-2010) are clipped to each species' known range; 2100 projections are not (see Methodology)."
               : "Explorez des modèles de distribution d'espèces à une résolution de 1 km pour le Canada et les États-Unis. Chaque carte est la moyenne de trois modèles (arbres de régression boostés, MaxEnt et forêt aléatoire). Les cartes actuelles (1980-2010) sont découpées selon l'aire connue de chaque espèce; les projections pour 2100 ne le sont pas (voir Méthodologie)."}
           </p>
+  );
+
+  return (
+    <div className="space-y-8 pb-16">
+      
+      {/* Intro descriptive card */}
+      <section className={`bg-white border border-gray-100 rounded-2xl card-shadow ${selectedSpecies ? 'px-4 py-2' : 'p-6 md:p-8'}`}>
+        <div>
+          <h1 className={`font-display font-semibold text-wood-900 tracking-tight ${selectedSpecies ? 'text-lg' : 'text-2xl sm:text-3xl'}`}>
+            {lang === 'EN' ? "Species Distribution Models" : "Modèles de distribution d'espèces"}
+          </h1>
+          {selectedSpecies ? (<details className="text-sm font-sans"><summary className="cursor-pointer text-sage-700">{lang === 'EN' ? 'About these maps' : 'À propos de ces cartes'}</summary>{intro}</details>) : intro}
         </div>
       </section>
 
