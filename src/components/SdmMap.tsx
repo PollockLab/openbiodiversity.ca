@@ -191,8 +191,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       const zoneSpan = zoneRef.current;
       if (zoneSpan) {
         // The zones compare two periods, so name the zone instead of one period's suitability
-        const c = await categoryAt(s, e.lngLat.lng, e.lngLat.lat, evidenceKey(s, await fetchCells(sciName(s)).catch(() => []), zoneSpan)).catch(() => null);
-        text = c ? CAT_LABELS[c][fr ? 1 : 0] : fr ? 'Non favorable aux deux périodes' : 'Unsuitable in both periods';
+        const c = await categoryAt(s, e.lngLat.lng, e.lngLat.lat, evidenceKey(s, await fetchCells(sciName(s)).catch(() => []), zoneSpan), 7).catch(() => undefined); // z7: the pixels the map draws
+        text = c ? CAT_LABELS[c][fr ? 1 : 0] : c === undefined ? (fr ? 'Aucune prédiction ici' : 'No prediction here') : fr ? 'Non favorable aux deux périodes' : 'Unsuitable in both periods';
         if (c) { tip = CAT_TIPS[c][fr ? 1 : 0]; colour = hex(c); }
       } else if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {
         const res = await fetch(sdmPointUrl(sdmCogUrl(s, periodRef.current), e.lngLat.lng, e.lngLat.lat));
@@ -247,7 +247,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
       map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 0.75 : 0.85, 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
-    if (map.isStyleLoaded()) apply(); else map.once('load', apply);
+    if (map.getSource(RANGE)) apply(); else map.once('load', apply); // not isStyleLoaded(): it is false while any tile loads, and 'load' fires once
     return () => { live = false; map.off('load', apply); };
   }, [slug, period, view, spanKey]);
 
@@ -262,7 +262,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       src.setData(EMPTY);
       setZoneStats(null);
       if (!slug || view !== 'categories') return;
-      const cells = await fetchCells(sciName(slug));
+      const cells = await fetchCells(sciName(slug)).catch(() => []);
       const fresh = span[1] < LAST_YEAR ? await classifyNew(slug, cells, span, [span[1] + 1, LAST_YEAR]) : undefined;
       if (!live || mapRef.current !== map) return;
       src.setData({ type: 'FeatureCollection', features: fresh?.features ?? [] });

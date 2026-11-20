@@ -44,7 +44,7 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
       else line(r.kind === 'evidence' ? t('Evidence record cell', 'Cellule de preuve') : r.kind === 'test' ? t('Newer record cell', 'Cellule de mention récente') : t('Model training record', "Mention d'entraînement du modèle"), 'font-weight:600');
       if (r.kind === 'new' || r.kind === 'test') {
         const km = distanceToTrainingKm(evidenceKey(c.slug, r.cells, c.span), r.lon, r.lat);
-        if (Number.isFinite(km)) line(t(`Nearest evidence: ${km.toFixed(km < 10 ? 1 : 0)} km`, `Preuve la plus proche : ${km.toFixed(km < 10 ? 1 : 0)} km`));
+        if (Number.isFinite(km)) line(km >= 100 ? t('Nearest evidence: over 100 km', 'Preuve la plus proche : plus de 100 km') : t(`Nearest evidence: ${km.toFixed(km < 10 ? 1 : 0)} km`, `Preuve la plus proche : ${km.toFixed(km < 10 ? 1 : 0)} km`));
       }
       const [a, b] = r.years ?? [0, 0];
       const counts = r.cell ? Object.entries(r.cell.years).filter(([y]) => +y >= a && +y <= (r.years ? b : 9999)).map(([y, n]) => `${y}: ${n}`).join(' · ') : '';
