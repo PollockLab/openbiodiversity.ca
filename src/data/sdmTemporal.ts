@@ -10,7 +10,9 @@ const TILES = [0, 1, 2].flatMap((x) => [0, 1, 2, 3].map((y) => [x, y]));
 export const BASIS = ['HUMAN_OBSERVATION', 'MACHINE_OBSERVATION', 'OBSERVATION', 'OCCURRENCE', 'PRESERVED_SPECIMEN', 'MATERIAL_SAMPLE'];
 export const LAST_YEAR = new Date().getFullYear();
 
-export type Cell = { lon: number; lat: number; first: number; years: Record<number, number> };
+// years is flat [year, count, year, count, ...]: a dict keyed by year sits in V8's slow dictionary mode, about 4x the memory over 150k cells
+export type Cell = { lon: number; lat: number; first: number; years: number[] };
+export const yearsOf = (c: Cell) => c.years.filter((_, i) => i % 2 === 0);
 
 const taxonKeys = new Map<string, Promise<number | null>>();
 export const taxonKey = (sci: string) => {
@@ -50,9 +52,9 @@ async function load(sci: string): Promise<Cell[]> {
     for (let i = 0; i < (layer?.length ?? 0); i++) {
       const f = layer.feature(i), [[pt]] = f.loadGeometry();
       if (pt.x < 0 || pt.y < 0 || pt.x >= EXTENT || pt.y >= EXTENT) continue; // tile buffer: the neighbour tile owns it
-      const years: Record<number, number> = {};
-      for (const [k, v] of Object.entries(f.properties)) if (/^\d{4}$/.test(k)) years[+k] = Number(v);
-      const ys = Object.keys(years).map(Number);
+      const years: number[] = [];
+      for (const [k, v] of Object.entries(f.properties)) if (/^\d{4}$/.test(k)) years.push(+k, Number(v));
+      const ys = years.filter((_, i) => i % 2 === 0);
       if (!ys.length) continue; // undated records cannot be placed in time
       const wx = (x * EXTENT + pt.x + 0.5) / (EXTENT * 2 ** Z), wy = (y * EXTENT + pt.y + 0.5) / (EXTENT * 2 ** Z);
       cells.push({ lon: wx * 360 - 180, lat: Math.atan(Math.sinh(Math.PI * (1 - 2 * wy))) * 180 / Math.PI, first: Math.min(...ys), years });
@@ -65,7 +67,7 @@ export type Span = [number, number]; // inclusive years
 export const TIMELINE_START = 1990; // earliest evidence year the timeline offers
 // Default evidence period: the last 10 full years (the IUCN Red List's recent-presence span)
 export const DEFAULT_SPAN: Span = [LAST_YEAR - 10, LAST_YEAR - 1];
-const inSpan = (c: Cell, [a, b]: Span) => Object.keys(c.years).some((y) => +y >= a && +y <= b);
+const inSpan = (c: Cell, [a, b]: Span) => yearsOf(c).some((y) => y >= a && y <= b);
 export const spanSet = ([a, b]: Span) => `${a}-${b}`;
 export const evidenceCells = (cells: Cell[], span: Span) => cells.filter((c) => inSpan(c, span));
 const built = new Map<string, Cell[]>();
@@ -113,7 +115,7 @@ export async function classifyNew(slug: string, cells: Cell[], span: Span, after
     const row = stats.byCat[category] ??= [0, 0];
     row[0]++; stats.total++;
     if (discovery) { row[1]++; stats.discovery++; }
-    features.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [c.lon, c.lat] }, properties: { category, discovery, date: Object.keys(c.years).find((y) => +y >= after[0] && +y <= after[1]) } });
+    features.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [c.lon, c.lat] }, properties: { category, discovery, date: yearsOf(c).find((y) => y >= after[0] && y <= after[1]) } });
   }));
   return { stats, features };
 }

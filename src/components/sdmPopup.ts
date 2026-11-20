@@ -1,5 +1,5 @@
 import maplibregl from 'maplibre-gl';
-import { cellAt, cellBox, evidenceKey, fetchCells, LAST_YEAR, Span } from '../data/sdmTemporal';
+import { cellAt, cellBox, evidenceKey, fetchCells, LAST_YEAR, Span, yearsOf } from '../data/sdmTemporal';
 import { distanceToTrainingKm } from '../data/sdmCategories';
 import { fetchRecords, RecordList } from '../data/sdmRecords';
 
@@ -57,7 +57,7 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
         if (Number.isFinite(km)) line(km >= 100 ? t('Nearest evidence: over 100 km', 'Preuve la plus proche : plus de 100 km') : t(`Nearest evidence: ${km.toFixed(km < 10 ? 1 : 0)} km`, `Preuve la plus proche : ${km.toFixed(km < 10 ? 1 : 0)} km`));
       }
       const [a, b] = r.years ?? [0, 0];
-      const counts = r.cell ? Object.entries(r.cell.years).filter(([y]) => +y >= a && +y <= (r.years ? b : 9999)).map(([y, n]) => `${y}: ${n}`).join(' · ') : '';
+      const counts = r.cell ? yearsOf(r.cell).map((y, i) => [y, r.cell!.years[2 * i + 1]]).filter(([y]) => y >= a && y <= (r.years ? b : 9999)).map(([y, n]) => `${y}: ${n}`).join(' · ') : '';
       if (counts) line(`${t('Records per year', 'Mentions par année')}: ${counts}`, 'color:#4b5563');
       const list = box.appendChild(el('div', t('Loading records…', 'Chargement des mentions…'), 'margin-top:6px;color:#6b7280'));
       popup?.remove();
