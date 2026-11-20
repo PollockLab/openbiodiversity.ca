@@ -153,6 +153,8 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
               </div>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Menu"
+                aria-expanded={mobileMenuOpen}
                 className="p-2 rounded-xl text-wood-600 hover:text-wood-900 hover:bg-sage-50 transition-colors"
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
