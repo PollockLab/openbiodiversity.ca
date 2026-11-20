@@ -191,7 +191,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       const zoneSpan = zoneRef.current;
       if (zoneSpan) {
         // The zones compare two periods, so name the zone instead of one period's suitability
-        const c = await categoryAt(s, e.lngLat.lng, e.lngLat.lat, evidenceKey(s, await fetchCells(sciName(s)).catch(() => []), zoneSpan)).catch(() => null);
+        const c = await categoryAt(s, e.lngLat.lng, e.lngLat.lat, evidenceKey(s, await fetchCells(sciName(s)).catch(() => []), zoneSpan), 7).catch(() => null); // z7: the pixels the map draws
         text = c ? CAT_LABELS[c][fr ? 1 : 0] : fr ? 'Non favorable aux deux périodes' : 'Unsuitable in both periods';
         if (c) { tip = CAT_TIPS[c][fr ? 1 : 0]; colour = hex(c); }
       } else if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {

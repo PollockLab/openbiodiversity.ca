@@ -8,7 +8,6 @@ const Z = 3, EXTENT = 512;
 // Tiles covering Canada and the US (lon -180..-45, lat 0..85)
 const TILES = [0, 1, 2].flatMap((x) => [0, 1, 2, 3].map((y) => [x, y]));
 export const BASIS = ['HUMAN_OBSERVATION', 'MACHINE_OBSERVATION', 'OBSERVATION', 'OCCURRENCE', 'PRESERVED_SPECIMEN', 'MATERIAL_SAMPLE'];
-export const FIRST_YEAR = 2015;
 export const LAST_YEAR = new Date().getFullYear();
 
 export type Cell = { lon: number; lat: number; first: number; years: Record<number, number> };

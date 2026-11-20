@@ -15,9 +15,10 @@ export const hex = (c: Category) => `#${CATEGORY_COLORS[c].map((v) => v.toString
 export const SUITABLE = 50;
 // Per species: the suitability that 90% of the model's training records reach (scripts/sdm-thresholds.py). The same value
 // is used for today and 2100, so a cell changes status only when its suitability crosses it.
+// A failed load is not kept: the next call asks again, so one network error does not put every species on the fallback
 let thresholds: Promise<Record<string, number>> | undefined;
 export const thresholdOf = (slug: string): Promise<number> =>
-  (thresholds ??= fetch(`${import.meta.env.BASE_URL}sdm-thresholds.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))).then((t) => t[slug] ?? SUITABLE);
+  (thresholds ??= fetch(`${import.meta.env.BASE_URL}sdm-thresholds.json`).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).catch(() => { thresholds = undefined; return {} as Record<string, number>; })).then((t) => t[slug] ?? SUITABLE);
 // shortcut: fixed distance and a hard range edge, not yet the paper's per-species decay (tau); replace once that kernel is settled
 export const NEAR_KM = 40; // a record this close counts as "near"
 
@@ -103,7 +104,7 @@ const rangeOf = (slug: string) => {
       for (const ring of poly) { ring.forEach(([lon, lat], i) => (i ? path.lineTo(...merc(lon, lat)) : path.moveTo(...merc(lon, lat)))); path.closePath(); }
       return path;
     });
-  })).catch((e) => { console.warn('IUCN range unavailable', e); return null; }));
+  })).catch((e) => { console.warn('IUCN range unavailable', e); ranges.delete(slug); return null; })); // not kept, so the next tile asks again
   return ranges.get(slug)!;
 };
 const W = 2 * Math.PI * R;
