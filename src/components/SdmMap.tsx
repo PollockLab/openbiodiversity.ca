@@ -115,6 +115,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const [zoneStats, setZoneStats] = useState<{ thr: number; cells: Awaited<ReturnType<typeof fetchCells>>; features: GeoJSON.Feature[] } | null>(null);
   // The legend bars describe what is on screen: the map's bounds [west, south, east, north] after each move
   const [box, setBox] = useState<number[] | null>(null);
+  const [tipOf, setTipOf] = useState<Category | null>(null);
   const [inView, setInView] = useState<{ area: number[]; whole: number[]; share: number } | null>(null);
   const slugRef = useRef(slug);
   const periodRef = useRef(period);
@@ -395,12 +396,20 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           // Collapsed by default at phone width, where the open legend covers the controls
           <details open={window.innerWidth >= 640}>
             <summary className="mb-1 text-gray-600 font-semibold pointer-events-auto cursor-pointer">{lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'}</summary>
-            {CATEGORIES.map((c) => (
-                <div key={c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} aria-description={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className="flex items-center gap-2 mt-0.5 text-[10px] pointer-events-auto cursor-help">
-                  <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
-                  <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
+            {/* A row is a button so touch and keyboard users can read the definition that hover gives on desktop; the number is the zone's share of suitable area in view */}
+            {CATEGORIES.map((c, i) => {
+              const sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
+              return (
+                <div key={c}>
+                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className="flex w-full items-center gap-2 mt-0.5 text-[10px] text-left pointer-events-auto cursor-help">
+                    <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
+                    <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
+                    {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}
+                  </button>
+                  {tipOf === c && <div className="ml-5 text-[10px] text-gray-600">{CAT_TIPS[c][lang === 'EN' ? 0 : 1]}</div>}
                 </div>
-            ))}
+              );
+            })}
             <div className="flex items-center gap-2 mt-0.5 text-[10px]">
               <span className="inline-block w-3 border-t-2" style={{ borderColor: '#e8590c' }} />
               <span>{lang === 'EN' ? 'IUCN range. No colour: unsuitable in both periods' : 'Aire UICN. Sans couleur : non favorable aux deux périodes'}</span>
