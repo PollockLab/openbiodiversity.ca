@@ -40,7 +40,8 @@ export const T = 512;
 // v: the tile server's cache ignores Vary: Origin, so a tile first requested from another origin is cached without this site's CORS header; bump to leave such copies behind
 const rawUrl = (cog: string, z: number, x: number, y: number) =>
   `${TITILER_BASE}/tiles/WebMercatorQuad/${z}/${x}/${y}.png?tilesize=512&url=${encodeURIComponent(cog)}&nodata=255&v=2`;
-type Raw = { v: Uint8ClampedArray } | null; // RGBA with R = value, A = 0 for nodata
+type Raw = { v: Uint8Array } | null; // one byte per pixel, NODATA where titiler gave alpha 0
+const NODATA = 255; // the COGs' own nodata value, so no valid suitability reads as it
 const rawCache = new Map<string, Promise<Raw>>();
 function raw(cog: string, z: number, x: number, y: number): Promise<Raw> {
   const k = `${cog}|${z}|${x}|${y}`;
@@ -53,7 +54,10 @@ function raw(cog: string, z: number, x: number, y: number): Promise<Raw> {
       const bmp = await createImageBitmap(await r.blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
       const ctx = new OffscreenCanvas(T, T).getContext('2d')!;
       ctx.drawImage(bmp, 0, 0);
-      return { v: ctx.getImageData(0, 0, T, T).data };
+      // Keep R only: a quarter of the RGBA, so the 600-tile cache holds 150 MB, not 600
+      const rgba = ctx.getImageData(0, 0, T, T).data, v = new Uint8Array(T * T);
+      for (let p = 0; p < T * T; p++) v[p] = rgba[p * 4 + 3] ? rgba[p * 4] : NODATA;
+      return { v };
     }).catch(() => { rawCache.delete(k); return null; }));
   }
   return rawCache.get(k)!;
@@ -153,8 +157,8 @@ export async function zoneTile(slug: string, set: string, z: number, x: number, 
   const out = new Uint8Array(T * T);
   for (let p = 0; p < T * T; p++) {
     const i = p * 4;
-    if (!u.v[i + 3] || !f.v[i + 3]) continue;
-    const cat = categorize(u.v[i], f.v[i], thr, !rm || rm[i + 3] > 127, !nm || nm[i + 3] > 127);
+    if (u.v[p] === NODATA || f.v[p] === NODATA) continue;
+    const cat = categorize(u.v[p], f.v[p], thr, !rm || rm[i + 3] > 127, !nm || nm[i + 3] > 127);
     if (cat) out[p] = CATEGORIES.indexOf(cat) + 1;
   }
   return out;
@@ -178,9 +182,9 @@ export function registerCategoryProtocol() {
 // Category of the cell under a point, read from the same raw tiles at a fixed zoom (512 px z5 ≈ 1.7 km pixels at 45°N, so records share tiles)
 export async function categoryAt(slug: string, lon: number, lat: number, key: string, z = 5): Promise<Category | null | undefined> {
   const n = 2 ** z, fx = (lon + 180) / 360 * n, fy = (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2 * n;
-  const x = Math.floor(fx), y = Math.floor(fy), i = (Math.floor((fy - y) * T) * T + Math.floor((fx - x) * T)) * 4;
+  const x = Math.floor(fx), y = Math.floor(fy), i = Math.floor((fy - y) * T) * T + Math.floor((fx - x) * T);
   const [[u, f], paths, thr] = await Promise.all([pair(slug, z, x, y), rangeOf(slug), thresholdOf(slug)]);
-  if (!u || !f || !u.v[i + 3] || !f.v[i + 3]) return undefined; // no prediction here (sea, outside the model), not the same as unsuitable
+  if (!u || !f || u.v[i] === NODATA || f.v[i] === NODATA) return undefined; // no prediction here (sea, outside the model), not the same as unsuitable
   const both = u.v[i] >= thr && f.v[i] >= thr; // range and records only decide the zone when the cell is suitable in both periods
   return categorize(u.v[i], f.v[i], thr, both && (!paths || inRange(paths, ...merc(lon, lat))), both && distanceToTrainingKm(key, lon, lat) <= NEAR_KM);
 }
