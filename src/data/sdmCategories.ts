@@ -164,15 +164,15 @@ export async function zoneTile(slug: string, set: string, z: number, x: number, 
   return out;
 }
 
-// sdmcat://{slug}/{record set}/{z}/{x}/{y}
+// sdmcat://{slug}/{record set}/{shown}/{z}/{x}/{y}, shown: one 0/1 per CATEGORIES entry, so a use can hide zones
 let registered = false;
 export function registerCategoryProtocol() {
   if (registered) return;
   registered = true;
   maplibregl.addProtocol('sdmcat', async (params) => {
-    const [slug, set, z, x, y] = params.url.replace('sdmcat://', '').split('/');
+    const [slug, set, shown, z, x, y] = params.url.replace('sdmcat://', '').split('/');
     const zones = await zoneTile(slug, set, +z, +x, +y), out = new ImageData(T, T);
-    if (zones) for (let p = 0; p < T * T; p++) if (zones[p]) out.data.set([...CATEGORY_COLORS[CATEGORIES[zones[p] - 1]], 255], p * 4);
+    if (zones) for (let p = 0; p < T * T; p++) if (zones[p] && shown[zones[p] - 1] === '1') out.data.set([...CATEGORY_COLORS[CATEGORIES[zones[p] - 1]], 255], p * 4);
     const canvas = new OffscreenCanvas(T, T);
     canvas.getContext('2d')!.putImageData(out, 0, 0);
     return { data: await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer() };
@@ -188,3 +188,13 @@ export async function categoryAt(slug: string, lon: number, lat: number, key: st
   const both = u.v[i] >= thr && f.v[i] >= thr; // range and records only decide the zone when the cell is suitable in both periods
   return categorize(u.v[i], f.v[i], thr, both && (!paths || inRange(paths, ...merc(lon, lat))), both && distanceToTrainingKm(key, lon, lat) <= NEAR_KM);
 }
+
+// Uses from exploratory to evidence-based (paper Fig. 6): each shows only the zones that answer it
+export const USES: { id: string; label: [string, string]; zones: Category[] }[] = [
+  { id: 'all', label: ['All zones', 'Toutes les zones'], zones: CATEGORIES },
+  { id: 'protect', label: ['Protected area planning', 'Planification des aires protégées'], zones: ['confirmed', 'in-range'] },
+  { id: 'survey', label: ['Survey for new populations', 'Inventaire de nouvelles populations'], zones: ['in-range', 'frontier'] },
+  { id: 'range', label: ['Range map review', "Révision de la carte d'aire"], zones: ['range-gap', 'frontier'] },
+  { id: 'climate', label: ['Climate adaptation', 'Adaptation au climat'], zones: ['climate-risk', 'newly-suitable'] },
+];
+export const shownKey = (zones: Category[]) => CATEGORIES.map((c) => (zones.includes(c) ? 1 : 0)).join('');

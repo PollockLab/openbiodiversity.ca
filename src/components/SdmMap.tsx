@@ -5,7 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
 import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
-import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf } from '../data/sdmCategories';
+import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
 import { bindRecordPopups, nearestDot } from './sdmPopup';
 import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
@@ -121,6 +121,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   // The legend bars describe what is on screen: the map's bounds [west, south, east, north] after each move
   const [box, setBox] = useState<number[] | null>(null);
   const [tipOf, setTipOf] = useState<Category | null>(null);
+  const [use, setUse] = useState(USES[0]);
+  const shown = shownKey(use.zones);
   const [inView, setInView] = useState<{ area: number[]; whole: number[]; share: number } | null>(null);
   const slugRef = useRef(slug);
   const periodRef = useRef(period);
@@ -267,12 +269,12 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (cats) evidenceKey(slug, await fetchCells(sciName(slug)).catch(() => []), span);
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
-      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
+      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
       map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 0.75 : 0.85, 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply); // not isStyleLoaded(): it is false while any tile loads, and 'load' fires once
     return () => { live = false; map.off('load', apply); };
-  }, [slug, period, view, spanKey]);
+  }, [slug, period, view, spanKey, shown]);
 
   // Records added after the evidence period, coloured by the zone they land in, and the zone shares for the legend bars
   useEffect(() => {
@@ -417,12 +419,17 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           <summary className="py-1 text-xs uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Legend' : 'Légende'}</summary>
         {view === 'categories' && slug ? (
           <div role="group" aria-label={lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'} className="mt-1">
+            <label className="flex items-center gap-2 mb-1 text-xs">{lang === 'EN' ? 'Show zones for' : 'Zones pour'}
+              <select value={use.id} onChange={(e) => setUse(USES.find((u) => u.id === e.target.value)!)} className="flex-1 min-w-0 rounded border border-gray-300 bg-white px-1 py-0.5 text-xs">
+                {USES.map((u) => <option key={u.id} value={u.id}>{u.label[lang === 'EN' ? 0 : 1]}</option>)}
+              </select>
+            </label>
             {/* A row is a button so touch and keyboard users can read the definition that hover gives on desktop; the number is the zone's share of suitable area in view */}
             {LEGEND_ORDER.map((c) => {
               const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
               return (
                 <div key={c}>
-                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full min-h-6 items-center gap-2 text-xs text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''}`}>
+                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full min-h-6 items-center gap-2 text-xs text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''} ${use.zones.includes(c) ? '' : 'opacity-40'}`}>
                     <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
                     <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
                     {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}
