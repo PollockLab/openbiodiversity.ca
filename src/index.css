@@ -90,3 +90,6 @@ body {
   background: #2d5a27;
 }
 
+
+/* Map popups open over the control panels (z-10), not under them */
+.maplibregl-popup { z-index: 20; }
