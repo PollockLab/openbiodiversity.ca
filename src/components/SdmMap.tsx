@@ -150,7 +150,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       container: containerRef.current,
       style: { ...getGreyStyle(isRetina), projection: { type: 'mercator' } },
       ...(parseAt(atRef.current) ?? FULL_VIEW),
-      attributionControl: { compact: true },
+      attributionControl: false,
     });
     mapRef.current = map;
     map.setPadding(sidebarPadding(sidebarRef.current, containerRef.current.clientWidth));
@@ -228,6 +228,15 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
 
   // MapLibre labels its canvas "Map" in English only
   useEffect(() => { mapRef.current?.getCanvas().setAttribute('aria-label', lang === 'EN' ? 'Map' : 'Carte'); }, [lang]);
+  // Licence lives in the map's attribution box so it never overlaps it on a phone
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const licence = '<a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license">CC BY-NC 4.0</a>';
+    const ctrl = new maplibregl.AttributionControl({ compact: true, customAttribution: (lang === 'EN' ? 'Models: Pollock Lab, ' : 'Modèles : Laboratoire Pollock, ') + licence });
+    map.addControl(ctrl);
+    return () => { map.removeControl(ctrl); };
+  }, [lang]);
 
   // Resize with the container (expand mode) and re-center in the space the sidebar leaves free
   useEffect(() => {
@@ -398,12 +407,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           ))}
         </div>
       </div>
-      <div className={`absolute bottom-3 ${isSidebarOpen ? LEFT_OPEN : 'left-3'} max-w-[calc(100%-240px)] bg-white/90 rounded-lg px-3 py-1.5 text-xs font-sans text-gray-600 shadow-sm border border-gray-200 z-10 transition-all duration-300 flex items-center gap-1.5 flex-wrap`}>
-        <span>{lang === 'EN' ? 'Models: Pollock Lab, licensed under ' : 'Modèles : Laboratoire Pollock, sous licence '}</span>
-        <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline text-sage-700 hover:text-sage-900 font-medium">CC BY-NC 4.0</a>
-      </div>
       {/* z-20 and after the zoom buttons in the DOM: the column must stay readable over them. Right column on desktop, bottom sheet on a phone (sections collapsed there) */}
-      <div className="absolute z-20 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 overflow-y-auto overflow-x-hidden inset-x-3 bottom-10 max-h-[60%] @[600px]:inset-x-auto @[600px]:bottom-auto @[600px]:top-3 @[600px]:right-3 @[600px]:w-56 @[600px]:max-h-[calc(100%-1.5rem)]">
+      <div className="absolute z-20 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 overflow-y-auto overflow-x-hidden inset-x-3 bottom-16 max-h-[60%] @[600px]:inset-x-auto @[600px]:bottom-auto @[600px]:top-3 @[600px]:right-3 @[600px]:w-56 @[600px]:max-h-[calc(100%-1.5rem)]">
         <details open={!!open?.layers}>
           <summary className="py-1 text-xs uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Layers' : 'Calques'}</summary>
           <div ref={setSlot} className="mt-1" />

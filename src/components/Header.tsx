@@ -61,7 +61,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
             <div className="flex items-center py-1">
               <div
                 onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }}
-                className="flex items-center gap-3 cursor-pointer select-none group"
+                className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none group"
               >
                 <img 
                   src="/openbiodiversity_mark.png" 
@@ -69,7 +69,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
                   className="h-11 sm:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
                 />
                 <div className="flex flex-col">
-                  <span className="font-display font-bold tracking-tight text-wood-900 text-lg sm:text-xl leading-none">
+                  <span className="font-display font-bold tracking-tight text-wood-900 text-base sm:text-xl leading-none">
                     openbiodiversity<span className="text-sage-600">.ca</span>
                   </span>
                   <span className="text-xs font-sans font-medium tracking-normal text-wood-500 mt-1">
@@ -128,7 +128,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
             </div>
 
             {/* Mobile menu button and language toggles */}
-            <div className="flex lg:hidden items-center gap-3">
+            <div className="flex lg:hidden items-center gap-2 sm:gap-3">
               <div className="flex items-center border border-gray-200 rounded-lg p-0.5 bg-gray-50/50">
                 <button
                   onClick={() => setLang('EN')}
