@@ -66,7 +66,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
                 <img 
                   src="/openbiodiversity_mark.png" 
                   alt="openbiodiversity.ca" 
-                  className="h-11 sm:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                  className="hidden min-[380px]:block h-11 sm:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
                 />
                 <div className="flex flex-col">
                   <span className="font-display font-bold tracking-tight text-wood-900 text-base sm:text-xl leading-none">
