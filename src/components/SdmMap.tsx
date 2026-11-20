@@ -213,7 +213,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (map.getSource(SRC)) map.removeSource(SRC);
       if (!slug) return;
       const cats = view === 'categories';
-      if (cats) evidenceKey(slug, await fetchCells(sciName(slug)), span);
+      // Zones still draw when GBIF is down: without records nothing is Confirmed
+      if (cats) evidenceKey(slug, await fetchCells(sciName(slug)).catch(() => []), span);
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
       map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
@@ -351,23 +352,22 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         <span>{lang === 'EN' ? 'Models: Pollock Lab, licensed under ' : 'Modèles : Laboratoire Pollock, sous licence '}</span>
         <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline text-sage-700 hover:text-sage-900 font-medium">CC BY-NC 4.0</a>
       </div>
-      {view === 'categories' && slug && (
-        <p className={`absolute bottom-14 ${isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} max-w-xs bg-amber-50/95 border border-amber-300 rounded-lg px-3 py-2 text-xs font-sans text-amber-900 shadow-sm pointer-events-none z-10 transition-all duration-300`}>
-          {lang === 'EN'
-            ? 'Prototype for discussion. Thresholds are provisional and the categories are not peer reviewed; do not use for decisions.'
-            : "Prototype à des fins de discussion. Les seuils sont provisoires et les catégories n'ont pas été évaluées par des pairs; ne pas utiliser pour prendre des décisions."}
-        </p>
-      )}
       <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-[11px] font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-10 max-w-[210px] sm:max-w-xs">
         {view === 'categories' && slug ? (
-          <>
-            <div className="mb-1 text-gray-600 font-semibold">{lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'}</div>
+          // Collapsed by default at phone width, where the open legend covers the controls
+          <details open={window.innerWidth >= 640}>
+            <summary className="mb-1 text-gray-600 font-semibold pointer-events-auto cursor-pointer">{lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'}</summary>
             {CATEGORIES.map((c) => (
                 <div key={c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} aria-description={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className="flex items-center gap-2 mt-0.5 text-[10px] pointer-events-auto cursor-help">
                   <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
                   <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
                 </div>
             ))}
+            <div className="flex items-center gap-2 mt-0.5 text-[10px]">
+              <span className="inline-block w-3 border-t-2" style={{ borderColor: '#e8590c' }} />
+              <span>{lang === 'EN' ? 'IUCN range. No colour: unsuitable in both periods' : 'Aire UICN. Sans couleur : non favorable aux deux périodes'}</span>
+            </div>
+            {!zoneStats && <div className="mt-1 text-[10px] text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
             {zoneStats && (() => {
               const en = lang === 'EN', name = (c: Category) => CAT_LABELS[c][en ? 0 : 1];
               const points = (i: 0 | 1): [string, string, number][] => [...CATEGORIES, 'unsuitable' as const].map((c) => [c === 'unsuitable' ? (en ? 'Unsuitable' : 'Non favorable') : name(c), c === 'unsuitable' ? UNSUITABLE : hex(c), zoneStats.stats?.byCat[c]?.[i] ?? 0]);
@@ -376,7 +376,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
                   <Bar label={en ? 'Share of suitable area' : 'Part de la superficie favorable'} parts={CATEGORIES.map((c, i) => [name(c), hex(c), zoneStats.area[i]])} />
                   {!!zoneStats.stats?.total && <Bar label={en ? `New cells since ${to + 1} (${zoneStats.stats.total})` : `Nouvelles cellules depuis ${to + 1} (${zoneStats.stats.total})`} parts={points(0)} />}
                   {!!zoneStats.stats?.discovery && <Bar label={en ? `Discoveries, over 10 km from records (${zoneStats.stats.discovery})` : `Découvertes, à plus de 10 km des mentions (${zoneStats.stats.discovery})`} parts={points(1)} />}
-                  <div className="mt-1 text-[10px] text-gray-500">{en ? `Suitable: at least ${zoneStats.thr}%, the level 90% of training records reach` : `Favorable : au moins ${zoneStats.thr} %, le niveau atteint par 90 % des mentions d'entraînement`}</div>
+                  <div className="mt-1 text-[10px] text-gray-600">{en ? `Suitable: at least ${zoneStats.thr}%, the level 90% of training records reach` : `Favorable : au moins ${zoneStats.thr} %, le niveau atteint par 90 % des mentions d'entraînement`}</div>
                 </div>
               );
             })()}
@@ -384,10 +384,15 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-600">
                 {lang === 'EN'
                   ? `Dots: observed ${from}–${to}, white edge. New since ${to + 1}: larger, dark edge if >10 km from earlier records, hollow grey if unsuitable.`
-                  : `Points : observé ${from}–${to}, bord blanc. Nouveau depuis ${to + 1} : plus gros, bord foncé si >10 km des mentions antérieures, gris vide si non favorable.`}
+                  : `Points : observés ${from}–${to}, bord blanc. Nouveau depuis ${to + 1} : plus gros, bord foncé si >10 km des mentions antérieures, gris vide si non favorable.`}
               </div>
             )}
-          </>
+            <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-amber-900">
+              {lang === 'EN'
+                ? 'Prototype for discussion. Thresholds are provisional and the categories are not peer reviewed; do not use for decisions.'
+                : "Prototype à des fins de discussion. Les seuils sont provisoires et les catégories n'ont pas été évaluées par des pairs; ne pas utiliser pour prendre des décisions."}
+            </div>
+          </details>
         ) : (<>
         <div className="mb-1 text-gray-600 font-semibold">{period === 'current'
           ? (lang === 'EN' ? 'Ensemble (clipped to the known range), 1980-2010, 1 km' : 'Ensemble (découpé selon l\'aire connue), 1980-2010, 1 km')
