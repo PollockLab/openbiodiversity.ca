@@ -7,14 +7,14 @@ import type { View } from './SdmMap';
 
 type L = [string, string]; // EN, FR
 // The prototype Change view is unlisted: its button shows only when the page was opened from a view=categories link
-// One-line plain-language explanations of Laura's categories (names unchanged)
+// Definition, action, and the matching term in the literature for each zone
 export const CAT_TIPS: Record<Category, L> = {
-  confirmed: ['Suitable now and in 2100, inside the known range and near observations', "Favorable aujourd'hui et en 2100, dans l'aire connue et près des observations"],
-  'in-range': ['Suitable now and in 2100, inside the known range, but no observation within 40 km', "Favorable aujourd'hui et en 2100, dans l'aire connue, mais sans observation à moins de 40 km"],
-  'range-gap': ['Suitable now and in 2100 and observed, but outside the known range: the range map may need redrawing', "Favorable aujourd'hui et en 2100 et observé, mais hors de l'aire connue : la carte de l'aire est peut-être à revoir"],
-  frontier: ['Suitable now and in 2100, outside the known range and far (>40 km) from any observation: worth a survey', "Favorable aujourd'hui et en 2100, hors de l'aire connue et loin (>40 km) de toute observation : à inventorier"],
-  'climate-risk': ['Suitable now, not in 2100', "Favorable aujourd'hui, pas en 2100"],
-  'newly-suitable': ['Not suitable now, suitable in 2100', "Non favorable aujourd'hui, favorable en 2100"],
+  confirmed: ['Suitable now and in 2100, inside the known range, observed within 40 km. Protect. Stable documented range.', "Favorable aujourd'hui et en 2100, dans l'aire connue, observé à moins de 40 km. À protéger. Aire documentée stable."],
+  'in-range': ['Suitable now and in 2100, inside the known range, no observation within 40 km. Look here. Suitable, unrecorded.', "Favorable aujourd'hui et en 2100, dans l'aire connue, sans observation à moins de 40 km. À explorer. Favorable, non observé."],
+  'range-gap': ['Horizon with records: suitable and observed outside the known range. The range map may need redrawing. Recorded outside range.', "Horizon avec mentions : favorable et observé hors de l'aire connue. La carte de l'aire est peut-être à revoir. Observé hors de l'aire."],
+  frontier: ['Suitable now and in 2100, outside the known range, no observation within 40 km. Survey here. Suitable outside range.', "Favorable aujourd'hui et en 2100, hors de l'aire connue, sans observation à moins de 40 km. À inventorier. Favorable hors de l'aire."],
+  'climate-risk': ['Suitable now, not in 2100. Watch. Projected loss of suitable climate.', "Favorable aujourd'hui, pas en 2100. À surveiller. Perte projetée de climat favorable."],
+  'newly-suitable': ['Not suitable now, suitable in 2100. Prepare. Projected gain of suitable climate.', "Non favorable aujourd'hui, favorable en 2100. À préparer. Gain projeté de climat favorable."],
 };
 
 interface Props {
@@ -62,7 +62,7 @@ export default function SdmControls({ lang, left, view, onViewChange, period, on
           <details className="max-w-72 text-[10px] leading-snug text-gray-600">
             <summary className="cursor-pointer text-sage-700 underline">{t('How does this work?', 'Comment ça marche?')}</summary>
             <p className="mt-1">{t('Pick the baseline years with the two handles. Observations from those years are what is taken as already known about where the species lives.', 'Choisissez les années de référence avec les deux poignées. Les observations de ces années représentent ce que l\'on sait déjà de la répartition de l\'espèce.')}</p>
-            {cats && <p className="mt-1">{t('A place counts as Confirmed when a baseline observation lies within 40 km.', 'Un lieu est Confirmé si une observation de référence se trouve à moins de 40 km.')}</p>}
+            {cats && <p className="mt-1">{t('A place counts as a Stronghold when a baseline observation lies within 40 km.', 'Un lieu est un Bastion si une observation de référence se trouve à moins de 40 km.')}</p>}
             <p className="mt-1">{t('Observations made after the baseline are new. They show as larger dots and test the map: did the species turn up where the model said it could?', 'Les observations faites après la référence sont nouvelles. Elles apparaissent en plus gros points et mettent la carte à l\'épreuve : l\'espèce est-elle apparue là où le modèle le prévoyait?')}</p>
           </details>
         </>}
