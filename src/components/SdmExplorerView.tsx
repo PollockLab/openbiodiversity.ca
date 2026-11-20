@@ -44,8 +44,8 @@ export default function SdmExplorerView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
   const [view, setView] = useState<View>(viewFromHash);
-  // The clipped 2100 file is uploaded per species: without it the Future map and the checkbox behave as before
-  const [clip2100, setClip2100] = useState(false);
+  // The clipped 2100 file is uploaded per species: without it the Future map and the checkbox behave as before; null while the check runs, so a 2100c link does not flash the unclipped map
+  const [clip2100, setClip2100] = useState<boolean | null>(null);
   const [span, setSpan] = useState<Span>(spanFromHash);
   const [showOcc, setShowOcc] = useState(() => hashParam('train') === '1');
   // By year is on in the categories view unless the link says obs=0, and off elsewhere unless it says obs=1
@@ -93,7 +93,7 @@ export default function SdmExplorerView() {
   const slug = selectedSpecies?.ecccSlug ?? selectedSdmId;
   useEffect(() => {
     let live = true;
-    setClip2100(false);
+    setClip2100(null);
     hasClipped2100(slug).then(ok => live && setClip2100(ok));
     return () => { live = false; };
   }, [slug]);
@@ -146,9 +146,9 @@ export default function SdmExplorerView() {
         </div>
         <SdmMap
           slug={slug}
-          period={period === '2100-clipped' && !clip2100 ? '2100' : period}
+          period={period === '2100-clipped' && clip2100 === false ? '2100' : period}
           onPeriodChange={setPeriod}
-          clip2100={clip2100}
+          clip2100={!!clip2100}
           showOcc={showOcc}
           onToggleOcc={() => setShowOcc(v => !v)}
           showObs={showObs}
