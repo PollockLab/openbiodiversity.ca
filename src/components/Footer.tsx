@@ -27,7 +27,7 @@ export default function Footer({ setActiveTab }: FooterProps) {
                 ? "Canada's open-access biodiversity data platform."
                 : "La plateforme de données sur la biodiversité en libre accès du Canada."}
             </p>
-            <div className="text-[10px] font-sans text-gray-400">
+            <div className="text-xs font-sans text-gray-600">
               {lang === 'EN'
                 ? "Developed by the Quantitative Biodiversity Lab, McGill University."
                 : "Développée par le Laboratoire de biodiversité quantitative, Université McGill."}
@@ -65,7 +65,7 @@ export default function Footer({ setActiveTab }: FooterProps) {
  
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center text-[11px] text-gray-400 gap-4">
+        <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-600 gap-4">
           <div>
             &copy; {currentYear} openbiodiversity.ca &bull; {lang === 'EN' ? "Released in Canada under CC BY 4.0." : "Publié au Canada sous licence CC BY 4.0."}
           </div>

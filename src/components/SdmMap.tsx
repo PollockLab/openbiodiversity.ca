@@ -405,11 +405,11 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       {/* z-20 and after the zoom buttons in the DOM: the column must stay readable over them. Right column on desktop, bottom sheet on a phone (sections collapsed there) */}
       <div className="absolute z-20 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 overflow-y-auto overflow-x-hidden inset-x-3 bottom-10 max-h-[60%] @[600px]:inset-x-auto @[600px]:bottom-auto @[600px]:top-3 @[600px]:right-3 @[600px]:w-56 @[600px]:max-h-[calc(100%-1.5rem)]">
         <details open={!!open?.layers}>
-          <summary className="text-xs uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Layers' : 'Calques'}</summary>
+          <summary className="py-1 text-xs uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Layers' : 'Calques'}</summary>
           <div ref={setSlot} className="mt-1" />
         </details>
         <details open={!!open?.legend} className="mt-2 pt-2 border-t border-gray-100">
-          <summary className="text-xs uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Legend' : 'Légende'}</summary>
+          <summary className="py-1 text-xs uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Legend' : 'Légende'}</summary>
         {view === 'categories' && slug ? (
           <div role="group" aria-label={lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'} className="mt-1">
             {/* A row is a button so touch and keyboard users can read the definition that hover gives on desktop; the number is the zone's share of suitable area in view */}

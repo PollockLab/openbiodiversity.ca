@@ -72,7 +72,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
                   <span className="font-display font-bold tracking-tight text-wood-900 text-lg sm:text-xl leading-none">
                     openbiodiversity<span className="text-sage-600">.ca</span>
                   </span>
-                  <span className="text-[10px] sm:text-[11px] font-sans font-medium tracking-normal text-wood-500 mt-1">
+                  <span className="text-xs font-sans font-medium tracking-normal text-wood-500 mt-1">
                     {lang === 'EN' ? 'Canadian Biodiversity Layers' : 'Couches De Biodiversité Canadienne'}
                   </span>
                 </div>
@@ -106,20 +106,20 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
               <div className="flex items-center border border-gray-200/80 rounded-lg p-0.5 bg-gray-50/50">
                 <button
                   onClick={() => setLang('EN')}
-                  className={`px-2 py-0.5 text-[10px] font-sans font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 min-h-6 text-xs font-sans font-bold rounded-md transition-all cursor-pointer ${
                     lang === 'EN'
                       ? 'bg-sage-600 text-white shadow-3xs'
-                      : 'text-gray-400 hover:text-gray-600'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   EN
                 </button>
                 <button
                   onClick={() => setLang('FR')}
-                  className={`px-2 py-0.5 text-[10px] font-sans font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 min-h-6 text-xs font-sans font-bold rounded-md transition-all cursor-pointer ${
                     lang === 'FR'
                       ? 'bg-sage-600 text-white shadow-3xs'
-                      : 'text-gray-400 hover:text-gray-600'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   FR
@@ -132,20 +132,20 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
               <div className="flex items-center border border-gray-200 rounded-lg p-0.5 bg-gray-50/50">
                 <button
                   onClick={() => setLang('EN')}
-                  className={`px-1.5 py-0.5 text-[10px] font-sans font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-1.5 py-0.5 min-h-6 text-xs font-sans font-bold rounded-md transition-all cursor-pointer ${
                     lang === 'EN'
                       ? 'bg-sage-600 text-white shadow-xs'
-                      : 'text-gray-400 hover:text-gray-600'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   EN
                 </button>
                 <button
                   onClick={() => setLang('FR')}
-                  className={`px-1.5 py-0.5 text-[10px] font-sans font-bold rounded-md transition-all cursor-pointer ${
+                  className={`px-1.5 py-0.5 min-h-6 text-xs font-sans font-bold rounded-md transition-all cursor-pointer ${
                     lang === 'FR'
                       ? 'bg-sage-600 text-white shadow-xs'
-                      : 'text-gray-400 hover:text-gray-600'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   FR
