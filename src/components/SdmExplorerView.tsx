@@ -51,7 +51,7 @@ export default function SdmExplorerView() {
   const showObs = obsChoice ?? view === 'categories';
   const [at, setAt] = useState(() => (parseAt(hashParam('at')) ? hashParam('at') : null));
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 640); // the open list covers a phone-width map
 
   useEffect(() => {
     loadSdmSpecies()
