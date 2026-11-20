@@ -123,19 +123,19 @@ export default function SdmSidebar({ lang, species, loading, selectedId, onSelec
                       className={`px-3 py-2 cursor-pointer flex items-baseline justify-between gap-3 ${i === active ? 'bg-sage-50' : ''} ${s.id === selectedId ? 'font-semibold' : ''}`}
                     >
                       <span className="min-w-0 truncate text-xs text-wood-900">
-                        {nameOf(s)} <span className="italic font-mono text-xs text-gray-500">{s.scientificName}</span>
+                        {nameOf(s)} <span className="italic font-mono text-xs text-gray-600">{s.scientificName}</span>
                       </span>
-                      <span className="shrink-0 text-xs uppercase tracking-wider text-gray-400 font-mono">{taxonLabel(s.taxonGroup)}</span>
+                      <span className="shrink-0 text-xs uppercase tracking-wider text-gray-600 font-mono">{taxonLabel(s.taxonGroup)}</span>
                     </li>
                   ))}
                 </ul>
                 {!shown.length && (
-                  <p role="status" className="px-3 py-3 text-xs text-gray-500">
+                  <p role="status" className="px-3 py-3 text-xs text-gray-600">
                     {lang === 'EN' ? `No species match "${rawQuery}"` : `Aucune espèce ne correspond à « ${rawQuery} »`}
                   </p>
                 )}
                 {filtered.length > MAX_MATCHES && (
-                  <p className="px-3 py-1.5 text-xs text-gray-400 border-t border-gray-100">
+                  <p className="px-3 py-1.5 text-xs text-gray-600 border-t border-gray-100">
                     {lang === 'EN' ? `Showing ${MAX_MATCHES} of ${filtered.length}` : `${MAX_MATCHES} sur ${filtered.length}`}
                   </p>
                 )}
@@ -167,14 +167,14 @@ export default function SdmSidebar({ lang, species, loading, selectedId, onSelec
                 className={`w-full px-3.5 py-2.5 flex items-center justify-between cursor-pointer select-none transition-colors ${isOpen ? 'bg-gray-200/90' : 'bg-gray-100/90 hover:bg-gray-200/70'}`}>
                 <span className="flex items-baseline gap-1.5">
                   <span className="text-sm font-semibold text-gray-700">{taxonLabel(g)}</span>
-                  <span className="text-xs text-gray-500">({list.length})</span>
+                  <span className="text-xs text-gray-600">({list.length})</span>
                 </span>
                 {isOpen ? <ChevronUp className="w-4 h-4 text-gray-700" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
               </button>
               {isOpen && (
                 <ul className="bg-white/80 max-h-72 overflow-y-auto divide-y divide-gray-100/60">
-                  {loading && <li className="p-3 text-xs text-gray-400 text-center">{lang === 'EN' ? 'Loading species…' : 'Chargement…'}</li>}
-                  {!loading && !list.length && <li className="px-3.5 py-2.5 text-xs text-gray-400 italic">{lang === 'EN' ? 'No species in this class' : 'Aucune espèce dans cette classe'}</li>}
+                  {loading && <li className="p-3 text-xs text-gray-600 text-center">{lang === 'EN' ? 'Loading species…' : 'Chargement…'}</li>}
+                  {!loading && !list.length && <li className="px-3.5 py-2.5 text-xs text-gray-600 italic">{lang === 'EN' ? 'No species in this class' : 'Aucune espèce dans cette classe'}</li>}
                   {list.map(s => {
                     const sel = s.id === selectedId;
                     return (
@@ -186,7 +186,7 @@ export default function SdmSidebar({ lang, species, loading, selectedId, onSelec
                               {sel && <Check className="w-3.5 h-3.5 text-sage-700 shrink-0" />}
                               <span className="truncate">{nameOf(s)}</span>
                             </span>
-                            <span className="block text-xs italic text-gray-500 truncate">{s.scientificName}</span>
+                            <span className="block text-xs italic text-gray-600 truncate">{s.scientificName}</span>
                           </span>
                           {s.iucnStatus && (
                             <span className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded ${s.iucnStatus === 'CR' || s.iucnStatus === 'EN' ? 'bg-red-50 text-red-700 border border-red-200' : s.iucnStatus === 'VU' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-600'}`}>
