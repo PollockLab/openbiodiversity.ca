@@ -393,7 +393,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         <span>{lang === 'EN' ? 'Models: Pollock Lab, licensed under ' : 'Modèles : Laboratoire Pollock, sous licence '}</span>
         <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline text-sage-700 hover:text-sage-900 font-medium">CC BY-NC 4.0</a>
       </div>
-      <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-[11px] font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-10 max-w-[210px] sm:max-w-xs">
+      {/* z-20 and after the zoom buttons in the DOM: on a phone the open legend reaches them and must stay readable */}
+      <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-[11px] font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-20 max-w-[210px] sm:max-w-xs">
         {view === 'categories' && slug ? (
           // Collapsed by default at phone width, where the open legend covers the controls
           <details open={window.innerWidth >= 640}>
