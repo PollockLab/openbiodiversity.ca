@@ -36,8 +36,9 @@ if (import.meta.env.DEV) {
 // Raw byte tiles: titiler returns gray+alpha PNG with the suitability % as gray when no colormap or rescale is set
 // 512 px tiles (titiler ?tilesize=512; this deployment rejects the @2x suffix with a 422): a quarter of the requests and reprojections of 256 px tiles
 export const T = 512;
+// v: the tile server's cache ignores Vary: Origin, so a tile first requested from another origin is cached without this site's CORS header; bump to leave such copies behind
 const rawUrl = (cog: string, z: number, x: number, y: number) =>
-  `${TITILER_BASE}/tiles/WebMercatorQuad/${z}/${x}/${y}.png?tilesize=512&url=${encodeURIComponent(cog)}&nodata=255`;
+  `${TITILER_BASE}/tiles/WebMercatorQuad/${z}/${x}/${y}.png?tilesize=512&url=${encodeURIComponent(cog)}&nodata=255&v=2`;
 type Raw = { v: Uint8ClampedArray } | null; // RGBA with R = value, A = 0 for nodata
 const rawCache = new Map<string, Promise<Raw>>();
 function raw(cog: string, z: number, x: number, y: number): Promise<Raw> {
