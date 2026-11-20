@@ -38,7 +38,7 @@ export default function SdmControls({ lang, left, view, onViewChange, period, on
   ];
   return (
     <div className={`absolute top-3 ${left} right-16 flex flex-wrap items-start gap-2 text-xs font-sans z-10 transition-all duration-300 pointer-events-none [&>*]:pointer-events-auto`}>
-      <div className="flex rounded-lg overflow-hidden shadow-sm border border-gray-200">
+      <div id="sdm-view-buttons" role="group" aria-label={t('Map view', 'Vue de la carte')} className="flex rounded-lg overflow-hidden shadow-sm border border-gray-200">
         {views.map((v) => <button key={v.k} onClick={v.go} aria-pressed={v.on} {...tip(`v${v.k}`, v.tip)} className={seg(v.on)}>{v.label}</button>)}
         {PROTO && <button onClick={() => onViewChange('categories')} aria-pressed={cats} {...tip('vcat', t('Compares today with 2100 and sorts every place into zones', "Compare aujourd'hui et 2100 et classe chaque lieu en zones"))} className={seg(cats)}>
           {t('Zones, current to future', 'Zones, actuel à futur')} <span className="ml-1 text-[9px] uppercase opacity-70">{t('prototype', 'prototype')}</span>

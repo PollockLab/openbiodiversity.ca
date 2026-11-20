@@ -124,6 +124,10 @@ export default function SdmExplorerView() {
             <ChevronRight className="w-4 h-4 text-sage-700" />
           </button>
         )}
+        {/* The species list holds hundreds of entries: let keyboard users jump past it. A button, not a #link, which would rewrite the page hash */}
+        <button type="button" onClick={() => document.querySelector<HTMLElement>('#sdm-view-buttons button')?.focus()} className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-14 focus:z-40 focus:px-3 focus:py-1 focus:rounded-lg focus:bg-white focus:shadow-md focus:text-xs">
+          {lang === 'EN' ? 'Skip to map controls' : 'Aller aux commandes de la carte'}
+        </button>
         <div className={`absolute inset-y-0 left-0 z-20 w-72 sm:w-[310px] md:w-[350px] transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <SdmSidebar lang={lang} species={species} loading={loading} selectedId={selectedSdmId} onSelect={(id) => { setSelectedSdmId(id); setAt(null); }} onCollapse={() => setIsSidebarOpen(false)} />
         </div>
