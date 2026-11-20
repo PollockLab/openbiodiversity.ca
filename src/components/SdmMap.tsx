@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { Maximize2, Minimize2, Plus, Minus } from 'lucide-react';
+import { Maximize2, Minimize2, Plus, Minus, House } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
 import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
@@ -128,6 +128,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   zoneRef.current = view === 'categories' ? span : null;
   langRef.current = lang;
   const atRef = useRef(at);
+  const rangeBox = useRef<ReturnType<typeof rangeBounds>>(null); // the species range extent, for the reset button
   const onMovedRef = useRef(onMoved);
   atRef.current = at;
   onMovedRef.current = onMoved;
@@ -295,14 +296,15 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       const src = map.getSource(RANGE) as maplibregl.GeoJSONSource | undefined;
       if (!src) return;
       src.setData(EMPTY);
+      rangeBox.current = null;
       if (!slug) return;
       const current = () => mapRef.current === map && slugRef.current === slug;
       // flatgeobuf + proj4 load lazily so they stay out of the main bundle
       import('../data/sdmRange').then((m) => m.fetchLaeaFgb(sdmRangeUrl(slug))).then((fc) => {
         if (!current()) return;
         src.setData(fc);
+        const box = rangeBox.current = rangeBounds(fc);
         if (atRef.current) return;
-        const box = rangeBounds(fc);
         if (box) map.fitBounds(box, { maxZoom: 7 }); else map.easeTo(FULL_VIEW);
       }).catch((e) => { console.warn('IUCN range unavailable', e); if (current() && !atRef.current) map.easeTo(FULL_VIEW); });
     };
@@ -381,7 +383,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           {isExpanded ? <Minimize2 className="w-4 h-4 text-sage-700" /> : <Maximize2 className="w-4 h-4 text-sage-700" />}
         </button>
         <div className="flex flex-col rounded-lg bg-white/95 shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-200">
-          {([[Plus, () => mapRef.current?.zoomIn({}, { user: true }), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut({}, { user: true }), lang === 'EN' ? 'Zoom out' : 'Zoom arrière']] as const).map(([Icon, fn, label]) => (
+          {([[Plus, () => mapRef.current?.zoomIn({}, { user: true }), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut({}, { user: true }), lang === 'EN' ? 'Zoom out' : 'Zoom arrière'],
+            [House, () => { onMovedRef.current(''); const b = rangeBox.current; if (b) mapRef.current?.fitBounds(b, { maxZoom: 7 }); else mapRef.current?.easeTo(FULL_VIEW); }, lang === 'EN' ? 'Reset view' : 'Réinitialiser la vue']] as const).map(([Icon, fn, label]) => (
             <button key={label} type="button" onClick={fn} title={label} aria-label={label}
               className="w-8 h-8 flex items-center justify-center text-gray-700 hover:bg-gray-50 cursor-pointer">
               <Icon className="w-4 h-4" />
