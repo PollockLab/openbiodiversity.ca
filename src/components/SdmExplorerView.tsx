@@ -175,7 +175,7 @@ export default function SdmExplorerView() {
           {selectedSpecies.habitatType && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-sans">
             <div className="bg-gray-50/70 p-3 rounded-lg border border-gray-100 text-xs text-gray-500">
-              <span className="block text-[10px] text-gray-500 uppercase tracking-wider font-sans">
+              <span className="block text-xs text-gray-500 uppercase tracking-wider font-sans">
                 {lang === 'EN' ? "Preferential Habitat" : "Habitat préférentiel"}
               </span>
               <strong className="text-wood-900 mt-0.5 block truncate font-sans" title={lang === 'FR' && selectedSpecies.habitatTypeFr ? selectedSpecies.habitatTypeFr : selectedSpecies.habitatType}>

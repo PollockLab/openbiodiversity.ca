@@ -226,6 +226,9 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     return () => { window.removeEventListener('keydown', esc); unbind(); map.remove(); mapRef.current = null; };
   }, []);
 
+  // MapLibre labels its canvas "Map" in English only
+  useEffect(() => { mapRef.current?.getCanvas().setAttribute('aria-label', lang === 'EN' ? 'Map' : 'Carte'); }, [lang]);
+
   // Resize with the container (expand mode) and re-center in the space the sidebar leaves free
   useEffect(() => {
     const el = containerRef.current;
@@ -402,11 +405,11 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       {/* z-20 and after the zoom buttons in the DOM: the column must stay readable over them. Right column on desktop, bottom sheet on a phone (sections collapsed there) */}
       <div className="absolute z-20 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 overflow-y-auto overflow-x-hidden inset-x-3 bottom-10 max-h-[60%] @[600px]:inset-x-auto @[600px]:bottom-auto @[600px]:top-3 @[600px]:right-3 @[600px]:w-56 @[600px]:max-h-[calc(100%-1.5rem)]">
         <details open={!!open?.layers}>
-          <summary className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Layers' : 'Calques'}</summary>
+          <summary className="text-xs uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Layers' : 'Calques'}</summary>
           <div ref={setSlot} className="mt-1" />
         </details>
         <details open={!!open?.legend} className="mt-2 pt-2 border-t border-gray-100">
-          <summary className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Legend' : 'Légende'}</summary>
+          <summary className="text-xs uppercase tracking-wide text-gray-500 font-semibold cursor-pointer">{lang === 'EN' ? 'Legend' : 'Légende'}</summary>
         {view === 'categories' && slug ? (
           <div role="group" aria-label={lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'} className="mt-1">
             {/* A row is a button so touch and keyboard users can read the definition that hover gives on desktop; the number is the zone's share of suitable area in view */}
@@ -414,7 +417,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
               return (
                 <div key={c}>
-                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full items-center gap-2 mt-0.5 text-xs text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''}`}>
+                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full min-h-6 items-center gap-2 text-xs text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''}`}>
                     <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
                     <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
                     {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}

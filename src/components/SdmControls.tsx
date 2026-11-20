@@ -42,7 +42,7 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, peri
       <div id="sdm-view-buttons" role="group" aria-label={t('Map view', 'Vue de la carte')} className="flex rounded-lg overflow-hidden shadow-sm border border-gray-200">
         {views.map((v) => <button key={v.k} onClick={v.go} aria-pressed={v.on} {...tip(`v${v.k}`, v.tip)} className={seg(v.on)}>{v.label}</button>)}
         {PROTO && <button onClick={() => onViewChange('categories')} aria-pressed={cats} {...tip('vcat', t('Compares today with 2100 and sorts every place into zones', "Compare aujourd'hui et 2100 et classe chaque lieu en zones"))} className={seg(cats)}>
-          {t('Zones, current to future', 'Zones, actuel à futur')} <span className="ml-1 text-[9px] uppercase opacity-70">{t('prototype', 'prototype')}</span>
+          {t('Zones, current to future', 'Zones, actuel à futur')} <span className="ml-1 text-xs uppercase opacity-70">{t('prototype', 'prototype')}</span>
         </button>}
       </div>
       {view === 'suitability' && (
@@ -75,7 +75,7 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, peri
 }
 
 const checkbox = (onChange: () => void, checked: boolean, label: string, props: object, busy = false) => (
-  <label className={`flex items-center gap-1.5 cursor-pointer ${busy ? 'animate-pulse' : ''}`} {...props}>
+  <label className={`flex min-h-6 items-center gap-1.5 cursor-pointer ${busy ? 'animate-pulse' : ''}`} {...props}>
     <input type="checkbox" className="accent-sage-500" checked={checked} onChange={onChange} aria-busy={busy} />
     {label}
   </label>
