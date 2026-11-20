@@ -21,9 +21,11 @@ const NEW = 'new-records';
 const OCC_IN = '#ffffff';
 const OCC_OUT = '#991b1b';
 const CAT_LABELS: Record<Category, [string, string]> = {
-  confirmed: ['Confirmed', 'Confirmé'], 'in-range': ['Suitable in range', "Favorable dans l'aire"], 'range-gap': ['Observed beyond range', "Observé hors de l'aire"], frontier: ['Frontier', 'Frontière'], 'climate-risk': ['Climate risk', 'Risque climatique'], 'newly-suitable': ['Newly suitable', 'Nouvellement favorable'],
+  confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, observé'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"],
 };
 const UNSUITABLE = '#b9b0a0';
+// Laura draws records outside the range as a branch of Frontier (Horizon), so it is listed under it, indented
+const LEGEND_ORDER: Category[] = ['confirmed', 'in-range', 'frontier', 'range-gap', 'climate-risk', 'newly-suitable'];
 // Dots take the colour of the zone they fall in
 const ZONE_COLOR = ['match', ['get', 'category'], ...CATEGORIES.flatMap((c) => [c, hex(c)]), UNSUITABLE] as unknown as maplibregl.ExpressionSpecification;
 // One thin stacked bar: how something (area, new cells) splits across the zones
@@ -197,7 +199,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (zoneSpan) {
         // The zones compare two periods, so name the zone instead of one period's suitability
         const c = await categoryAt(s, e.lngLat.lng, e.lngLat.lat, evidenceKey(s, await fetchCells(sciName(s)).catch(() => []), zoneSpan), 7).catch(() => undefined); // z7: the pixels the map draws
-        text = c ? CAT_LABELS[c][fr ? 1 : 0] : c === undefined ? (fr ? 'Aucune prédiction ici' : 'No prediction here') : fr ? 'Non favorable aux deux périodes' : 'Unsuitable in both periods';
+        text = c ? CAT_LABELS[c][fr ? 1 : 0] : c === undefined ? (fr ? 'Aucune prédiction ici' : 'No prediction here') : fr ? "Hors d'atteinte : non favorable aux deux périodes" : 'Out of reach: unsuitable in both periods';
         if (c) { tip = CAT_TIPS[c][fr ? 1 : 0]; colour = hex(c); }
       } else if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {
         const res = await fetch(sdmPointUrl(sdmCogUrl(s, periodRef.current), e.lngLat.lng, e.lngLat.lat));
@@ -397,11 +399,11 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           <details open={window.innerWidth >= 640}>
             <summary className="mb-1 text-gray-600 font-semibold pointer-events-auto cursor-pointer">{lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'}</summary>
             {/* A row is a button so touch and keyboard users can read the definition that hover gives on desktop; the number is the zone's share of suitable area in view */}
-            {CATEGORIES.map((c, i) => {
-              const sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
+            {LEGEND_ORDER.map((c) => {
+              const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
               return (
                 <div key={c}>
-                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className="flex w-full items-center gap-2 mt-0.5 text-[10px] text-left pointer-events-auto cursor-help">
+                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full items-center gap-2 mt-0.5 text-[10px] text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''}`}>
                     <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
                     <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
                     {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}
@@ -410,9 +412,13 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
                 </div>
               );
             })}
+            <div className="flex items-center gap-2 mt-0.5 text-[10px]" title={lang === 'EN' ? 'Unsuitable now and in 2100' : "Non favorable aujourd'hui et en 2100"}>
+              <span className="inline-block w-3 h-3 rounded-sm border border-gray-400" />
+              <span>{lang === 'EN' ? 'Out of reach (no colour)' : "Hors d'atteinte (sans couleur)"}</span>
+            </div>
             <div className="flex items-center gap-2 mt-0.5 text-[10px]">
               <span className="inline-block w-3 border-t-2" style={{ borderColor: '#e8590c' }} />
-              <span>{lang === 'EN' ? 'IUCN range. No colour: unsuitable in both periods' : 'Aire UICN. Sans couleur : non favorable aux deux périodes'}</span>
+              <span>{lang === 'EN' ? 'IUCN range' : 'Aire UICN'}</span>
             </div>
             {!(zoneStats && inView) && <div className="mt-1 text-[10px] text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
             {zoneStats && inView && (() => {
@@ -421,7 +427,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               const whole = !box || inView.share > 0.98;
               const all = zoneStats.features, seen = whole ? all : all.filter((f) => { const [x, y] = (f.geometry as GeoJSON.Point).coordinates; return x >= box[0] && x <= box[2] && y >= box[1] && y <= box[3]; });
               const sets = [seen, seen.filter((f) => f.properties?.discovery)], totals = [all.length, all.filter((f) => f.properties?.discovery).length];
-              const split = (fs: GeoJSON.Feature[]): Parts => [...CATEGORIES, 'unsuitable' as const].map((c) => [c === 'unsuitable' ? (en ? 'Unsuitable' : 'Non favorable') : name(c), c === 'unsuitable' ? UNSUITABLE : hex(c), fs.filter((f) => f.properties?.category === c).length]);
+              const split = (fs: GeoJSON.Feature[]): Parts => [...CATEGORIES, 'unsuitable' as const].map((c) => [c === 'unsuitable' ? (en ? 'Out of reach' : "Hors d'atteinte") : name(c), c === 'unsuitable' ? UNSUITABLE : hex(c), fs.filter((f) => f.properties?.category === c).length]);
               const everything = [all, all.filter((f) => f.properties?.discovery)], ref = (v: Parts) => (whole ? {} : { whole: v, wholeLabel: en ? 'whole map' : 'toute la carte' });
               const n = (i: 0 | 1) => (whole ? `${totals[i]}` : en ? `${sets[i].length} of ${totals[i]}` : `${sets[i].length} sur ${totals[i]}`);
               const pct = inView.share < 0.01 ? '<1' : `${Math.round(100 * inView.share)}`;
