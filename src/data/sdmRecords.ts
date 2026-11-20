@@ -1,6 +1,6 @@
 import { BASIS, taxonKey } from './sdmTemporal';
 
-export type GbifRecord = { key: number; date?: string; basis?: string; who?: string; photo: boolean };
+export type GbifRecord = { key: number; date?: string; basis?: string; who?: string; photo: boolean; src?: string };
 export type RecordList = { total: number; records: GbifRecord[] };
 
 // Individual GBIF records of one place and period, fetched once per (species, box, years) and shared by the hover prefetch and the click
@@ -20,6 +20,6 @@ async function load(sci: string, [w, s, e, n]: [number, number, number, number],
   const page = await res.json();
   return {
     total: page.count ?? 0,
-    records: (page.results ?? []).map((r: any) => ({ key: r.key, date: r.eventDate, basis: r.basisOfRecord, who: r.datasetName || r.recordedBy, photo: (r.media?.length ?? 0) > 0 })),
+    records: (page.results ?? []).map((r: any) => ({ key: r.key, date: r.eventDate, basis: r.basisOfRecord, who: r.datasetName || r.recordedBy, photo: (r.media?.length ?? 0) > 0, src: /^https:\/\//.test(r.references ?? '') ? r.references : undefined })),
   };
 }

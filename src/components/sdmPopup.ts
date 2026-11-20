@@ -64,6 +64,11 @@ export function bindRecordPopups(map: maplibregl.Map, layers: Record<Kind, strin
           li.appendChild(el('span', `${rec.date?.slice(0, 10) ?? t('no date', 'sans date')} `, 'font-weight:600'));
           li.appendChild(el('span', `${rec.basis ? BASIS[rec.basis]?.[fr ? 1 : 0] ?? rec.basis : ''}${rec.who ? `, ${rec.who}` : ''} `));
           if (rec.photo) li.appendChild(el('span', t('[photo] ', '[photo] '), 'color:#047857'));
+          if (rec.src) {
+            // The publisher's own page (e.g. iNaturalist) opens directly; gbif.org shows a bot check first
+            const a = li.appendChild(el('a', new URL(rec.src).hostname.replace(/^www\./, ''), 'color:#15803d;text-decoration:underline;margin-right:4px')) as HTMLAnchorElement;
+            a.href = rec.src; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          }
           if (Number.isInteger(rec.key)) {
             const a = li.appendChild(el('a', 'GBIF', 'color:#15803d;text-decoration:underline')) as HTMLAnchorElement;
             a.href = `https://www.gbif.org/occurrence/${rec.key}`; a.target = '_blank'; a.rel = 'noopener noreferrer';
