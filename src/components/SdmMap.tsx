@@ -110,6 +110,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const langRef = useRef(lang);
   slugRef.current = slug;
   periodRef.current = period;
+  const zoneRef = useRef<Span | null>(null);
+  zoneRef.current = view === 'categories' ? span : null;
   langRef.current = lang;
   const atRef = useRef(at);
   const onMovedRef = useRef(onMoved);
@@ -174,7 +176,12 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (!s || map.queryRenderedFeatures(e.point, { layers: [NEW, OBS, OCC].filter((l) => map.getLayer(l)) }).length) return;
       const fr = langRef.current === 'FR';
       let text = fr ? 'Aucune prédiction' : 'No prediction';
-      if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {
+      const zoneSpan = zoneRef.current;
+      if (zoneSpan) {
+        // The zones compare two periods, so name the zone instead of one period's suitability
+        const c = await categoryAt(s, e.lngLat.lng, e.lngLat.lat, evidenceKey(s, await fetchCells(sciName(s)).catch(() => []), zoneSpan)).catch(() => null);
+        text = c ? CAT_LABELS[c][fr ? 1 : 0] : fr ? 'Non favorable aux deux périodes' : 'Unsuitable in both periods';
+      } else if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {
         const res = await fetch(sdmPointUrl(sdmCogUrl(s, periodRef.current), e.lngLat.lng, e.lngLat.lat));
         if (res.ok) {
           const v = (await res.json()).values?.[0];
