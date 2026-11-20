@@ -5,7 +5,6 @@ import { SDMModel } from '../types';
 import SdmMap, { parseAt, View } from './SdmMap';
 import SdmSidebar from './SdmSidebar';
 import { SdmPeriod } from '../data/sdmSource';
-import { Evidence } from '../data/sdmCategories';
 import { Span, DEFAULT_SPAN, LAST_YEAR, TIMELINE_START } from '../data/sdmTemporal';
 import { useLanguage } from '../lib/LanguageContext';
 
@@ -15,8 +14,6 @@ const hashParam = (key: string) => new URLSearchParams(window.location.hash.spli
 const speciesFromHash = () => hashParam('sp') || DEFAULT_SPECIES;
 // No view, or an unknown one, is the default clipped current map, so links from before the view existed still work
 const viewFromHash = (): View => (hashParam('view') === 'categories' ? 'categories' : 'suitability');
-// Medium is the default evidence and is left out of the link
-const evidenceFromHash = (): Evidence => { const ev = hashParam('ev'); return ev === 'none' || ev === 'high' ? ev : 'medium'; };
 // Years are clamped to the timeline; a reversed or unreadable span (including the retired span=model) is the default
 const spanFromHash = (): Span => {
   const sp = hashParam('span');
@@ -47,7 +44,6 @@ export default function SdmExplorerView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
   const [view, setView] = useState<View>(viewFromHash);
-  const [evidence] = useState<Evidence>(evidenceFromHash);
   const [span, setSpan] = useState<Span>(spanFromHash);
   const [showOcc, setShowOcc] = useState(() => hashParam('gbif') === '1');
   // By year is on in the categories view unless the link says obs=0, and off elsewhere unless it says obs=1
@@ -72,10 +68,9 @@ export default function SdmExplorerView() {
   useEffect(() => {
     const cats = view === 'categories';
     const v = cats ? '&view=categories' : period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
-    const ev = cats && evidence !== 'medium' ? `&ev=${evidence}` : '';
     const sp = (cats || showObs) && span.join() !== DEFAULT_SPAN.join() ? `&span=${span.join('-')}` : '';
-    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${ev}${sp}${showOcc ? '&gbif=1' : ''}${showObs === (view === 'categories') ? '' : `&obs=${+showObs}`}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
-  }, [selectedSdmId, period, view, evidence, span, showOcc, showObs, at, lang]);
+    window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${sp}${showOcc ? '&gbif=1' : ''}${showObs === (view === 'categories') ? '' : `&obs=${+showObs}`}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
+  }, [selectedSdmId, period, view, span, showOcc, showObs, at, lang]);
 
   // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
   useEffect(() => {
@@ -142,7 +137,6 @@ export default function SdmExplorerView() {
           onToggleObs={() => setObsChoice(!showObs)}
           view={view}
           onViewChange={setView}
-          evidence={evidence}
           span={span}
           onSpanChange={setSpan}
           at={at}

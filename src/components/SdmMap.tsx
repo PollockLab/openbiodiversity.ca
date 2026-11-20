@@ -5,10 +5,10 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
 import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
-import { CATEGORIES, Category, Evidence, hex, registerCategoryProtocol, SUITABLE } from '../data/sdmCategories';
+import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
 import { bindRecordPopups } from './sdmPopup';
-import { fetchCells, evidenceCells, evidenceKey, classifyNew, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
+import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, NewStats, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
 
 const SRC = 'sdm-source';
 const LAYER = 'sdm-layer';
@@ -21,7 +21,23 @@ const NEW = 'new-records';
 const OCC_IN = '#ffffff';
 const OCC_OUT = '#991b1b';
 const CAT_LABELS: Record<Category, [string, string]> = {
-  expected: ['Expected', 'Attendu'], frontier: ['Frontier', 'Frontière'], 'climate-risk': ['Climate risk', 'Risque climatique'], 'newly-suitable': ['Newly suitable', 'Nouvellement favorable'],
+  confirmed: ['Confirmed', 'Confirmé'], 'in-range': ['Suitable in range', "Favorable dans l'aire"], 'range-gap': ['Observed beyond range', "Observé hors de l'aire"], frontier: ['Frontier', 'Frontière'], 'climate-risk': ['Climate risk', 'Risque climatique'], 'newly-suitable': ['Newly suitable', 'Nouvellement favorable'],
+};
+const UNSUITABLE = '#b9b0a0';
+// Dots take the colour of the zone they fall in
+const ZONE_COLOR = ['match', ['get', 'category'], ...CATEGORIES.flatMap((c) => [c, hex(c)]), UNSUITABLE] as unknown as maplibregl.ExpressionSpecification;
+// One thin stacked bar: how something (area, new cells) splits across the zones
+const Bar = ({ label, parts }: { label: string; parts: [string, string, number][] }) => {
+  const sum = parts.reduce((a, p) => a + p[2], 0);
+  const text = parts.filter((p) => p[2]).map((p) => `${p[0]} ${Math.round(100 * p[2] / sum)}%`).join(', ');
+  return (
+    <div className="mt-1 text-[10px] pointer-events-auto" title={text}>
+      <div className="text-gray-600">{label}</div>
+      <div className="flex h-2 rounded-sm overflow-hidden bg-gray-100" role="img" aria-label={`${label}: ${text}`}>
+        {sum > 0 && parts.map(([name, color, n]) => <span key={name} style={{ width: `${100 * n / sum}%`, background: color }} />)}
+      </div>
+    </div>
+  );
 };
 const sciName = (slug: string) => slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
 export type View = 'suitability' | 'categories';
@@ -68,10 +84,9 @@ interface SdmMapProps {
   // GBIF records by year: the dated GBIF cells in the timeline's span (and, in categories, the new records)
   showObs: boolean;
   onToggleObs: () => void;
-  // Categories view: its evidence level, and the GBIF evidence period in inclusive years
+  // Zones view: the GBIF evidence period in inclusive years
   view: View;
   onViewChange: (v: View) => void;
-  evidence: Evidence;
   span: Span;
   onSpanChange: (s: Span) => void;
   // Position the user chose, zoom/lat/lng; while it is set the map does not zoom to the species
@@ -82,13 +97,14 @@ interface SdmMapProps {
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, evidence, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
   const [from, to] = span;
   const spanKey = spanSet(span);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
+  const [zoneStats, setZoneStats] = useState<{ thr: number; area: number[]; stats?: NewStats } | null>(null);
   const slugRef = useRef(slug);
   const periodRef = useRef(period);
   const langRef = useRef(lang);
@@ -130,12 +146,12 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       map.addLayer({ id: NEW, type: 'circle', source: NEW, layout: { visibility: showObsRef.current ? 'visible' : 'none' }, paint: {
         // Records below the suitability threshold are hollow grey rings: kept visible as model misses, but recessive
         'circle-radius': ['case', ['==', ['get', 'category'], 'unsuitable'], 2, ['get', 'discovery'], 4.5, 3],
-        'circle-color': ['match', ['get', 'category'], 'expected', hex('expected'), 'frontier', hex('frontier'), 'climate-risk', hex('climate-risk'), 'newly-suitable', hex('newly-suitable'), '#9ca3af'],
+        'circle-color': ZONE_COLOR,
         'circle-opacity': ['case', ['==', ['get', 'category'], 'unsuitable'], 0, 1],
         'circle-stroke-color': ['case', ['==', ['get', 'category'], 'unsuitable'], '#6b7280', ['get', 'discovery'], '#111827', '#ffffff'],
         'circle-stroke-width': ['case', ['==', ['get', 'category'], 'unsuitable'], 1, ['get', 'discovery'], 1.5, 0.8] } });
       map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': ['case', ['has', 'evidence'], 2, 2.5], 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5, 'circle-stroke-opacity': ['case', ['has', 'evidence'], 0.35, 1] } });
-      map.addLayer({ id: OBS, type: 'circle', source: OBS, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['has', 'test'], '#f59e0b', OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5 } });
+      map.addLayer({ id: OBS, type: 'circle', source: OBS, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['has', 'test'], '#f59e0b', ['has', 'category'], ZONE_COLOR, OCC_IN], 'circle-stroke-color': ['case', ['has', 'category'], '#ffffff', '#374151'], 'circle-stroke-width': ['case', ['has', 'category'], 0.8, 0.5] } });
       map.moveLayer(OBS, NEW); // dated records under the new ones
     });
 
@@ -200,14 +216,14 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (cats) evidenceKey(slug, await fetchCells(sciName(slug)), span);
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
-      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${evidence}/${spanKey}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
-      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 1 : 0.85 } }, map.getLayer(RANGE) ? RANGE : undefined);
+      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
+      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 0.75 : 0.85 } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.isStyleLoaded()) apply(); else map.once('load', apply);
     return () => { live = false; map.off('load', apply); };
-  }, [slug, period, view, evidence, spanKey]);
+  }, [slug, period, view, spanKey]);
 
-  // Records added after the training download, coloured by the category of the cell they land in
+  // Records added after the evidence period, coloured by the zone they land in, and the zone shares for the legend bars
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -216,11 +232,14 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       const src = map.getSource(NEW) as maplibregl.GeoJSONSource | undefined;
       if (!src) return;
       src.setData(EMPTY);
+      setZoneStats(null);
       if (!slug || view !== 'categories') return;
-      let features: GeoJSON.Feature[] = [];
-      if (span[1] < LAST_YEAR) ({ features } = await classifyNew(slug, await fetchCells(sciName(slug)), span, [span[1] + 1, LAST_YEAR]));
+      const cells = await fetchCells(sciName(slug));
+      const fresh = span[1] < LAST_YEAR ? await classifyNew(slug, cells, span, [span[1] + 1, LAST_YEAR]) : undefined;
       if (!live || mapRef.current !== map) return;
-      src.setData({ type: 'FeatureCollection', features });
+      src.setData({ type: 'FeatureCollection', features: fresh?.features ?? [] });
+      const [thr, area] = await Promise.all([thresholdOf(slug), zoneShares(slug, cells, span)]);
+      if (live) setZoneStats({ thr, area, stats: fresh?.stats });
     };
     if (map.getSource(NEW)) apply().catch((e) => console.warn('New GBIF records unavailable', e)); else map.once('load', apply);
     return () => { live = false; map.off('load', apply); };
@@ -291,9 +310,12 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         const mask: GeoJSON.FeatureCollection = await (await fetch(`${import.meta.env.BASE_URL}outside-ca-us.geojson`)).json();
         const pts = (cs: typeof cells, properties: GeoJSON.GeoJsonProperties): GeoJSON.Feature[] => cs.map((c) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [c.lon, c.lat] }, properties }));
         const test = view === 'categories' ? [] : evidenceCells(cells, later).filter((c) => !evidenceCells([c], span).length);
-        const all: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [...pts(evidenceCells(cells, span), {}), ...pts(test, { test: true })] };
+        const evidence = evidenceCells(cells, span), key = evidenceKey(slug, cells, span);
+        // In the zones view the evidence dots take their zone's colour
+        const zoned = view === 'categories' ? await Promise.all(evidence.map((c) => categoryAt(slug, c.lon, c.lat, key).catch(() => null))) : [];
+        const all: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [...pts(evidence, {}).map((f, i) => (zoned.length ? { ...f, properties: { category: zoned[i] ?? 'unsuitable' } } : f)), ...pts(test, { test: true })] };
         // Points over the sea mask are dropped; markInsideRange flags them `inside`
-        return { ...all, features: m.markInsideRange(all, mask).features.filter((f) => !f.properties?.inside).map((f) => ({ ...f, properties: f.properties?.test ? { test: true } : {} })) };
+        return { ...all, features: m.markInsideRange(all, mask).features.filter((f) => !f.properties?.inside).map((f) => ({ ...f, properties: f.properties?.test ? { test: true } : f.properties?.category ? { category: f.properties.category } : {} })) };
       }).then((fc) => { if (live && mapRef.current === map) src.setData(fc); })
         .catch((e) => console.warn('GBIF records by year unavailable', e));
     };
@@ -339,19 +361,30 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-[11px] font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-10 max-w-[210px] sm:max-w-xs">
         {view === 'categories' && slug ? (
           <>
-            <div className="mb-1 text-gray-600 font-semibold">{lang === 'EN' ? 'Today vs 2100' : "Aujourd'hui c. 2100"}</div>
+            <div className="mb-1 text-gray-600 font-semibold">{lang === 'EN' ? 'Zones, current to future' : 'Zones, actuel à futur'}</div>
             {CATEGORIES.map((c) => (
                 <div key={c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} aria-description={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className="flex items-center gap-2 mt-0.5 text-[10px] pointer-events-auto cursor-help">
                   <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
                   <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
                 </div>
             ))}
+            {zoneStats && (() => {
+              const en = lang === 'EN', name = (c: Category) => CAT_LABELS[c][en ? 0 : 1];
+              const points = (i: 0 | 1): [string, string, number][] => [...CATEGORIES, 'unsuitable' as const].map((c) => [c === 'unsuitable' ? (en ? 'Unsuitable' : 'Non favorable') : name(c), c === 'unsuitable' ? UNSUITABLE : hex(c), zoneStats.stats?.byCat[c]?.[i] ?? 0]);
+              return (
+                <div className="mt-1 pt-1 border-t border-gray-100">
+                  <Bar label={en ? 'Share of suitable area' : 'Part de la superficie favorable'} parts={CATEGORIES.map((c, i) => [name(c), hex(c), zoneStats.area[i]])} />
+                  {!!zoneStats.stats?.total && <Bar label={en ? `New cells since ${to + 1} (${zoneStats.stats.total})` : `Nouvelles cellules depuis ${to + 1} (${zoneStats.stats.total})`} parts={points(0)} />}
+                  {!!zoneStats.stats?.discovery && <Bar label={en ? `Discoveries, over 10 km from records (${zoneStats.stats.discovery})` : `Découvertes, à plus de 10 km des mentions (${zoneStats.stats.discovery})`} parts={points(1)} />}
+                  <div className="mt-1 text-[10px] text-gray-500">{en ? `Suitable: at least ${zoneStats.thr}%, the level 90% of training records reach` : `Favorable : au moins ${zoneStats.thr} %, le niveau atteint par 90 % des mentions d'entraînement`}</div>
+                </div>
+              );
+            })()}
             {showObs && (
               <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-600">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-white border border-gray-600 mr-1" />
                 {lang === 'EN'
-                  ? `White: observed ${from}–${to}. Coloured: new since ${to + 1}, by group; ringed if >10 km from white, hollow grey if below ${SUITABLE}%.`
-                  : `Blanc : observé ${from}–${to}. Couleur : nouveau depuis ${to + 1}, par groupe; cerclé si >10 km du blanc, gris vide si sous ${SUITABLE} %.`}
+                  ? `Dots: observed ${from}–${to}, white edge. New since ${to + 1}: larger, dark edge if >10 km from earlier records, hollow grey if unsuitable.`
+                  : `Points : observé ${from}–${to}, bord blanc. Nouveau depuis ${to + 1} : plus gros, bord foncé si >10 km des mentions antérieures, gris vide si non favorable.`}
               </div>
             )}
           </>

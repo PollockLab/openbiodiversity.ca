@@ -1,30 +1,36 @@
 import maplibregl from 'maplibre-gl';
 import { TITILER_BASE, sdmCogUrl, sdmRangeUrl } from './sdmSource';
 
-// Category map after Laura's evidence-clip framework (lab meeting 2026-11-16): each cell gets one fixed category,
-// and the evidence setting only changes its transparency: medium fades with distance from the IUCN expert range, high also from records.
-export type Category = 'expected' | 'frontier' | 'climate-risk' | 'newly-suitable';
-export type Evidence = 'none' | 'medium' | 'high';
-export const CATEGORIES: Category[] = ['expected', 'frontier', 'climate-risk', 'newly-suitable'];
+// Zone map after Laura's evidence framework (meetings 2026-11-16 and 2026-11-19): each cell gets one zone from
+// suitability now and in 2100 (binary, at the species' own threshold), the IUCN expert range and nearby records.
+export type Category = 'confirmed' | 'in-range' | 'range-gap' | 'frontier' | 'climate-risk' | 'newly-suitable';
+export const CATEGORIES: Category[] = ['confirmed', 'in-range', 'range-gap', 'frontier', 'climate-risk', 'newly-suitable'];
+// Laura's palette (paper Fig. 3); range-gap is new and provisional
 export const CATEGORY_COLORS: Record<Category, [number, number, number]> = {
-  expected: [107, 114, 128], frontier: [14, 165, 233], 'climate-risk': [220, 38, 38], 'newly-suitable': [22, 163, 74],
+  confirmed: [92, 87, 125], 'in-range': [163, 168, 184], 'range-gap': [201, 162, 39], frontier: [143, 174, 40], 'climate-risk': [207, 90, 62], 'newly-suitable': [31, 140, 150],
 };
 export const hex = (c: Category) => `#${CATEGORY_COLORS[c].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
-// shortcut: fixed thresholds, not yet agreed with Laura; expose as controls once the paper fixes them
-export const SUITABLE = 50; // ensemble suitability % at or above which a cell counts as suitable
-// The range clip leaves ≥50% cells almost untouched (clipped/unclipped ≈ 1 at the 5th percentile for caribou and tailed frog),
-// so frontier uses distance to training records instead: suitable, but nobody has recorded the species nearby
-export const FRONTIER_KM = 40;
-const HIGH_DECAY_KM = 20; // e-folding distance from training records for the high-evidence weight
-const MEDIUM_FADE_KM = 100, MEDIUM_FLOOR = 0.15; // medium weight: 1 inside the expert range, falling linearly to the floor this far outside it
+// Fallback for species without a threshold in public/sdm-thresholds.json (too few training records)
+export const SUITABLE = 50;
+// Per species: the suitability that 90% of the model's training records reach (scripts/sdm-thresholds.py). The same value
+// is used for today and 2100, so a cell changes status only when its suitability crosses it.
+let thresholds: Promise<Record<string, number>> | undefined;
+export const thresholdOf = (slug: string): Promise<number> =>
+  (thresholds ??= fetch(`${import.meta.env.BASE_URL}sdm-thresholds.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}))).then((t) => t[slug] ?? SUITABLE);
+// shortcut: fixed distance and a hard range edge, not yet the paper's per-species decay (tau); replace once that kernel is settled
+export const NEAR_KM = 40; // a record this close counts as "near"
 
-export function categorize(u: number, f: number, nearKm: number): Category | null {
-  const now = u >= SUITABLE, later = f >= SUITABLE;
-  if (now && !later) return 'climate-risk';
-  if (!now && later) return 'newly-suitable'; // wins over frontier where both apply
+export function categorize(u: number, f: number, thr: number, inRange: boolean, near: boolean): Category | null {
+  const now = u >= thr, later = f >= thr;
+  if (now && !later) return 'climate-risk'; // the two change zones win over range and records
+  if (!now && later) return 'newly-suitable';
   if (!now) return null;
-  return nearKm <= FRONTIER_KM ? 'expected' : 'frontier';
+  return inRange ? (near ? 'confirmed' : 'in-range') : (near ? 'range-gap' : 'frontier');
+}
+if (import.meta.env.DEV) {
+  const all = [true, false].flatMap((r) => [true, false].map((n) => [categorize(70, 70, 60, r, n), categorize(70, 10, 60, r, n), categorize(10, 70, 60, r, n), categorize(10, 10, 60, r, n)].join()));
+  console.assert(all.join(' ') === ['confirmed', 'in-range', 'range-gap', 'frontier'].map((c) => `${c},climate-risk,newly-suitable,`).join(' ') && categorize(60, 59, 60, true, true) === 'climate-risk', 'categorize');
 }
 
 // Raw byte tiles: titiler returns gray+alpha PNG with the suitability % as gray when no colormap or rescale is set
@@ -86,120 +92,79 @@ export const distanceToTrainingKm = (key: string, lon: number, lat: number, capK
   return idx ? nearestKm(idx, ...merc(lon, lat), capKm) : Infinity;
 };
 
-// Expert range as Web Mercator rings (flat x,y pairs) per polygon, or null when it cannot be loaded
-type RangePoly = { box: [number, number, number, number]; rings: number[][] };
-const ranges = new Map<string, Promise<RangePoly[] | null>>();
+// Expert range as one Web Mercator path per polygon, or null when it cannot be loaded
+const ranges = new Map<string, Promise<Path2D[] | null>>();
 const rangeOf = (slug: string) => {
   if (!ranges.has(slug)) ranges.set(slug, import('./sdmRange').then((m) => m.fetchLaeaFgb(sdmRangeUrl(slug))).then((fc) => fc.features.flatMap((f) => {
     const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon;
     return (g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []).map((poly) => {
-      const box: RangePoly['box'] = [Infinity, Infinity, -Infinity, -Infinity];
-      const rings = poly.map((ring) => ring.flatMap(([lon, lat]) => {
-        const [mx, my] = merc(lon, lat);
-        box[0] = Math.min(box[0], mx); box[1] = Math.min(box[1], my); box[2] = Math.max(box[2], mx); box[3] = Math.max(box[3], my);
-        return [mx, my];
-      }));
-      return { box, rings };
+      const path = new Path2D();
+      for (const ring of poly) { ring.forEach(([lon, lat], i) => (i ? path.lineTo(...merc(lon, lat)) : path.moveTo(...merc(lon, lat)))); path.closePath(); }
+      return path;
     });
   })).catch((e) => { console.warn('IUCN range unavailable', e); return null; }));
   return ranges.get(slug)!;
 };
+const W = 2 * Math.PI * R;
+// Rings may be unwrapped past the antimeridian, so every test also tries the wrapped copies
+const probe = new OffscreenCanvas(1, 1).getContext('2d')!;
+const inRange = (paths: Path2D[], mx: number, my: number) => paths.some((p) => [-W, 0, W].some((off) => probe.isPointInPath(p, mx - off, my, 'evenodd')));
 
-// Distance (Web Mercator metres) from each cell of an N x N grid to the range, 0 inside it. The range is filled onto a canvas
-// (even-odd, so holes count) and a two-pass chamfer transform measures the distance: cost is per grid cell, not per range vertex.
-const RG = 256;
-function rangeDistance(polys: RangePoly[], gx0: number, gy0: number, cell: number): Float32Array {
-  const ctx = new OffscreenCanvas(RG, RG).getContext('2d', { willReadFrequently: true })!;
-  const W = 2 * Math.PI * R, ext = RG * cell;
-  ctx.fillStyle = '#000';
-  // Rings may be unwrapped past the antimeridian, so draw each polygon's wrapped copies too
-  for (const off of [-W, 0, W]) {
-    ctx.setTransform(1 / cell, 0, 0, -1 / cell, (off - gx0) / cell, gy0 / cell);
-    for (const { box, rings } of polys) {
-      if (box[2] + off < gx0 || box[0] + off > gx0 + ext || box[3] < gy0 - ext || box[1] > gy0) continue;
-      ctx.beginPath();
-      for (const r of rings) { ctx.moveTo(r[0], r[1]); for (let i = 2; i < r.length; i += 2) ctx.lineTo(r[i], r[i + 1]); ctx.closePath(); }
-      ctx.fill('evenodd');
-    }
-  }
-  const px = ctx.getImageData(0, 0, RG, RG).data, d = new Float32Array(RG * RG);
-  for (let i = 0; i < d.length; i++) d[i] = px[i * 4 + 3] > 127 ? 0 : 1e9;
-  const D = Math.SQRT2;
-  for (let j = 0; j < RG; j++) for (let i = 0; i < RG; i++) {
-    const k = j * RG + i;
-    if (i) d[k] = Math.min(d[k], d[k - 1] + 1);
-    if (j) { d[k] = Math.min(d[k], d[k - RG] + 1); if (i) d[k] = Math.min(d[k], d[k - RG - 1] + D); if (i < RG - 1) d[k] = Math.min(d[k], d[k - RG + 1] + D); }
-  }
-  for (let j = RG - 1; j >= 0; j--) for (let i = RG - 1; i >= 0; i--) {
-    const k = j * RG + i;
-    if (i < RG - 1) d[k] = Math.min(d[k], d[k + 1] + 1);
-    if (j < RG - 1) { d[k] = Math.min(d[k], d[k + RG] + 1); if (i < RG - 1) d[k] = Math.min(d[k], d[k + RG + 1] + D); if (i) d[k] = Math.min(d[k], d[k + RG - 1] + D); }
-  }
-  for (let i = 0; i < d.length; i++) d[i] = Math.max(0, d[i] * cell - cell / 2); // cell centres, so the edge lies half a cell closer
-  return d;
+// A tile-sized alpha mask drawn in Web Mercator metres: `draw` runs once per wrapped copy of the world
+function mask(x0: number, y0: number, size: number, draw: (ctx: OffscreenCanvasRenderingContext2D) => void): Uint8ClampedArray {
+  const ctx = new OffscreenCanvas(T, T).getContext('2d', { willReadFrequently: true })!, s = T / size;
+  for (const off of [-W, 0, W]) { ctx.setTransform(s, 0, 0, -s, (off - x0) * s, y0 * s); draw(ctx); }
+  return ctx.getImageData(0, 0, T, T).data;
 }
 
-// sdmcat://{slug}/{evidence}/{record set}/{z}/{x}/{y}
+// Zone of every pixel of a tile as an index into CATEGORIES + 1 (0 = unsuitable in both periods or no data), or null without rasters
+export async function zoneTile(slug: string, set: string, z: number, x: number, y: number): Promise<Uint8Array | null> {
+  const [[u, f], paths, thr] = await Promise.all([pair(slug, z, x, y), rangeOf(slug), thresholdOf(slug)]);
+  if (!u || !f) return null;
+  const size = W / 2 ** z, x0 = -W / 2 + x * size, y0 = W / 2 - y * size;
+  // No range: every cell counts as in range, so only records split the stable cells
+  const rm = paths && mask(x0, y0, size, (ctx) => paths.forEach((p) => ctx.fill(p, 'evenodd')));
+  // Near a record: discs of NEAR_KM ground distance (Mercator metres scale by cosh(my/R)) around the records in reach of the tile
+  const idx = records.get(recordsKey(slug, set));
+  const nm = idx && mask(x0, y0, size, (ctx) => {
+    ctx.beginPath();
+    for (const pts of idx.buckets.values()) for (const [px, py] of pts) {
+      const r = NEAR_KM * 1000 * Math.cosh(py / R);
+      if (py - r > y0 || py + r < y0 - size) continue;
+      ctx.moveTo(px + r, py); ctx.arc(px, py, r, 0, 2 * Math.PI);
+    }
+    ctx.fill();
+  });
+  const out = new Uint8Array(T * T);
+  for (let p = 0; p < T * T; p++) {
+    const i = p * 4;
+    if (!u.v[i + 3] || !f.v[i + 3]) continue;
+    const cat = categorize(u.v[i], f.v[i], thr, !rm || rm[i + 3] > 127, !nm || nm[i + 3] > 127);
+    if (cat) out[p] = CATEGORIES.indexOf(cat) + 1;
+  }
+  return out;
+}
+
+// sdmcat://{slug}/{record set}/{z}/{x}/{y}
 let registered = false;
 export function registerCategoryProtocol() {
   if (registered) return;
   registered = true;
   maplibregl.addProtocol('sdmcat', async (params) => {
-    const [slug, evidence, set, zs, xs, ys] = params.url.replace('sdmcat://', '').split('/');
-    const z = +zs, x = +xs, y = +ys;
-    const [[u, f], polys] = await Promise.all([pair(slug, z, x, y), evidence === 'none' ? null : rangeOf(slug)]);
-    const out = new ImageData(T, T);
-    const idx = records.get(recordsKey(slug, set));
-    const size = 2 * Math.PI * R / 2 ** z;
-    // Distances vary on a 20-40 km scale, so compute them on a lazily filled 32x32 grid instead of per pixel
-    const G = 32, step = T / G, grid = new Float32Array(G * G).fill(-1);
-    const nearAt = (p: number) => {
-      const g = Math.floor(Math.floor(p / T) / step) * G + Math.floor((p % T) / step);
-      if (grid[g] < 0) {
-        const gx = g % G, gy = Math.floor(g / G);
-        grid[g] = nearestKm(idx!, -Math.PI * R + (x * T + (gx + 0.5) * step) * size / T, Math.PI * R - (y * T + (gy + 0.5) * step) * size / T, 5 * HIGH_DECAY_KM);
-      }
-      return grid[g];
-    };
-    // Medium weight from a grid over the tile plus a margin of the fade distance, so ranges just outside the tile still count
-    const x0 = -Math.PI * R + x * size, y0 = Math.PI * R - y * size;
-    const merc100 = Math.min(MEDIUM_FADE_KM * 1000 * Math.cosh(Math.max(Math.abs(y0), Math.abs(y0 - size)) / R), size);
-    const gcell = (size + 2 * merc100) / RG, gx0 = x0 - merc100, gy0 = y0 + merc100;
-    const dist = polys ? rangeDistance(polys, gx0, gy0, gcell) : null;
-    // Bilinear lookup, in ground km: Mercator metres scale by 1/cosh(my/R)
-    const rangeKm = (mx: number, my: number) => {
-      const fx = Math.min(RG - 1, Math.max(0, (mx - gx0) / gcell - 0.5)), fy = Math.min(RG - 1, Math.max(0, (gy0 - my) / gcell - 0.5));
-      const i = Math.min(RG - 2, Math.floor(fx)), j = Math.min(RG - 2, Math.floor(fy)), a = fx - i, b = fy - j, k = j * RG + i;
-      const m = (dist![k] * (1 - a) + dist![k + 1] * a) * (1 - b) + (dist![k + RG] * (1 - a) + dist![k + RG + 1] * a) * b;
-      return m / Math.cosh(my / R) / 1000;
-    };
-    if (u && f) for (let p = 0; p < T * T; p++) {
-      const i = p * 4;
-      if (!u.v[i + 3] || !f.v[i + 3]) continue;
-      const uv = u.v[i], fv = f.v[i];
-      if (uv < SUITABLE && fv < SUITABLE) continue;
-      const near = idx ? nearAt(p) : 0;
-      const cat = categorize(uv, fv, near)!;
-      // Evidence only fades: medium by distance from the expert range, high also by distance from records (no range: medium stays 1)
-      let alpha = 1;
-      if (evidence !== 'none') {
-        if (dist) alpha = 1 - (1 - MEDIUM_FLOOR) * Math.min(1, rangeKm(x0 + (p % T + 0.5) * size / T, y0 - (Math.floor(p / T) + 0.5) * size / T) / MEDIUM_FADE_KM);
-        if (evidence === 'high') alpha *= Math.exp(-near / HIGH_DECAY_KM);
-      }
-      const [r, g, b] = CATEGORY_COLORS[cat];
-      out.data[i] = r; out.data[i + 1] = g; out.data[i + 2] = b; out.data[i + 3] = Math.round(alpha * 230);
-    }
+    const [slug, set, z, x, y] = params.url.replace('sdmcat://', '').split('/');
+    const zones = await zoneTile(slug, set, +z, +x, +y), out = new ImageData(T, T);
+    if (zones) for (let p = 0; p < T * T; p++) if (zones[p]) out.data.set([...CATEGORY_COLORS[CATEGORIES[zones[p] - 1]], 255], p * 4);
     const canvas = new OffscreenCanvas(T, T);
     canvas.getContext('2d')!.putImageData(out, 0, 0);
     return { data: await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer() };
   });
 }
 
-// Category of the cell under a point, read from the same raw tiles at a fixed zoom (512 px z6 ≈ 850 m pixels at 45°N, so records share tiles)
-export async function categoryAt(slug: string, lon: number, lat: number, key: string, z = 6): Promise<Category | null> {
+// Category of the cell under a point, read from the same raw tiles at a fixed zoom (512 px z5 ≈ 1.7 km pixels at 45°N, so records share tiles)
+export async function categoryAt(slug: string, lon: number, lat: number, key: string, z = 5): Promise<Category | null> {
   const n = 2 ** z, fx = (lon + 180) / 360 * n, fy = (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2 * n;
   const x = Math.floor(fx), y = Math.floor(fy), i = (Math.floor((fy - y) * T) * T + Math.floor((fx - x) * T)) * 4;
-  const [u, f] = await pair(slug, z, x, y);
+  const [[u, f], paths, thr] = await Promise.all([pair(slug, z, x, y), rangeOf(slug), thresholdOf(slug)]);
   if (!u || !f || !u.v[i + 3] || !f.v[i + 3]) return null;
-  return categorize(u.v[i], f.v[i], distanceToTrainingKm(key, lon, lat));
+  return categorize(u.v[i], f.v[i], thr, !paths || inRange(paths, ...merc(lon, lat)), distanceToTrainingKm(key, lon, lat) <= NEAR_KM);
 }
