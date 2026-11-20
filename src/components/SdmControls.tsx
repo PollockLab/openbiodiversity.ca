@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Category } from '../data/sdmCategories';
 import { SdmPeriod } from '../data/sdmSource';
 import { Span } from '../data/sdmTemporal';
@@ -7,7 +7,6 @@ import type { View } from './SdmMap';
 
 type L = [string, string]; // EN, FR
 // The prototype Change view is unlisted: its button shows only when the page was opened from a view=categories link
-const PROTO = window.location.hash.includes('view=categories');
 // One-line plain-language explanations of Laura's categories (names unchanged)
 export const CAT_TIPS: Record<Category, L> = {
   confirmed: ['Suitable now and in 2100, inside the known range and near observations', "Favorable aujourd'hui et en 2100, dans l'aire connue et près des observations"],
@@ -25,6 +24,8 @@ interface Props {
 }
 
 export default function SdmControls({ lang, left, view, onViewChange, period, onPeriodChange, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange }: Props) {
+  // Read once per mount: the explorer remounts when a new link is opened, and switching views must not hide the button
+  const [PROTO] = useState(() => window.location.hash.includes('view=categories'));
   const i = lang === 'EN' ? 0 : 1, t = (a: string, b: string) => (i ? b : a);
   // Each control gets a title tooltip and a screen-reader description
   const tips: [string, string][] = [];
