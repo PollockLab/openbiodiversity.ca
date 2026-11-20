@@ -123,9 +123,9 @@ export default function SdmSidebar({ lang, species, loading, selectedId, onSelec
                       className={`px-3 py-2 cursor-pointer flex items-baseline justify-between gap-3 ${i === active ? 'bg-sage-50' : ''} ${s.id === selectedId ? 'font-semibold' : ''}`}
                     >
                       <span className="min-w-0 truncate text-xs text-wood-900">
-                        {nameOf(s)} <span className="italic font-mono text-[11px] text-gray-500">{s.scientificName}</span>
+                        {nameOf(s)} <span className="italic font-mono text-xs text-gray-500">{s.scientificName}</span>
                       </span>
-                      <span className="shrink-0 text-[10px] uppercase tracking-wider text-gray-400 font-mono">{taxonLabel(s.taxonGroup)}</span>
+                      <span className="shrink-0 text-xs uppercase tracking-wider text-gray-400 font-mono">{taxonLabel(s.taxonGroup)}</span>
                     </li>
                   ))}
                 </ul>
@@ -150,7 +150,7 @@ export default function SdmSidebar({ lang, species, loading, selectedId, onSelec
         <div className="flex flex-wrap gap-1" role="group" aria-label={lang === 'EN' ? 'Taxon filter' : 'Filtre par taxon'}>
           {['All', ...GROUPS].map(g => (
             <button key={g} type="button" onClick={() => setTaxon(g)} aria-pressed={taxon === g}
-              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold cursor-pointer transition-colors ${taxon === g ? 'bg-sage-600 text-white' : 'bg-white/80 text-gray-600 hover:bg-gray-100'}`}>
+              className={`px-2 min-h-6 rounded-full text-xs font-semibold cursor-pointer transition-colors ${taxon === g ? 'bg-sage-600 text-white' : 'bg-white/80 text-gray-600 hover:bg-gray-100'}`}>
               {taxonLabel(g)} ({counts[g] || 0})
             </button>
           ))}
@@ -186,10 +186,10 @@ export default function SdmSidebar({ lang, species, loading, selectedId, onSelec
                               {sel && <Check className="w-3.5 h-3.5 text-sage-700 shrink-0" />}
                               <span className="truncate">{nameOf(s)}</span>
                             </span>
-                            <span className="block text-[11px] italic text-gray-500 truncate">{s.scientificName}</span>
+                            <span className="block text-xs italic text-gray-500 truncate">{s.scientificName}</span>
                           </span>
                           {s.iucnStatus && (
-                            <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${s.iucnStatus === 'CR' || s.iucnStatus === 'EN' ? 'bg-red-50 text-red-700 border border-red-200' : s.iucnStatus === 'VU' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-600'}`}>
+                            <span className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded ${s.iucnStatus === 'CR' || s.iucnStatus === 'EN' ? 'bg-red-50 text-red-700 border border-red-200' : s.iucnStatus === 'VU' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-600'}`}>
                               {s.iucnStatus}
                             </span>
                           )}
