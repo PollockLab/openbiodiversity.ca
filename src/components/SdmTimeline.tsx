@@ -9,7 +9,7 @@ export default function Timeline({ from, to, onChange, lang }: { from: number; t
   return (
     <div className="flex flex-col w-full max-w-72 px-1">
       {/* Each label sits over its part of the track and shares its colour */}
-      <div className="flex justify-between gap-2 text-[11px] tabular-nums whitespace-nowrap">
+      <div className="flex justify-between gap-2 text-xs tabular-nums whitespace-nowrap">
         <span className="text-sage-700 font-medium">{lang === 'EN' ? 'Baseline years' : 'Référence'} {from}–{to}</span>
         <span className="text-amber-700 font-medium">{lang === 'EN' ? 'New since' : 'Nouveau dès'} {to + 1}</span>
       </div>

@@ -52,27 +52,20 @@ export default function SdmControls({ lang, left, view, onViewChange, period, on
           {period === '2100' && t(' (no clipped version for 2100)', ' (pas de version découpée pour 2100)')}
         </label>
       )}
-      <fieldset className="min-w-0 max-w-full rounded-lg shadow-sm border border-gray-200 bg-white px-3 py-1.5 text-gray-600 flex flex-col gap-1">
-        <legend className="sr-only">{t('Observations', 'Observations')}</legend>
-        <span className="text-gray-700 font-semibold">{t('Observations by year', 'Observations par année')}</span>
-        {checkbox(onToggleObs, showObs, t('Show on the map', 'Afficher sur la carte'), tip('obs', t('GBIF observations as dots: baseline ones small, new ones larger', 'Observations GBIF en points : celles de référence petites, les nouvelles plus grosses')))}
+      <fieldset className="min-w-0 max-w-full rounded-lg shadow-sm border border-gray-200 bg-white px-3 py-2 text-gray-700 flex flex-col gap-1.5">
+        <legend className="sr-only">{t('Dots on the map', 'Points sur la carte')}</legend>
+        {checkbox(onToggleObs, showObs, t('Observations by year', 'Observations par année'), tip('obs', t('GBIF observations as dots: baseline ones small, new ones larger', 'Observations GBIF en points : celles de référence petites, les nouvelles plus grosses')))}
         {/* The zones depend on the baseline years, so the slider stays when the dots are hidden */}
-        {(showObs || cats) && <>
-          <Timeline from={span[0]} to={span[1]} onChange={onSpanChange} lang={lang} />
-          <details className="max-w-72 text-[10px] leading-snug text-gray-600">
-            <summary className="cursor-pointer text-sage-700 underline">{t('How does this work?', 'Comment ça marche?')}</summary>
-            <p className="mt-1">{t('Pick the baseline years with the two handles. Observations from those years are what is taken as already known about where the species lives.', 'Choisissez les années de référence avec les deux poignées. Les observations de ces années représentent ce que l\'on sait déjà de la répartition de l\'espèce.')}</p>
+        {(showObs || cats) && <Timeline from={span[0]} to={span[1]} onChange={onSpanChange} lang={lang} />}
+        {/* A different set from the dated observations above: fixed, undated, and not moved by the slider */}
+        {checkbox(onToggleOcc, showOcc, t('Model training records', "Mentions d'entraînement du modèle"), tip('train', t('The GBIF records the model was trained on, mapped where they fall', "Les mentions GBIF utilisées pour entraîner le modèle, là où elles se trouvent")), occBusy)}
+        <details className="max-w-72 text-xs leading-snug text-gray-600">
+          <summary className="cursor-pointer text-sage-700">{t('How does this work?', 'Comment ça marche?')}</summary>
+          <p className="mt-1">{t('Pick the baseline years with the two handles. Observations from those years are what is taken as already known about where the species lives.', 'Choisissez les années de référence avec les deux poignées. Les observations de ces années représentent ce que l\'on sait déjà de la répartition de l\'espèce.')}</p>
             {cats && <p className="mt-1">{t('A place counts as a Stronghold when a baseline observation lies within 40 km.', 'Un lieu est un Bastion si une observation de référence se trouve à moins de 40 km.')}</p>}
             <p className="mt-1">{t('Observations made after the baseline are new. They show as larger dots and test the map: did the species turn up where the model said it could?', 'Les observations faites après la référence sont nouvelles. Elles apparaissent en plus gros points et mettent la carte à l\'épreuve : l\'espèce est-elle apparue là où le modèle le prévoyait?')}</p>
-          </details>
-        </>}
-        {/* A different set from the dated observations above: fixed, undated, and not moved by the slider */}
-        <span className="mt-1 pt-1 border-t border-gray-200 text-gray-700 font-semibold">{t('Model training records', "Mentions d'entraînement du modèle")}</span>
-        {checkbox(onToggleOcc, showOcc, t('Show on the map', 'Afficher sur la carte'), tip('train', t('The GBIF records the model was trained on, mapped where they fall', "Les mentions GBIF utilisées pour entraîner le modèle, là où elles se trouvent")), occBusy)}
-        <p className="max-w-72 text-[10px] leading-snug text-gray-600">
-          <span className="inline-block w-2 h-2 rounded-full bg-white border border-gray-700 align-middle" /> {t('The fixed set of records the model learned from. The slider does not change it.', 'Les mentions fixes à partir desquelles le modèle a appris. Le curseur ne les modifie pas.')}{' '}
-          <span className="inline-block w-2 h-2 rounded-full border border-gray-700 align-middle" style={{ background: '#991b1b' }} /> {t('Outside the IUCN range.', "Hors de l'aire UICN.")}
-        </p>
+          <p className="mt-1"><span className="inline-block w-2 h-2 rounded-full bg-white border border-gray-700 align-middle" /> {t('Training records are the fixed set the model learned from; the slider does not change them.', "Les mentions d'entraînement sont l'ensemble fixe dont le modèle a appris; le curseur ne les change pas.")} <span className="inline-block w-2 h-2 rounded-full border border-gray-700 align-middle" style={{ background: '#991b1b' }} /> {t('Outside the IUCN range.', "Hors de l'aire UICN.")}</p>
+        </details>
       </fieldset>
       {tips.map(([id, text]) => <span key={id} id={`sdm-tip-${id}`} className="sr-only">{text}</span>)}
     </div>

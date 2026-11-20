@@ -37,7 +37,7 @@ const Bar = ({ label, parts, whole, wholeLabel }: { label: string; parts: Parts;
   const say = (v: Parts) => v.filter((p) => p[2]).map((p) => `${p[0]} ${Math.round(100 * p[2] / total(v))}%`).join(', ');
   const text = whole ? `${say(parts) || '–'} | ${wholeLabel}: ${say(whole)}` : say(parts);
   return (
-    <div className="mt-1 text-[10px] pointer-events-auto" title={text}>
+    <div className="mt-1 text-xs pointer-events-auto" title={text}>
       <div className="text-gray-600">{label}</div>
       <div className="flex h-2 rounded-sm overflow-hidden bg-gray-100" role="img" aria-label={`${label}: ${text}`}>
         {strip(parts, sum)}
@@ -392,12 +392,12 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           ))}
         </div>
       </div>
-      <div className={`absolute bottom-3 ${isSidebarOpen ? LEFT_OPEN : 'left-3'} max-w-[calc(100%-240px)] bg-white/90 rounded-lg px-3 py-1.5 text-[11px] font-sans text-gray-600 shadow-sm border border-gray-200 z-10 transition-all duration-300 flex items-center gap-1.5 flex-wrap`}>
+      <div className={`absolute bottom-3 ${isSidebarOpen ? LEFT_OPEN : 'left-3'} max-w-[calc(100%-240px)] bg-white/90 rounded-lg px-3 py-1.5 text-xs font-sans text-gray-600 shadow-sm border border-gray-200 z-10 transition-all duration-300 flex items-center gap-1.5 flex-wrap`}>
         <span>{lang === 'EN' ? 'Models: Pollock Lab, licensed under ' : 'Modèles : Laboratoire Pollock, sous licence '}</span>
         <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license" className="underline text-sage-700 hover:text-sage-900 font-medium">CC BY-NC 4.0</a>
       </div>
       {/* z-20 and after the zoom buttons in the DOM: on a phone the open legend reaches them and must stay readable */}
-      <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-[11px] font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-20 max-w-[210px] sm:max-w-xs">
+      <div className="absolute bottom-7 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 pointer-events-none z-20 max-w-[210px] sm:max-w-xs">
         {view === 'categories' && slug ? (
           // Collapsed by default at phone width, where the open legend covers the controls
           <details open={window.innerWidth >= 640}>
@@ -407,24 +407,24 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
               return (
                 <div key={c}>
-                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full items-center gap-2 mt-0.5 text-[10px] text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''}`}>
+                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full items-center gap-2 mt-0.5 text-xs text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''}`}>
                     <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
                     <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
                     {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}
                   </button>
-                  {tipOf === c && <div className="ml-5 text-[10px] text-gray-600">{CAT_TIPS[c][lang === 'EN' ? 0 : 1]}</div>}
+                  {tipOf === c && <div className="ml-5 text-xs text-gray-600">{CAT_TIPS[c][lang === 'EN' ? 0 : 1]}</div>}
                 </div>
               );
             })}
-            <div className="flex items-center gap-2 mt-0.5 text-[10px]" title={lang === 'EN' ? 'Unsuitable now and in 2100' : "Non favorable aujourd'hui et en 2100"}>
+            <div className="flex items-center gap-2 mt-0.5 text-xs" title={lang === 'EN' ? 'Unsuitable now and in 2100' : "Non favorable aujourd'hui et en 2100"}>
               <span className="inline-block w-3 h-3 rounded-sm border border-gray-400" />
               <span>{lang === 'EN' ? 'Out of reach (no colour)' : "Hors d'atteinte (sans couleur)"}</span>
             </div>
-            <div className="flex items-center gap-2 mt-0.5 text-[10px]">
+            <div className="flex items-center gap-2 mt-0.5 text-xs">
               <span className="inline-block w-3 border-t-2" style={{ borderColor: '#e8590c' }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire UICN'}</span>
             </div>
-            {!(zoneStats && inView) && <div className="mt-1 text-[10px] text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
+            {!(zoneStats && inView) && <div className="mt-1 text-xs text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
             {zoneStats && inView && (() => {
               const en = lang === 'EN', name = (c: Category) => CAT_LABELS[c][en ? 0 : 1];
               // Nearly everything on screen counts as the whole map, so a snug fit does not read as a partial view
@@ -436,32 +436,33 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               const n = (i: 0 | 1) => (whole ? `${totals[i]}` : en ? `${sets[i].length} of ${totals[i]}` : `${sets[i].length} sur ${totals[i]}`);
               const pct = inView.share < 0.01 ? '<1' : `${Math.round(100 * inView.share)}`;
               return (
-                <div className="mt-1 pt-1 border-t border-gray-100">
-                  <div className="text-[10px] font-medium" role="status">
+                <details className="mt-1 pt-1 border-t border-gray-100">
+                  <summary className="cursor-pointer text-gray-600 pointer-events-auto">{en ? 'Numbers' : 'Chiffres'}</summary>
+                  <div className="text-xs font-medium" role="status">
                     {whole
                       ? <span className="text-gray-600">{en ? 'Bars: whole map' : 'Barres : toute la carte'}</span>
                       : <><span className="rounded px-1 bg-sage-500 text-white">{en ? `This view: ${pct}% of the zoned area` : `Cette vue : ${pct} % de la superficie classée`}</span> <span className="text-gray-600 font-normal">{en ? 'Thin strips: whole map' : 'Bandes minces : toute la carte'}</span></>}
                   </div>
                   {inView.share > 0
                     ? <Bar label={en ? 'Share of suitable area' : 'Part de la superficie favorable'} parts={CATEGORIES.map((c, i) => [name(c), hex(c), inView.area[i]])} {...ref(CATEGORIES.map((c, i) => [name(c), hex(c), inView.whole[i]]))} />
-                    : <div className="mt-1 text-[10px] text-gray-600">{en ? 'No zoned area in this view' : 'Aucune superficie classée dans cette vue'}</div>}
+                    : <div className="mt-1 text-xs text-gray-600">{en ? 'No zoned area in this view' : 'Aucune superficie classée dans cette vue'}</div>}
                   {!!totals[0] && <Bar label={en ? `New cells since ${to + 1} (${n(0)})` : `Nouvelles cellules depuis ${to + 1} (${n(0)})`} parts={split(sets[0])} {...ref(split(everything[0]))} />}
                   {!!totals[1] && <Bar label={en ? `Discoveries, over 10 km from records (${n(1)})` : `Découvertes, à plus de 10 km des mentions (${n(1)})`} parts={split(sets[1])} {...ref(split(everything[1]))} />}
-                  <div className="mt-1 text-[10px] text-gray-600">{en ? `Suitable: at least ${zoneStats.thr}%, the level 90% of training records reach` : `Favorable : au moins ${zoneStats.thr} %, le niveau atteint par 90 % des mentions d'entraînement`}</div>
-                </div>
+                  <div className="mt-1 text-xs text-gray-600">{en ? `Suitable: at least ${zoneStats.thr}%, the level 90% of training records reach` : `Favorable : au moins ${zoneStats.thr} %, le niveau atteint par 90 % des mentions d'entraînement`}</div>
+                </details>
               );
             })()}
             {showObs && (
-              <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-gray-600">
+              <div className="mt-1 pt-1 border-t border-gray-100 text-xs text-gray-600">
                 {lang === 'EN'
                   ? `Dots: observed ${from}–${to}, white edge. New since ${to + 1}: larger, dark edge if >10 km from earlier records, hollow grey if unsuitable.`
                   : `Points : observés ${from}–${to}, bord blanc. Nouveau depuis ${to + 1} : plus gros, bord foncé si >10 km des mentions antérieures, gris vide si non favorable.`}
               </div>
             )}
-            <div className="mt-1 pt-1 border-t border-gray-100 text-[10px] text-amber-900">
+            <div className="mt-1 pt-1 border-t border-gray-100 text-xs text-amber-900">
               {lang === 'EN'
-                ? 'Prototype for discussion. Thresholds are provisional and the categories are not peer reviewed; do not use for decisions.'
-                : "Prototype à des fins de discussion. Les seuils sont provisoires et les catégories n'ont pas été évaluées par des pairs; ne pas utiliser pour prendre des décisions."}
+                ? 'Prototype: provisional thresholds, not peer reviewed. Not for decisions.'
+                : "Prototype : seuils provisoires, non évalué par des pairs. Pas pour décider."}
             </div>
           </details>
         ) : (<>
@@ -471,12 +472,12 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         {slug && (
           <>
             <div className="h-2 w-40 rounded-sm" style={{ background: 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' }} />
-            <div className="flex justify-between w-40 mt-0.5 text-gray-500 text-[10px]">
+            <div className="flex justify-between w-40 mt-0.5 text-gray-500 text-xs">
               <span>0</span>
               <span>{lang === 'EN' ? 'Suitability (%)' : 'Convenance (%)'}</span>
               <span>100</span>
             </div>
-            <div className="flex items-center gap-2 mt-1.5 pt-1 border-t border-gray-100 text-[10px]">
+            <div className="flex items-center gap-2 mt-1.5 pt-1 border-t border-gray-100 text-xs">
               <span className="inline-block w-5 border-t-2" style={{ borderColor: '#e8590c' }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
@@ -484,7 +485,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               ...(showObs ? [[OCC_IN, lang === 'EN' ? `GBIF records ${from}–${to}` : `Observations GBIF ${from}–${to}`], ['#f59e0b', lang === 'EN' ? `GBIF records since ${to + 1}` : `Observations GBIF depuis ${to + 1}`]] : []),
               ...(showOcc ? [[OCC_IN, lang === 'EN' ? 'Records inside IUCN range' : "Observations dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'Records outside IUCN range' : "Observations hors de l'aire UICN"]] : []),
             ] as [string, string][]).map(([c, label]) => (
-              <div key={label} className="flex items-center gap-2 mt-1 text-[10px]">
+              <div key={label} className="flex items-center gap-2 mt-1 text-xs">
                 <span className="inline-block w-5 text-center"><span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: c, border: '0.5px solid #374151' }} /></span>
                 <span>{label}</span>
               </div>
