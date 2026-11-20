@@ -7,7 +7,7 @@ import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmP
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
-import { bindRecordPopups } from './sdmPopup';
+import { bindRecordPopups, nearestDot } from './sdmPopup';
 import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
 
 const SRC = 'sdm-source';
@@ -190,7 +190,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     window.addEventListener('keydown', esc);
     map.on('click', async (e) => {
       const s = slugRef.current;
-      if (!s || map.queryRenderedFeatures(e.point, { layers: [NEW, OBS, OCC].filter((l) => map.getLayer(l)) }).length) return;
+      if (!s || nearestDot(map, e.point, [NEW, OBS, OCC])) return;
       const fr = langRef.current === 'FR';
       let text = fr ? 'Aucune prédiction' : 'No prediction', tip = '', colour = '';
       const zoneSpan = zoneRef.current;
