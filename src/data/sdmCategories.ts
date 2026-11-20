@@ -96,12 +96,22 @@ export const distanceToTrainingKm = (key: string, lon: number, lat: number, capK
 
 // Expert range as one Web Mercator path per polygon, or null when it cannot be loaded
 const ranges = new Map<string, Promise<Path2D[] | null>>();
+// Mercator bounds [minX, minY, maxX, maxY] per polygon: a point outside them skips the exact test (the robin has hundreds of polygons)
+const bounds = new WeakMap<Path2D, number[]>();
 const rangeOf = (slug: string) => {
   if (!ranges.has(slug)) ranges.set(slug, import('./sdmRange').then((m) => m.fetchLaeaFgb(sdmRangeUrl(slug))).then((fc) => fc.features.flatMap((f) => {
     const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon;
     return (g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []).map((poly) => {
-      const path = new Path2D();
-      for (const ring of poly) { ring.forEach(([lon, lat], i) => (i ? path.lineTo(...merc(lon, lat)) : path.moveTo(...merc(lon, lat)))); path.closePath(); }
+      const path = new Path2D(), b = [Infinity, Infinity, -Infinity, -Infinity];
+      for (const ring of poly) {
+        ring.forEach(([lon, lat], i) => {
+          const [mx, my] = merc(lon, lat);
+          b[0] = Math.min(b[0], mx); b[1] = Math.min(b[1], my); b[2] = Math.max(b[2], mx); b[3] = Math.max(b[3], my);
+          if (i) path.lineTo(mx, my); else path.moveTo(mx, my);
+        });
+        path.closePath();
+      }
+      bounds.set(path, b);
       return path;
     });
   })).catch((e) => { console.warn('IUCN range unavailable', e); ranges.delete(slug); return null; })); // not kept, so the next tile asks again
@@ -110,7 +120,10 @@ const rangeOf = (slug: string) => {
 const W = 2 * Math.PI * R;
 // Rings may be unwrapped past the antimeridian, so every test also tries the wrapped copies
 const probe = new OffscreenCanvas(1, 1).getContext('2d')!;
-const inRange = (paths: Path2D[], mx: number, my: number) => paths.some((p) => [-W, 0, W].some((off) => probe.isPointInPath(p, mx - off, my, 'evenodd')));
+const inRange = (paths: Path2D[], mx: number, my: number) => paths.some((p) => {
+  const b = bounds.get(p)!;
+  return my >= b[1] && my <= b[3] && [-W, 0, W].some((off) => mx - off >= b[0] && mx - off <= b[2] && probe.isPointInPath(p, mx - off, my, 'evenodd'));
+});
 
 // A tile-sized alpha mask drawn in Web Mercator metres: `draw` runs once per wrapped copy of the world
 function mask(x0: number, y0: number, size: number, draw: (ctx: OffscreenCanvasRenderingContext2D) => void): Uint8ClampedArray {
@@ -163,10 +176,11 @@ export function registerCategoryProtocol() {
 }
 
 // Category of the cell under a point, read from the same raw tiles at a fixed zoom (512 px z5 ≈ 1.7 km pixels at 45°N, so records share tiles)
-export async function categoryAt(slug: string, lon: number, lat: number, key: string, z = 5): Promise<Category | null> {
+export async function categoryAt(slug: string, lon: number, lat: number, key: string, z = 5): Promise<Category | null | undefined> {
   const n = 2 ** z, fx = (lon + 180) / 360 * n, fy = (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2 * n;
   const x = Math.floor(fx), y = Math.floor(fy), i = (Math.floor((fy - y) * T) * T + Math.floor((fx - x) * T)) * 4;
   const [[u, f], paths, thr] = await Promise.all([pair(slug, z, x, y), rangeOf(slug), thresholdOf(slug)]);
-  if (!u || !f || !u.v[i + 3] || !f.v[i + 3]) return null;
-  return categorize(u.v[i], f.v[i], thr, !paths || inRange(paths, ...merc(lon, lat)), distanceToTrainingKm(key, lon, lat) <= NEAR_KM);
+  if (!u || !f || !u.v[i + 3] || !f.v[i + 3]) return undefined; // no prediction here (sea, outside the model), not the same as unsuitable
+  const both = u.v[i] >= thr && f.v[i] >= thr; // range and records only decide the zone when the cell is suitable in both periods
+  return categorize(u.v[i], f.v[i], thr, both && (!paths || inRange(paths, ...merc(lon, lat))), both && distanceToTrainingKm(key, lon, lat) <= NEAR_KM);
 }

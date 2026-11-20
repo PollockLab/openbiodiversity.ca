@@ -17,7 +17,7 @@ export default function Timeline({ from, to, onChange, lang }: { from: number; t
         <div className="absolute top-2 left-0 right-0 h-1 rounded bg-gray-200" />
         <div className="absolute top-2 h-1 bg-sage-500" style={{ left: pct(from), width: `calc(${pct(to)} - ${pct(from)})` }} />
         <div className="absolute top-2 h-1 bg-amber-400" style={{ left: pct(to + 1), right: 0 }} />
-        <input type="range" min={T0} max={LAST_YEAR - 1} value={from} onChange={(e) => onChange([Math.min(+e.target.value, to), to])} aria-label={lang === 'EN' ? 'Baseline from' : 'Référence depuis'} className={thumb} />
+        <input type="range" min={T0} max={LAST_YEAR - 1} value={from} onChange={(e) => onChange([Math.min(+e.target.value, to), to])} aria-label={lang === 'EN' ? 'Baseline from' : 'Référence depuis'} className={thumb} style={{ zIndex: from >= LAST_YEAR - 1 ? 1 : undefined }} />
         <input type="range" min={T0} max={LAST_YEAR - 1} value={to} onChange={(e) => onChange([from, Math.max(+e.target.value, from)])} aria-label={lang === 'EN' ? 'Baseline to' : "Référence jusqu'à"} className={thumb} />
       </div>
     </div>
