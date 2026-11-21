@@ -237,7 +237,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     const licence = '<a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license">CC BY-NC 4.0</a>';
     const ctrl = new maplibregl.AttributionControl({ compact: true, customAttribution: (lang === 'EN' ? 'Models: Pollock Lab, ' : 'Modèles : Laboratoire Pollock, ') + licence });
     map.addControl(ctrl);
-    return () => { map.removeControl(ctrl); };
+    return () => { if (map.hasControl(ctrl)) map.removeControl(ctrl); }; // map.remove() already detached it on unmount
   }, [lang]);
 
   // Resize with the container (expand mode) and re-center in the space the sidebar leaves free
