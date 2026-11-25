@@ -1,0 +1,49 @@
+name: SDM zones
+
+# Keeps the precomputed zone files on the Arbutus bucket in step with the models: regenerates only species whose
+# zones are missing, built with other rules or threshold, or older than their suitability or range files.
+on:
+  schedule:
+    - cron: '0 7 * * 1'  # weekly; also picks up the new evidence period each January
+  push:
+    branches: [main]
+    paths: [public/sdm-species.json, public/sdm-thresholds.json, scripts/sdm-zones.py]
+  workflow_dispatch:
+    inputs:
+      slugs:
+        description: Space-separated species slugs to rebuild regardless of age (empty = stale ones)
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdm-zones
+  cancel-in-progress: false
+
+jobs:
+  zones:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d  # v10.4.0
+
+      - name: Check bucket credentials
+        run: '[ -n "$AWS_ACCESS_KEY_ID" ] || { echo "::error::Set the ARBUTUS_ACCESS_KEY and ARBUTUS_SECRET_KEY repository secrets (S3 keys for def-pollock-eckert)"; exit 1; }'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ARBUTUS_ACCESS_KEY }}
+
+      - name: Build zones
+        run: uv run scripts/sdm-zones.py --jobs 4 ${SLUGS:---stale}
+        env:
+          SLUGS: ${{ inputs.slugs }}
+
+      - name: Upload to Arbutus
+        run: aws s3 cp sdm-zones-out "s3://def-pollock-eckert/vertebrates_NA/ECCC_2026/" --recursive --endpoint-url https://object-arbutus.alliancecan.ca
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ARBUTUS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ARBUTUS_SECRET_KEY }}
+          AWS_DEFAULT_REGION: us-east-1

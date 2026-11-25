@@ -30,3 +30,6 @@ old_stuff/
 
 # GBIF vernacular-name cache
 scripts/.gbif-cache.json
+
+# Precomputed SDM zone rasters (scripts/sdm-zones.py)
+sdm-zones-out/
