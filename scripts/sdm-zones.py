@@ -4,7 +4,8 @@
 # ///
 """Precomputed zone rasters for the SDM explorer's zones view (src/data/sdmCategories.ts), so the browser does not compose them per tile.
 
-Usage: uv run scripts/sdm-zones.py [--out DIR] [--span 2016-2025] [--jobs N] [slug ...]
+Usage: uv run scripts/sdm-zones.py [--out DIR] [--span 2016-2025] [--jobs N] [--stale] [slug ...]
+--stale: only species whose zones on the bucket are missing or older than their inputs (.github/workflows/sdm-zones.yml runs this).
 No slugs: every species in public/sdm-species.json. Default span: the explorer's default evidence period, the last 10 full years.
 Per species writes {slug}_sdm-zones_1km_na_{span}.tif and .json into DIR (default sdm-zones-out/, gitignored); upload both next to
 the other {slug}_* files on the bucket. The client looks for the .json first and falls back to composing zones itself on a 404.
@@ -17,7 +18,7 @@ with a record in the span.
 Codes (uint8): 0 unsuitable in both periods, 1 confirmed, 2 in-range, 3 range-gap, 4 frontier, 5 climate-risk, 6 newly-suitable
 (index into CATEGORIES + 1), 255 no prediction (nodata in either period).
 """
-import argparse, datetime, json, sys
+import argparse, datetime, email.utils, json, sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -35,6 +36,7 @@ BASE = "https://object-arbutus.alliancecan.ca/swift/v1/4903c6264e0c4191a74a54c93
 CATEGORIES = ["confirmed", "in-range", "range-gap", "frontier", "climate-risk", "newly-suitable"]
 SUITABLE, NEAR_KM, NODATA, R = 50, 40, 255, 6371.0088
 BASIS = ["HUMAN_OBSERVATION", "MACHINE_OBSERVATION", "OBSERVATION", "OCCURRENCE", "PRESERVED_SPECIMEN", "MATERIAL_SAMPLE"]
+VERSION = 1  # bump when the zone rules change, so --stale regenerates every species
 Z, EXTENT, TILES = 3, 512, [(x, y) for x in range(3) for y in range(4)]  # z3 tiles covering Canada and the US
 
 
@@ -83,6 +85,24 @@ def records(sci, span):
     return np.array(pts).reshape(-1, 2)
 
 
+def modified(name):
+    r = requests.head(f"{BASE}/{name}", timeout=60)
+    return email.utils.parsedate_to_datetime(r.headers["last-modified"]) if r.ok else None
+
+
+def stale(slug, thr, span):
+    """True when the bucket's zones for slug are missing, from another rule version or threshold, or older than an input."""
+    tag = f"{slug}_sdm-zones_1km_na_{span[0]}-{span[1]}"
+    done = modified(f"{tag}.json")
+    if done is None or modified(f"{tag}.tif") is None:
+        return True
+    meta = requests.get(f"{BASE}/{tag}.json", timeout=60).json()
+    if meta.get("version") != VERSION or meta.get("threshold") != thr:
+        return True
+    inputs = [f"{slug}_sdm-ensemble_1km_na_{p}_sett1.tif" for p in ("1980-2010", "2071-2100")] + [f"{slug}_iucn-range_NA_na_NA_NA.fgb"]
+    return any(t and t > done for t in map(modified, inputs))
+
+
 def unit(lon, lat):
     lon, lat = np.radians(lon), np.radians(lat)
     return np.column_stack([np.cos(lat) * np.cos(lon), np.cos(lat) * np.sin(lon), np.sin(lat)])
@@ -117,7 +137,7 @@ def run(slug, sci, thr, span, out):
         dst.write(zones, 1)
     counts = np.bincount(zones.ravel(), minlength=256)
     px_km2 = abs(transform.a * transform.e) / 1e6
-    stats = {"slug": slug, "span": list(span), "threshold": thr, "near_km": NEAR_KM, "records": len(pts), "generated": datetime.date.today().isoformat(),
+    stats = {"version": VERSION, "slug": slug, "span": list(span), "threshold": thr, "near_km": NEAR_KM, "records": len(pts), "generated": datetime.date.today().isoformat(),
              "codes": {str(i + 1): c for i, c in enumerate(CATEGORIES)} | {"0": "unsuitable", str(NODATA): "nodata"},
              "km2": [round(float(counts[i + 1] * px_km2)) for i in range(len(CATEGORIES))]}
     (out / f"{tag}.json").write_text(json.dumps(stats, separators=(",", ":")) + "\n")
@@ -131,11 +151,17 @@ def main():
     y = datetime.date.today().year
     ap.add_argument("--span", default=f"{y - 10}-{y - 1}")
     ap.add_argument("--jobs", type=int, default=4)  # each job holds ~0.5 GB of rasters
+    ap.add_argument("--stale", action="store_true")
     a = ap.parse_args()
     span = tuple(int(v) for v in a.span.split("-"))
     species = {s["slug"]: s["sci"] for s in json.loads((ROOT / "public/sdm-species.json").read_text())}
     thresholds = json.loads((ROOT / "public/sdm-thresholds.json").read_text())
     slugs = a.slugs or list(species)
+    if a.stale:
+        with ProcessPoolExecutor(16) as pool:  # HEAD requests only
+            flags = list(pool.map(stale, slugs, [thresholds.get(s, SUITABLE) for s in slugs], [span] * len(slugs)))
+        slugs = [s for s, f in zip(slugs, flags) if f]
+        print(f"{len(slugs)} stale species")
     a.out.mkdir(parents=True, exist_ok=True)
     with ProcessPoolExecutor(a.jobs) as pool:
         futs = {s: pool.submit(run, s, species[s], thresholds.get(s, SUITABLE), span, a.out) for s in slugs}
