@@ -5,9 +5,9 @@ import { TITILER_BASE, sdmCogUrl, sdmRangeUrl, sdmZonesUrl } from './sdmSource';
 // suitability now and in 2100 (binary, at the species' own threshold), the IUCN expert range and nearby records.
 export type Category = 'confirmed' | 'in-range' | 'range-gap' | 'frontier' | 'climate-risk' | 'newly-suitable';
 export const CATEGORIES: Category[] = ['confirmed', 'in-range', 'range-gap', 'frontier', 'climate-risk', 'newly-suitable'];
-// Colour-blind-safe variant of the paper's palette (Fig. 3); range-gap is a darker shade of frontier, its branch with records
+// The project palette: one hue per family, light without records nearby, dark with them
 export const CATEGORY_COLORS: Record<Category, [number, number, number]> = {
-  confirmed: [28, 26, 59], 'in-range': [157, 169, 192], 'range-gap': [120, 128, 37], frontier: [170, 181, 36], 'climate-risk': [226, 125, 114], 'newly-suitable': [42, 136, 155],
+  confirmed: [137, 130, 155], 'in-range': [205, 199, 216], 'range-gap': [120, 149, 120], frontier: [189, 209, 185], 'climate-risk': [216, 154, 134], 'newly-suitable': [96, 137, 139],
 };
 export const hex = (c: Category) => `#${CATEGORY_COLORS[c].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 

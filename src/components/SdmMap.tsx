@@ -56,7 +56,9 @@ const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpe
   layers: [...style.layers.map((l) => ({ ...l, paint: { 'raster-brightness-min': 0.15 } })), { id: 'relief', type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.45, 'hillshade-shadow-color': '#5b5348', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#7d7468', 'hillshade-illumination-direction': 315 } }],
 });
 // Records outside the range are a branch of Frontier (Horizon), so it is listed under it, indented
-const LEGEND_ORDER: Category[] = ['confirmed', 'in-range', 'frontier', 'range-gap', 'climate-risk', 'newly-suitable'];
+// Grouped by family, the shade without records nearby first; the climate zones are not split by records yet
+const LEGEND_ROWS: Category[][] = [['in-range', 'confirmed'], ['frontier', 'range-gap'], ['climate-risk'], ['newly-suitable']];
+const RANGE_LINE = '#747c7b';
 // Dots take the colour of the zone they fall in
 const ZONE_COLOR = ['match', ['get', 'category'], ...CATEGORIES.flatMap((c) => [c, hex(c)]), UNSUITABLE] as unknown as maplibregl.ExpressionSpecification;
 // One thin stacked bar: how something (area, new cells) splits across the zones
@@ -204,7 +206,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       map.on('zoomend', syncTerrain);
       syncTerrain();
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
-      map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#431407', 'line-width': 1.5, 'line-opacity': 0.9 } });
+      map.addLayer({ id: RANGE, type: 'line', source: RANGE, layout: { 'line-cap': 'round' }, paint: { 'line-color': RANGE_LINE, 'line-width': 1.5, 'line-dasharray': [0, 2.5] } });
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
       map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}outside-ca-us.geojson` });
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
@@ -477,25 +479,29 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               </select>
             </label>
             {/* A row is a button so touch and keyboard users can read the definition that hover gives on desktop; the number is the zone's share of suitable area in view */}
-            {LEGEND_ORDER.map((c) => {
-              const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
-              return (
-                <div key={c}>
-                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full min-h-6 items-center gap-2 text-xs text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''} ${use.zones.includes(c) ? '' : 'opacity-40'}`}>
-                    <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
-                    <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
-                    {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}
-                  </button>
-                  {tipOf === c && <div className="ml-5 text-xs text-gray-600">{CAT_TIPS[c][lang === 'EN' ? 0 : 1]}</div>}
-                </div>
-              );
-            })}
+            {LEGEND_ROWS.map((row) => (
+              <div key={row[0]} className="mb-1">
+                {row.map((c) => {
+                  const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
+                  return (
+                    <div key={c}>
+                      <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full min-h-6 items-center gap-2 text-xs text-left pointer-events-auto cursor-help ${use.zones.includes(c) ? '' : 'opacity-40'}`}>
+                        <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
+                        <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
+                        {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}
+                      </button>
+                      {tipOf === c && <div className="ml-5 text-xs text-gray-600">{CAT_TIPS[c][lang === 'EN' ? 0 : 1]}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
             <div className="flex items-center gap-2 mt-0.5 text-xs" title={lang === 'EN' ? 'Unsuitable now and in 2100' : "Non favorable aujourd'hui et en 2100"}>
               <span className="inline-block w-3 h-3 rounded-sm border border-gray-400" />
               <span>{lang === 'EN' ? 'Out of reach (no colour)' : "Hors d'atteinte (sans couleur)"}</span>
             </div>
             <div className="flex items-center gap-2 mt-0.5 text-xs">
-              <span className="inline-block w-3 border-t-2" style={{ borderColor: '#431407' }} />
+              <span className="inline-block w-3 border-t-2 border-dotted" style={{ borderColor: RANGE_LINE }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire UICN'}</span>
             </div>
             {!(zoneStats && inView) && <div className="mt-1 text-xs text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
@@ -552,7 +558,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               <span>100</span>
             </div>
             <div className="flex items-center gap-2 mt-1.5 pt-1 border-t border-gray-100 text-xs">
-              <span className="inline-block w-5 border-t-2" style={{ borderColor: '#431407' }} />
+              <span className="inline-block w-5 border-t-2 border-dotted" style={{ borderColor: RANGE_LINE }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
             {([
