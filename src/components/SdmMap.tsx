@@ -534,7 +534,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           </div>
         ) : (<>
         <div className="mb-1 text-gray-600 font-semibold">{period === 'current'
-          ? (lang === 'EN' ? 'Ensemble (clipped to the known range), 1980-2010, 1 km' : 'Ensemble (découpé selon l\'aire connue), 1980-2010, 1 km')
+          ? (lang === 'EN' ? 'Ensemble, 1980-2010, 1 km, clipped to the IUCN range plus areas with records' : 'Ensemble, 1980-2010, 1 km, découpé selon l\'aire UICN et les zones avec observations')
           : (lang === 'EN' ? `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (model only, not clipped)` : `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (modèle seul, non découpé)`)}</div>
         {slug && (
           <>
