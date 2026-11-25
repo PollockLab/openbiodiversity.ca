@@ -15,7 +15,9 @@ export const CAT_TIPS: Record<Category, L> = {
   'range-gap': ['Horizon with records: suitable and observed outside the known range. The range map may need redrawing. Recorded outside range.', "Horizon avec mentions : favorable et observé hors de l'aire connue. La carte de l'aire est peut-être à revoir. Observé hors de l'aire."],
   frontier: ['Suitable now and in 2100, outside the known range, no observation within 40 km. Survey here. Suitable outside range.', "Favorable aujourd'hui et en 2100, hors de l'aire connue, sans observation à moins de 40 km. À inventorier. Favorable hors de l'aire."],
   'climate-risk': ['Suitable now, not in 2100. Watch. Projected loss of suitable climate.', "Favorable aujourd'hui, pas en 2100. À surveiller. Perte projetée de climat favorable."],
+  'climate-risk-recorded': ['Losing ground with records: suitable now, not in 2100, observed within 40 km. Act first. Documented populations at risk.', "En recul avec mentions : favorable aujourd'hui, pas en 2100, observé à moins de 40 km. Agir d'abord. Populations documentées à risque."],
   'newly-suitable': ['Not suitable now, suitable in 2100. Prepare. Projected gain of suitable climate.', "Non favorable aujourd'hui, favorable en 2100. À préparer. Gain projeté de climat favorable."],
+  'newly-suitable-recorded': ['Arrival zone with records: not suitable now, suitable in 2100, observed within 40 km. Likely first arrivals. Track here.', "Terre d'accueil avec mentions : non favorable aujourd'hui, favorable en 2100, observé à moins de 40 km. Arrivées probables. À suivre."],
 };
 
 interface Props {

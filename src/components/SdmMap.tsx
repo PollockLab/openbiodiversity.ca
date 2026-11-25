@@ -21,7 +21,7 @@ const NEW = 'new-records';
 const OCC_IN = '#ffffff';
 const OCC_OUT = '#991b1b';
 const CAT_LABELS: Record<Category, [string, string]> = {
-  confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, avec mentions'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"],
+  confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, avec mentions'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"], 'climate-risk-recorded': ['Losing ground, recorded', 'En recul, avec mentions'], 'newly-suitable-recorded': ['Arrival zone, recorded', "Terre d'accueil, avec mentions"],
 };
 const UNSUITABLE = '#b9b0a0';
 // Soft hillshade from AWS Terrain Tiles (Terrarium encoding) between the plain basemap and the model, so ranges read against real mountains and valleys
@@ -56,8 +56,8 @@ const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpe
   layers: [...style.layers.map((l) => ({ ...l, paint: { 'raster-brightness-min': 0.15 } })), { id: 'relief', type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.45, 'hillshade-shadow-color': '#5b5348', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#7d7468', 'hillshade-illumination-direction': 315 } }],
 });
 // Records outside the range are a branch of Frontier (Horizon), so it is listed under it, indented
-// Grouped by family, the shade without records nearby first; the climate zones are not split by records yet
-const LEGEND_ROWS: Category[][] = [['in-range', 'confirmed'], ['frontier', 'range-gap'], ['climate-risk'], ['newly-suitable']];
+// Grouped by family, the shade without records nearby first
+const LEGEND_ROWS: Category[][] = [['in-range', 'confirmed'], ['frontier', 'range-gap'], ['climate-risk', 'climate-risk-recorded'], ['newly-suitable', 'newly-suitable-recorded']];
 const RANGE_LINE = '#747c7b';
 // Dots take the colour of the zone they fall in
 const ZONE_COLOR = ['match', ['get', 'category'], ...CATEGORIES.flatMap((c) => [c, hex(c)]), UNSUITABLE] as unknown as maplibregl.ExpressionSpecification;

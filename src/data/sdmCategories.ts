@@ -3,12 +3,12 @@ import { TITILER_BASE, sdmCogUrl, sdmRangeUrl, sdmZonesUrl } from './sdmSource';
 
 // Zone map after the lab's evidence framework: each cell gets one zone from
 // suitability now and in 2100 (binary, at the species' own threshold), the IUCN expert range and nearby records.
-export type Category = 'confirmed' | 'in-range' | 'range-gap' | 'frontier' | 'climate-risk' | 'newly-suitable';
-export const CATEGORIES: Category[] = ['confirmed', 'in-range', 'range-gap', 'frontier', 'climate-risk', 'newly-suitable'];
+export type Category = 'confirmed' | 'in-range' | 'range-gap' | 'frontier' | 'climate-risk' | 'newly-suitable' | 'climate-risk-recorded' | 'newly-suitable-recorded';
+export const CATEGORIES: Category[] = ['confirmed', 'in-range', 'range-gap', 'frontier', 'climate-risk', 'newly-suitable', 'climate-risk-recorded', 'newly-suitable-recorded'];
 // The project palette: one hue per family, light without records nearby, dark with them
-// newly-suitable is the palette's teal 6 L* darker: at 60898b it matched stronghold for red-green colour-blind viewers (CIEDE2000 4, now 9+)
+// The teals are the palette's 6 L* darker: at 60898b the dark one matched stronghold for red-green colour-blind viewers (CIEDE2000 4, now 9+)
 export const CATEGORY_COLORS: Record<Category, [number, number, number]> = {
-  confirmed: [137, 130, 155], 'in-range': [205, 199, 216], 'range-gap': [120, 149, 120], frontier: [189, 209, 185], 'climate-risk': [216, 154, 134], 'newly-suitable': [88, 120, 122],
+  confirmed: [137, 130, 155], 'in-range': [205, 199, 216], 'range-gap': [120, 149, 120], frontier: [189, 209, 185], 'climate-risk': [224, 197, 174], 'climate-risk-recorded': [216, 154, 134], 'newly-suitable': [143, 177, 177], 'newly-suitable-recorded': [88, 120, 122],
 };
 export const hex = (c: Category) => `#${CATEGORY_COLORS[c].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
@@ -25,14 +25,14 @@ export const NEAR_KM = 40; // a record this close counts as "near"
 
 export function categorize(u: number, f: number, thr: number, inRange: boolean, near: boolean): Category | null {
   const now = u >= thr, later = f >= thr;
-  if (now && !later) return 'climate-risk'; // the two change zones win over range and records
-  if (!now && later) return 'newly-suitable';
+  if (now && !later) return near ? 'climate-risk-recorded' : 'climate-risk'; // the change zones win over the range
+  if (!now && later) return near ? 'newly-suitable-recorded' : 'newly-suitable';
   if (!now) return null;
   return inRange ? (near ? 'confirmed' : 'in-range') : (near ? 'range-gap' : 'frontier');
 }
 if (import.meta.env.DEV) {
   const all = [true, false].flatMap((r) => [true, false].map((n) => [categorize(70, 70, 60, r, n), categorize(70, 10, 60, r, n), categorize(10, 70, 60, r, n), categorize(10, 10, 60, r, n)].join()));
-  console.assert(all.join(' ') === ['confirmed', 'in-range', 'range-gap', 'frontier'].map((c) => `${c},climate-risk,newly-suitable,`).join(' ') && categorize(60, 59, 60, true, true) === 'climate-risk', 'categorize');
+  console.assert(all.join(' ') === ['confirmed', 'in-range', 'range-gap', 'frontier'].map((c, i) => i % 2 ? `${c},climate-risk,newly-suitable,` : `${c},climate-risk-recorded,newly-suitable-recorded,`).join(' ') && categorize(60, 59, 60, true, false) === 'climate-risk', 'categorize');
 }
 
 // Raw byte tiles: titiler returns gray+alpha PNG with the suitability % as gray when no colormap or rescale is set
@@ -211,8 +211,8 @@ export async function categoryAt(slug: string, lon: number, lat: number, key: st
   }
   const [[u, f], paths, thr] = await Promise.all([pair(slug, z, x, y), rangeOf(slug), thresholdOf(slug)]);
   if (!u || !f || u.v[i] === NODATA || f.v[i] === NODATA) return undefined; // no prediction here (sea, outside the model), not the same as unsuitable
-  const both = u.v[i] >= thr && f.v[i] >= thr; // range and records only decide the zone when the cell is suitable in both periods
-  return categorize(u.v[i], f.v[i], thr, both && (!paths || inRange(paths, ...merc(lon, lat))), both && distanceToTrainingKm(key, lon, lat) <= NEAR_KM);
+  const both = u.v[i] >= thr && f.v[i] >= thr, either = u.v[i] >= thr || f.v[i] >= thr; // the range splits only stable cells, records any suitable one
+  return categorize(u.v[i], f.v[i], thr, both && (!paths || inRange(paths, ...merc(lon, lat))), either && distanceToTrainingKm(key, lon, lat) <= NEAR_KM);
 }
 
 // Uses from exploratory to evidence-based (paper Fig. 6): each shows only the zones that answer it
@@ -221,6 +221,6 @@ export const USES: { id: string; label: [string, string]; zones: Category[] }[] 
   { id: 'protect', label: ['Protected area planning', 'Planification des aires protégées'], zones: ['confirmed', 'in-range'] },
   { id: 'survey', label: ['Survey for new populations', 'Inventaire de nouvelles populations'], zones: ['in-range', 'frontier'] },
   { id: 'range', label: ['Range map review', "Révision de la carte d'aire"], zones: ['range-gap', 'frontier'] },
-  { id: 'climate', label: ['Climate adaptation', 'Adaptation au climat'], zones: ['climate-risk', 'newly-suitable'] },
+  { id: 'climate', label: ['Climate adaptation', 'Adaptation au climat'], zones: ['climate-risk', 'climate-risk-recorded', 'newly-suitable', 'newly-suitable-recorded'] },
 ];
 export const shownKey = (zones: Category[]) => CATEGORIES.map((c) => (zones.includes(c) ? 1 : 0)).join('');
