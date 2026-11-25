@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl';
 import { Maximize2, Minimize2, Plus, Minus, House } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
-import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
+import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
@@ -24,6 +24,13 @@ const CAT_LABELS: Record<Category, [string, string]> = {
   confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, avec mentions'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"],
 };
 const UNSUITABLE = '#b9b0a0';
+// Soft hillshade from AWS Terrain Tiles (Terrarium encoding) between the plain basemap and the model, so ranges read against real mountains and valleys
+const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpecification => ({
+  ...style,
+  projection: { type: 'mercator' },
+  sources: { ...style.sources, relief: { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: 'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">AWS Terrain Tiles</a>' } },
+  layers: [...style.layers, { id: 'relief', type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.45, 'hillshade-shadow-color': '#5b5348', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#7d7468', 'hillshade-illumination-direction': 315 } }],
+});
 // Laura draws records outside the range as a branch of Frontier (Horizon), so it is listed under it, indented
 const LEGEND_ORDER: Category[] = ['confirmed', 'in-range', 'frontier', 'range-gap', 'climate-risk', 'newly-suitable'];
 // Dots take the colour of the zone they fall in
@@ -150,7 +157,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     const isRetina = window.devicePixelRatio >= 2;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: { ...getGreyStyle(isRetina), projection: { type: 'mercator' } },
+      style: withRelief(getGreyStyle(isRetina)),
       ...(parseAt(atRef.current) ?? FULL_VIEW),
       attributionControl: false,
     });
@@ -270,7 +277,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
       map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
-      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 0.75 : 0.85, 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RANGE) ? RANGE : undefined);
+      // The suitability ramp carries its own alpha, so only the zones are dimmed to let the relief through
+      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 0.7 : 1, 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply); // not isStyleLoaded(): it is false while any tile loads, and 'load' fires once
     return () => { live = false; map.off('load', apply); };
@@ -493,7 +501,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           : (lang === 'EN' ? `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (model only, not clipped)` : `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (modèle seul, non découpé)`)}</div>
         {slug && (
           <>
-            <div className="h-2 w-40 rounded-sm" style={{ background: 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' }} />
+            <div className="h-2 w-40 rounded-sm" style={{ background: `linear-gradient(to right, transparent 10%, ${SUIT_RAMP.map(([lo, r, g, b, a]) => `rgba(${r},${g},${b},${a / 255}) ${lo + 5}%`).join(', ')})` }} />
             <div className="flex justify-between w-40 mt-0.5 text-gray-500 text-xs">
               <span>0</span>
               <span>{lang === 'EN' ? 'Suitability (%)' : 'Convenance (%)'}</span>

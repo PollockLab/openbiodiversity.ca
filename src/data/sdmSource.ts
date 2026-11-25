@@ -14,9 +14,15 @@ const SDM_FILES: Record<SdmPeriod, string> = {
 export const sdmCogUrl = (slug: string, period: SdmPeriod = 'current') =>
   `${ARBUTUS_BASE}/${slug}_${SDM_FILES[period]}_sett1.tif`;
 
+// Light-to-dark plum, fading to clear below 10% so the relief shows through where the species is not; [from %, r, g, b, alpha]
+export const SUIT_RAMP: [number, number, number, number, number][] = [
+  [10, 237, 231, 245, 60], [20, 218, 205, 235, 100], [30, 194, 174, 221, 130], [40, 167, 141, 204, 160], [50, 140, 108, 186, 175],
+  [60, 113, 77, 166, 190], [70, 88, 50, 143, 200], [80, 66, 28, 118, 210], [90, 45, 12, 90, 220],
+];
+const SUIT_COLORMAP = JSON.stringify(SUIT_RAMP.map(([lo, ...rgba], i) => [[lo, SUIT_RAMP[i + 1]?.[0] ?? 100], rgba]));
 // Byte 0..99 suitability %, nodata 255
 export const sdmTileUrl = (cogUrl: string) =>
-  `${TITILER_BASE}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(cogUrl)}&colormap_name=viridis&rescale=0,99&nodata=255`;
+  `${TITILER_BASE}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(cogUrl)}&colormap=${encodeURIComponent(SUIT_COLORMAP)}&nodata=255`;
 
 export const sdmPointUrl = (cogUrl: string, lon: number, lat: number) =>
   `${TITILER_BASE}/point/${lon},${lat}?url=${encodeURIComponent(cogUrl)}`;
