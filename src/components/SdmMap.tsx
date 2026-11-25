@@ -221,7 +221,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         'circle-stroke-color': ['case', ['==', ['get', 'category'], 'unsuitable'], '#6b7280', ['get', 'discovery'], '#111827', '#ffffff'],
         'circle-stroke-width': ['case', ['==', ['get', 'category'], 'unsuitable'], 1, ['get', 'discovery'], 1.5, 0.8] } });
       map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': ['case', ['has', 'evidence'], 2, 2.5], 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5, 'circle-stroke-opacity': ['case', ['has', 'evidence'], 0.35, 1] } });
-      map.addLayer({ id: OBS, type: 'circle', source: OBS, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['has', 'test'], '#fde68a', ['has', 'category'], ZONE_COLOR, OCC_IN], 'circle-stroke-color': ['case', ['has', 'category'], '#ffffff', '#374151'], 'circle-stroke-width': ['case', ['has', 'category'], 0.8, 0.5] } });
+      // Baseline records shrink at country scale so the zones under them stay readable
+      map.addLayer({ id: OBS, type: 'circle', source: OBS, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 1.2, 7, 2.5], 'circle-color': ['case', ['has', 'test'], '#fde68a', ['has', 'category'], ZONE_COLOR, OCC_IN], 'circle-stroke-color': ['case', ['has', 'category'], '#ffffff', '#374151'], 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 3, 0.3, 7, ['case', ['has', 'category'], 0.8, 0.5]] } });
       map.moveLayer(OBS, NEW); // dated records under the new ones
     });
 
@@ -321,7 +322,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
       map.addSource(SRC, { type: 'raster', tiles: [pre ? zonesTileUrl(slug, spanKey, shown) : cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period), CLASSIC)], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
       // The suitability ramp carries its own alpha; past its 1 km cells it also fades so the basemap shows when zoomed in
-      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': CLASSIC ? (cats ? 0.75 : 0.85) : cats ? 0.7 : ['interpolate', ['linear'], ['zoom'], 6, 1, 9, 0.55], 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RELIEF_OVER) ? RELIEF_OVER : map.getLayer(RANGE) ? RANGE : undefined);
+      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': CLASSIC ? (cats ? 0.75 : 0.85) : cats ? 0.85 : ['interpolate', ['linear'], ['zoom'], 6, 1, 9, 0.55], 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RELIEF_OVER) ? RELIEF_OVER : map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply); // not isStyleLoaded(): it is false while any tile loads, and 'load' fires once
     return () => { live = false; map.off('load', apply); };
