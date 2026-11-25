@@ -25,19 +25,16 @@ jobs:
   zones:
     runs-on: ubuntu-latest
     timeout-minutes: 340
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.ARBUTUS_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.ARBUTUS_SECRET_KEY }}
-      AWS_DEFAULT_REGION: us-east-1
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d  # v10.4.0
 
       - name: Check bucket credentials
-        if: ${{ !env.AWS_ACCESS_KEY_ID }}
-        run: echo "::error::Set the ARBUTUS_ACCESS_KEY and ARBUTUS_SECRET_KEY repository secrets (S3 keys for def-pollock-eckert)" && exit 1
+        run: '[ -n "$AWS_ACCESS_KEY_ID" ] || { echo "::error::Set the ARBUTUS_ACCESS_KEY and ARBUTUS_SECRET_KEY repository secrets (S3 keys for def-pollock-eckert)"; exit 1; }'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ARBUTUS_ACCESS_KEY }}
 
       - name: Build zones
         run: uv run scripts/sdm-zones.py --jobs 4 ${SLUGS:---stale}
@@ -46,3 +43,7 @@ jobs:
 
       - name: Upload to Arbutus
         run: aws s3 cp sdm-zones-out "s3://def-pollock-eckert/vertebrates_NA/ECCC_2026/" --recursive --endpoint-url https://object-arbutus.alliancecan.ca
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ARBUTUS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ARBUTUS_SECRET_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
