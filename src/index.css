@@ -101,3 +101,13 @@ body {
 .sdm-compass .maplibregl-ctrl-group { margin: 0; border-radius: 0.5rem; border: 1px solid #e5e7eb; background: rgb(255 255 255 / 0.95); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
 .sdm-compass .maplibregl-ctrl-group button { width: 2rem; height: 2rem; }
 .sdm-compass .maplibregl-ctrl-group button:focus-visible { box-shadow: 0 0 0 2px #6b8f71; }
+
+:focus-visible {
+  outline: 2px solid var(--color-sage-500);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-sage-100);
+  color: var(--color-sage-950);
+}
