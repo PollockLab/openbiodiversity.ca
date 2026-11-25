@@ -1,6 +1,6 @@
 import { VectorTile } from '@mapbox/vector-tile';
 import Pbf from 'pbf';
-import { CATEGORIES, T, categoryAt, distanceToTrainingKm, hasTrainingRecords, recordsKey, setTrainingRecords, zoneTile } from './sdmCategories';
+import { CATEGORIES, T, categoryAt, distanceToTrainingKm, hasTrainingRecords, recordsKey, setTrainingRecords, zoneTile, zonesOf } from './sdmCategories';
 
 // GBIF density tiles carry per-year counts for every cell, so one pass gives the full dated record history (no 100k
 // search cap, no sampling). z3 tiles with a 512 extent are ~9.8 km cells at the equator, ~7 km at 45°N.
@@ -84,6 +84,8 @@ export function evidenceKey(slug: string, cells: Cell[], span: Span) {
 export async function zoneShares(slug: string, cells: Cell[], span: Span, box?: number[] | null): Promise<{ area: number[]; whole: number[]; share: number }> {
   evidenceKey(slug, cells, span);
   const area = CATEGORIES.map(() => 0), whole = CATEGORIES.map(() => 0);
+  // Precomputed zones carry the whole map's areas at 1 km, so only the box is summed from tiles
+  const pre = await zonesOf(slug, spanSet(span));
   await Promise.all(TILES.map(async ([x, y]) => {
     const zones = await zoneTile(slug, spanSet(span), Z, x, y);
     if (!zones) return;
@@ -99,8 +101,11 @@ export async function zoneShares(slug: string, cells: Cell[], span: Span, box?: 
       }
     }
   }));
-  const sum = (v: number[]) => v.reduce((a, b) => a + b, 0), all = sum(whole);
-  return { area, whole, share: all ? sum(area) / all : 0 };
+  // Equator pixel area in km², so tile sums share units with the precomputed areas
+  const px = (40075.017 / (T * 2 ** Z)) ** 2;
+  const km2 = (v: number[]) => v.map((a) => a * px);
+  const sum = (v: number[]) => v.reduce((a, b) => a + b, 0), all = sum(pre ? pre.km2 : km2(whole));
+  return { area: km2(area), whole: pre ? pre.km2 : km2(whole), share: all ? Math.min(1, sum(km2(area)) / all) : 0 };
 }
 
 export type NewStats = { total: number; discovery: number; byCat: Record<string, [number, number]> };

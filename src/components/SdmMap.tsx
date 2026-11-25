@@ -5,7 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
 import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
-import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey } from '../data/sdmCategories';
+import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey, zonesOf, zonesTileUrl } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
 import { bindRecordPopups, nearestDot } from './sdmPopup';
 import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
@@ -311,11 +311,13 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (map.getSource(SRC)) map.removeSource(SRC);
       if (!slug) return;
       const cats = view === 'categories';
+      // Precomputed zones (scripts/sdm-zones.py) come straight from titiler; without them they are composed here from the records
+      const pre = cats && await zonesOf(slug, spanKey);
       // Zones still draw when GBIF is down: without records nothing is Confirmed
-      if (cats) evidenceKey(slug, await fetchCells(sciName(slug)).catch(() => []), span);
+      if (cats && !pre) evidenceKey(slug, await fetchCells(sciName(slug)).catch(() => []), span);
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
-      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period), CLASSIC)], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
+      map.addSource(SRC, { type: 'raster', tiles: [pre ? zonesTileUrl(slug, spanKey, shown) : cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period), CLASSIC)], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
       // The suitability ramp carries its own alpha; past its 1 km cells it also fades so the basemap shows when zoomed in
       map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': CLASSIC ? (cats ? 0.75 : 0.85) : cats ? 0.7 : ['interpolate', ['linear'], ['zoom'], 6, 1, 9, 0.55], 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RELIEF_OVER) ? RELIEF_OVER : map.getLayer(RANGE) ? RANGE : undefined);
     };

@@ -40,3 +40,6 @@ export const sdmRangeUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_iucn-range
 
 // GBIF records used to fit and clip the model, snapped to the 1 km grid; no date or other attributes
 export const sdmOccurrenceUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_gbif-occurrence-points-filtered_NA_na_NA_NA.fgb`;
+
+// Zones precomputed by scripts/sdm-zones.py for one evidence span ('2016-2025'): a uint8 COG of category codes and its stats
+export const sdmZonesUrl = (slug: string, span: string, ext: 'tif' | 'json') => `${ARBUTUS_BASE}/${slug}_sdm-zones_1km_na_${span}.${ext}`;

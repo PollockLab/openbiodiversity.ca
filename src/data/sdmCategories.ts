@@ -1,5 +1,5 @@
 import maplibregl from 'maplibre-gl';
-import { TITILER_BASE, sdmCogUrl, sdmRangeUrl } from './sdmSource';
+import { TITILER_BASE, sdmCogUrl, sdmRangeUrl, sdmZonesUrl } from './sdmSource';
 
 // Zone map after the lab's evidence framework: each cell gets one zone from
 // suitability now and in 2100 (binary, at the species' own threshold), the IUCN expert range and nearby records.
@@ -65,6 +65,22 @@ function raw(cog: string, z: number, x: number, y: number): Promise<Raw> {
 // Unclipped present-day and 2100 suitability: the categories compare the two
 const pair = (slug: string, z: number, x: number, y: number) =>
   Promise.all([raw(sdmCogUrl(slug, 'current-model'), z, x, y), raw(sdmCogUrl(slug, '2100'), z, x, y)]);
+
+// Precomputed zones (scripts/sdm-zones.py) for a species and evidence span, or null when there are none (404): then tiles are composed here.
+// codes: CATEGORIES index + 1, 0 unsuitable in both periods, 255 no prediction; km2: ground area per CATEGORIES entry
+export type Zones = { km2: number[]; threshold: number };
+const zonesCache = new Map<string, Promise<Zones | null>>();
+export const zonesOf = (slug: string, set: string): Promise<Zones | null> => {
+  const k = `${slug}|${set}`;
+  // A network error is not kept, so the next call asks again; a 404 is
+  if (!zonesCache.has(k)) zonesCache.set(k, fetch(sdmZonesUrl(slug, set, 'json')).then((r) => (r.ok ? r.json() : null), () => { zonesCache.delete(k); return null; }));
+  return zonesCache.get(k)!;
+};
+// Titiler paints the codes directly; a hidden zone has no colormap entry, so it is clear like 0 and nodata
+export const zonesTileUrl = (slug: string, set: string, shown: string) => {
+  const cmap = Object.fromEntries(CATEGORIES.flatMap((c, i) => (shown[i] === '1' ? [[i + 1, [...CATEGORY_COLORS[c], 255]]] : [])));
+  return `${TITILER_BASE}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?tilesize=512&url=${encodeURIComponent(sdmZonesUrl(slug, set, 'tif'))}&nodata=255&resampling=nearest&colormap=${encodeURIComponent(JSON.stringify(cmap))}`;
+};
 
 // Training records in Web Mercator metres, bucketed for nearest-distance lookups
 const R = 6378137;
@@ -138,6 +154,10 @@ function mask(x0: number, y0: number, size: number, draw: (ctx: OffscreenCanvasR
 
 // Zone of every pixel of a tile as an index into CATEGORIES + 1 (0 = unsuitable in both periods or no data), or null without rasters
 export async function zoneTile(slug: string, set: string, z: number, x: number, y: number): Promise<Uint8Array | null> {
+  if (await zonesOf(slug, set)) {
+    const v = (await raw(sdmZonesUrl(slug, set, 'tif'), z, x, y))?.v;
+    return v ? v.map((c) => (c === NODATA ? 0 : c)) : null;
+  }
   const [[u, f], paths, thr] = await Promise.all([pair(slug, z, x, y), rangeOf(slug), thresholdOf(slug)]);
   if (!u || !f) return null;
   const size = W / 2 ** z, x0 = -W / 2 + x * size, y0 = W / 2 - y * size;
@@ -183,6 +203,11 @@ export function registerCategoryProtocol() {
 export async function categoryAt(slug: string, lon: number, lat: number, key: string, z = 5): Promise<Category | null | undefined> {
   const n = 2 ** z, fx = (lon + 180) / 360 * n, fy = (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2 * n;
   const x = Math.floor(fx), y = Math.floor(fy), i = Math.floor((fy - y) * T) * T + Math.floor((fx - x) * T);
+  const set = key.slice(key.indexOf('|') + 1);
+  if (await zonesOf(slug, set)) {
+    const c = (await raw(sdmZonesUrl(slug, set, 'tif'), z, x, y))?.v[i];
+    return c === undefined || c === NODATA ? undefined : c ? CATEGORIES[c - 1] : null;
+  }
   const [[u, f], paths, thr] = await Promise.all([pair(slug, z, x, y), rangeOf(slug), thresholdOf(slug)]);
   if (!u || !f || u.v[i] === NODATA || f.v[i] === NODATA) return undefined; // no prediction here (sea, outside the model), not the same as unsuitable
   const both = u.v[i] >= thr && f.v[i] >= thr; // range and records only decide the zone when the cell is suitable in both periods
