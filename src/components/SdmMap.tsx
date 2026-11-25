@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { Maximize2, Minimize2, Plus, Minus, House, Mountain, Navigation2 } from 'lucide-react';
+import { Maximize2, Minimize2, Plus, Minus, House, Mountain } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
 import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
@@ -29,6 +29,7 @@ const UNSUITABLE = '#b9b0a0';
 const LOOK = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('look');
 const CLASSIC = LOOK === 'classic';
 const RELIEF_OVER = 'relief-over';
+const TERRAIN = { source: 'relief', exaggeration: 1.6 };
 const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpecification => ({
   ...style,
   projection: { type: 'mercator' },
@@ -126,8 +127,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  const [bearing, setBearing] = useState(0);
   const [tilted, setTilted] = useState(LOOK === '3d');
+  const compassRef = useRef<HTMLDivElement>(null);
   // Sections open by default, sized from the map box (not the window, the map is embedded): a narrow map gets a collapsed bottom sheet, a short one only the legend
   const [open, setOpen] = useState<{ layers: boolean; legend: boolean } | null>(null);
   const [zoneStats, setZoneStats] = useState<{ thr: number; cells: Awaited<ReturnType<typeof fetchCells>>; features: GeoJSON.Feature[] } | null>(null);
@@ -172,9 +173,13 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     map.on('load', () => {
       // Shadows only, above the model, so the terrain still reads through its darkest cells
       if (!CLASSIC) map.addLayer({ id: RELIEF_OVER, type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.5, 'hillshade-shadow-color': 'rgba(30, 20, 40, 0.45)', 'hillshade-highlight-color': 'rgba(255, 255, 255, 0.12)', 'hillshade-accent-color': 'rgba(30, 20, 40, 0.2)', 'hillshade-illumination-direction': 315 } });
-      if (LOOK === '3d') { map.setTerrain({ source: 'relief', exaggeration: 1.6 }); map.easeTo({ pitch: 55, duration: 0 }); }
-      map.on('rotate', () => setBearing(map.getBearing()));
-      map.on('pitchend', () => setTilted(map.getPitch() > 5));
+      if (LOOK === '3d') { map.setTerrain(TERRAIN); map.easeTo({ pitch: 55, duration: 0 }); }
+      // Built-in compass: drag it to rotate or tilt, click to face north and flatten. Hosted in our button column, not a map corner
+      const compass = new maplibregl.NavigationControl({ showZoom: false, visualizePitch: true }).onAdd(map);
+      compassRef.current?.appendChild(compass);
+      map.once('remove', () => compass.remove());
+      // Terrain follows the tilt however it was reached (button, compass, ctrl-drag), so a flat map stays light
+      map.on('pitchend', () => { const t = map.getPitch() > 5; setTilted(t); if (!CLASSIC && !!map.getTerrain() !== t) map.setTerrain(t ? TERRAIN : null); });
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#431407', 'line-width': 1.5, 'line-opacity': 0.9 } });
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
@@ -422,14 +427,14 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           {([[Plus, () => mapRef.current?.zoomIn({}, { user: true }), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut({}, { user: true }), lang === 'EN' ? 'Zoom out' : 'Zoom arrière'],
             [House, () => { onMovedRef.current(''); const b = rangeBox.current; if (b) mapRef.current?.fitBounds(b, { maxZoom: 7 }); else mapRef.current?.easeTo(FULL_VIEW); }, lang === 'EN' ? 'Reset view' : 'Réinitialiser la vue'],
             // Tilt drapes the model over the terrain in 3D; flat drops the terrain again so the map stays light
-            [Mountain, () => { const m = mapRef.current; if (!m) return; const up = !tilted; if (!CLASSIC) m.setTerrain(up ? { source: 'relief', exaggeration: 1.6 } : null); m.easeTo({ pitch: up ? 55 : 0, duration: 600 }); }, tilted ? (lang === 'EN' ? 'Flat view' : 'Vue à plat') : (lang === 'EN' ? 'Tilt to 3D terrain' : 'Incliner en relief 3D'), tilted],
-            [Navigation2, () => mapRef.current?.easeTo({ bearing: 0, duration: 500 }), lang === 'EN' ? 'Point north up' : 'Orienter vers le nord', false, -bearing]] as const).map(([Icon, fn, label, pressed, rotate]) => (
+            [Mountain, () => { const m = mapRef.current; if (!m) return; const up = !tilted; if (up && !CLASSIC) m.setTerrain(TERRAIN); m.easeTo({ pitch: up ? 55 : 0, duration: 600 }); }, tilted ? (lang === 'EN' ? 'Flat view' : 'Vue à plat') : (lang === 'EN' ? 'Tilt to 3D terrain' : 'Incliner en relief 3D'), tilted]] as const).map(([Icon, fn, label, pressed]) => (
             <button key={label} type="button" onClick={fn} title={label} aria-label={label} {...(Icon === Mountain ? { 'aria-pressed': !!pressed } : {})}
               className={`w-8 h-8 flex items-center justify-center hover:bg-gray-50 cursor-pointer ${pressed ? 'text-sage-700 bg-sage-50' : 'text-gray-700'}`}>
-              <Icon className="w-4 h-4 transition-transform" style={rotate ? { transform: `rotate(${rotate}deg)` } : undefined} />
+              <Icon className="w-4 h-4" />
             </button>
           ))}
         </div>
+        <div ref={compassRef} className="sdm-compass" />
       </div>
       {/* z-20 and after the zoom buttons in the DOM: the column must stay readable over them. Right column on desktop, bottom sheet on a phone (sections collapsed there) */}
       <div className="absolute z-20 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 overflow-y-auto overflow-x-hidden inset-x-3 bottom-16 max-h-[60%] @[600px]:inset-x-auto @[600px]:bottom-auto @[600px]:top-3 @[600px]:right-3 @[600px]:w-56 @[600px]:max-h-[calc(100%-1.5rem)]">
