@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { Maximize2, Minimize2, Plus, Minus, House } from 'lucide-react';
+import { Maximize2, Minimize2, Plus, Minus, House, Mountain, Navigation2 } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
 import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
@@ -126,6 +126,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [bearing, setBearing] = useState(0);
+  const [tilted, setTilted] = useState(LOOK === '3d');
   // Sections open by default, sized from the map box (not the window, the map is embedded): a narrow map gets a collapsed bottom sheet, a short one only the legend
   const [open, setOpen] = useState<{ layers: boolean; legend: boolean } | null>(null);
   const [zoneStats, setZoneStats] = useState<{ thr: number; cells: Awaited<ReturnType<typeof fetchCells>>; features: GeoJSON.Feature[] } | null>(null);
@@ -171,6 +173,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       // Shadows only, above the model, so the terrain still reads through its darkest cells
       if (!CLASSIC) map.addLayer({ id: RELIEF_OVER, type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.5, 'hillshade-shadow-color': 'rgba(30, 20, 40, 0.45)', 'hillshade-highlight-color': 'rgba(255, 255, 255, 0.12)', 'hillshade-accent-color': 'rgba(30, 20, 40, 0.2)', 'hillshade-illumination-direction': 315 } });
       if (LOOK === '3d') { map.setTerrain({ source: 'relief', exaggeration: 1.6 }); map.easeTo({ pitch: 55, duration: 0 }); }
+      map.on('rotate', () => setBearing(map.getBearing()));
+      map.on('pitchend', () => setTilted(map.getPitch() > 5));
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#431407', 'line-width': 1.5, 'line-opacity': 0.9 } });
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
@@ -416,10 +420,13 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         </button>
         <div className="flex flex-col rounded-lg bg-white/95 shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-200">
           {([[Plus, () => mapRef.current?.zoomIn({}, { user: true }), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut({}, { user: true }), lang === 'EN' ? 'Zoom out' : 'Zoom arrière'],
-            [House, () => { onMovedRef.current(''); const b = rangeBox.current; if (b) mapRef.current?.fitBounds(b, { maxZoom: 7 }); else mapRef.current?.easeTo(FULL_VIEW); }, lang === 'EN' ? 'Reset view' : 'Réinitialiser la vue']] as const).map(([Icon, fn, label]) => (
-            <button key={label} type="button" onClick={fn} title={label} aria-label={label}
-              className="w-8 h-8 flex items-center justify-center text-gray-700 hover:bg-gray-50 cursor-pointer">
-              <Icon className="w-4 h-4" />
+            [House, () => { onMovedRef.current(''); const b = rangeBox.current; if (b) mapRef.current?.fitBounds(b, { maxZoom: 7 }); else mapRef.current?.easeTo(FULL_VIEW); }, lang === 'EN' ? 'Reset view' : 'Réinitialiser la vue'],
+            // Tilt drapes the model over the terrain in 3D; flat drops the terrain again so the map stays light
+            [Mountain, () => { const m = mapRef.current; if (!m) return; const up = !tilted; if (!CLASSIC) m.setTerrain(up ? { source: 'relief', exaggeration: 1.6 } : null); m.easeTo({ pitch: up ? 55 : 0, duration: 600 }); }, tilted ? (lang === 'EN' ? 'Flat view' : 'Vue à plat') : (lang === 'EN' ? 'Tilt to 3D terrain' : 'Incliner en relief 3D'), tilted],
+            [Navigation2, () => mapRef.current?.easeTo({ bearing: 0, duration: 500 }), lang === 'EN' ? 'Point north up' : 'Orienter vers le nord', false, -bearing]] as const).map(([Icon, fn, label, pressed, rotate]) => (
+            <button key={label} type="button" onClick={fn} title={label} aria-label={label} {...(Icon === Mountain ? { 'aria-pressed': !!pressed } : {})}
+              className={`w-8 h-8 flex items-center justify-center hover:bg-gray-50 cursor-pointer ${pressed ? 'text-sage-700 bg-sage-50' : 'text-gray-700'}`}>
+              <Icon className="w-4 h-4 transition-transform" style={rotate ? { transform: `rotate(${rotate}deg)` } : undefined} />
             </button>
           ))}
         </div>
