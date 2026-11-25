@@ -31,7 +31,8 @@ const CLASSIC = LOOK === 'classic';
 const RELIEF_OVER = 'relief-over';
 const TERRAIN = { source: 'terrain', exaggeration: 1.6 };
 // Steeper tilt only once zoomed in, so a continental view keeps its land in frame
-// MapLibre renders worse when hillshade and terrain share one source, so each gets its own copy
+// MapLibre renders worse when hillshade and terrain share one source, so each gets its own copy.
+// The 3D mesh stops at z9 (the hillshade keeps full detail): fewer tiles to fetch, so the walls drawn while finer tiles load clear sooner
 const DEM: maplibregl.RasterDEMSourceSpecification = { type: 'raster-dem', tiles: ['land://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: 'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">AWS Terrain Tiles</a>' };
 const pitchFor = (z: number) => Math.min(60, 25 + 6 * z);
 // Terrarium carries the sea floor; in 3D the coast then drops into a cliff and the model's edge pixels smear down it. Clamp below sea level to 0
@@ -50,7 +51,7 @@ maplibregl.addProtocol('land', async ({ url }) => {
 const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpecification => ({
   ...style,
   projection: { type: 'mercator' },
-  sources: { ...style.sources, relief: DEM, terrain: DEM },
+  sources: { ...style.sources, relief: DEM, terrain: { ...DEM, maxzoom: 9 } },
   // In 3D a translucent raster shows the terrain's overlapping tiles and skirts as raised blocks and walls, so dim the basemap with an opaque fade to white instead (0.15 + 0.85 * colour = 85% opacity over white)
   layers: [...style.layers.map((l) => ({ ...l, paint: { 'raster-brightness-min': 0.15 } })), { id: 'relief', type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.45, 'hillshade-shadow-color': '#5b5348', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#7d7468', 'hillshade-illumination-direction': 315 } }],
 });
@@ -191,13 +192,17 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     map.on('load', () => {
       // Shadows only, above the model, so the terrain still reads through its darkest cells
       if (!CLASSIC) map.addLayer({ id: RELIEF_OVER, type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.5, 'hillshade-shadow-color': 'rgba(30, 20, 40, 0.45)', 'hillshade-highlight-color': 'rgba(255, 255, 255, 0.12)', 'hillshade-accent-color': 'rgba(30, 20, 40, 0.2)', 'hillshade-illumination-direction': 315 } });
-      if (LOOK === '3d') { map.setTerrain(TERRAIN); map.easeTo({ pitch: pitchFor(map.getZoom()), duration: 0 }); }
+      if (LOOK === '3d') map.easeTo({ pitch: pitchFor(map.getZoom()), duration: 0 });
       // Built-in compass: drag it to rotate or tilt, click to face north and flatten. Hosted in our button column, not a map corner
       const compass = new maplibregl.NavigationControl({ showZoom: false, visualizePitch: true }).onAdd(map);
       compassRef.current?.appendChild(compass);
       map.once('remove', () => compass.remove());
-      // Terrain follows the tilt however it was reached (button, compass, ctrl-drag), so a flat map stays light
-      map.on('pitchend', () => { const t = map.getPitch() > 5; setTilted(t); if (!CLASSIC && !!map.getTerrain() !== t) map.setTerrain(t ? TERRAIN : null); });
+      // Terrain follows the tilt however it was reached (button, compass, ctrl-drag), so a flat map stays light.
+      // Below z4 relief is invisible and terrain only adds skirt walls at the world's edge, so it stays off there
+      const syncTerrain = () => { const t = map.getPitch() > 5; setTilted(t); const on = !CLASSIC && t && map.getZoom() >= 4; if (!!map.getTerrain() !== on) map.setTerrain(on ? TERRAIN : null); };
+      map.on('pitchend', syncTerrain);
+      map.on('zoomend', syncTerrain);
+      syncTerrain();
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#431407', 'line-width': 1.5, 'line-opacity': 0.9 } });
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
@@ -445,7 +450,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           {([[Plus, () => mapRef.current?.zoomIn({}, { user: true }), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut({}, { user: true }), lang === 'EN' ? 'Zoom out' : 'Zoom arrière'],
             [House, () => { onMovedRef.current(''); const b = rangeBox.current; if (b) mapRef.current?.fitBounds(b, { maxZoom: 7 }); else mapRef.current?.easeTo(FULL_VIEW); }, lang === 'EN' ? 'Reset view' : 'Réinitialiser la vue'],
             // Tilt drapes the model over the terrain in 3D; flat drops the terrain again so the map stays light
-            [Mountain, () => { const m = mapRef.current; if (!m) return; const up = !tilted; if (up && !CLASSIC) m.setTerrain(TERRAIN); m.easeTo({ pitch: up ? pitchFor(m.getZoom()) : 0, duration: 600 }); }, tilted ? (lang === 'EN' ? 'Flat view' : 'Vue à plat') : (lang === 'EN' ? 'Tilt to 3D terrain' : 'Incliner en relief 3D'), tilted]] as const).map(([Icon, fn, label, pressed]) => (
+            [Mountain, () => { const m = mapRef.current; if (!m) return; const up = !tilted; m.easeTo({ pitch: up ? pitchFor(m.getZoom()) : 0, duration: 600 }); }, tilted ? (lang === 'EN' ? 'Flat view' : 'Vue à plat') : (lang === 'EN' ? 'Tilt to 3D terrain' : 'Incliner en relief 3D'), tilted]] as const).map(([Icon, fn, label, pressed]) => (
             <button key={label} type="button" onClick={fn} title={label} aria-label={label} {...(Icon === Mountain ? { 'aria-pressed': !!pressed } : {})}
               className={`w-8 h-8 flex items-center justify-center hover:bg-gray-50 cursor-pointer ${pressed ? 'text-sage-700 bg-sage-50' : 'text-gray-700'}`}>
               <Icon className="w-4 h-4" />
