@@ -6,8 +6,9 @@ import { TITILER_BASE, sdmCogUrl, sdmRangeUrl, sdmZonesUrl } from './sdmSource';
 export type Category = 'confirmed' | 'in-range' | 'range-gap' | 'frontier' | 'climate-risk' | 'newly-suitable';
 export const CATEGORIES: Category[] = ['confirmed', 'in-range', 'range-gap', 'frontier', 'climate-risk', 'newly-suitable'];
 // The project palette: one hue per family, light without records nearby, dark with them
+// newly-suitable is the palette's teal 6 L* darker: at 60898b it matched stronghold for red-green colour-blind viewers (CIEDE2000 4, now 9+)
 export const CATEGORY_COLORS: Record<Category, [number, number, number]> = {
-  confirmed: [137, 130, 155], 'in-range': [205, 199, 216], 'range-gap': [120, 149, 120], frontier: [189, 209, 185], 'climate-risk': [216, 154, 134], 'newly-suitable': [96, 137, 139],
+  confirmed: [137, 130, 155], 'in-range': [205, 199, 216], 'range-gap': [120, 149, 120], frontier: [189, 209, 185], 'climate-risk': [216, 154, 134], 'newly-suitable': [88, 120, 122],
 };
 export const hex = (c: Category) => `#${CATEGORY_COLORS[c].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
