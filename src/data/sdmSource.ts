@@ -21,8 +21,8 @@ export const SUIT_RAMP: [number, number, number, number, number][] = [
 ];
 const SUIT_COLORMAP = JSON.stringify(SUIT_RAMP.map(([lo, ...rgba], i) => [[lo, SUIT_RAMP[i + 1]?.[0] ?? 100], rgba]));
 // Byte 0..99 suitability %, nodata 255
-export const sdmTileUrl = (cogUrl: string) =>
-  `${TITILER_BASE}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(cogUrl)}&colormap=${encodeURIComponent(SUIT_COLORMAP)}&nodata=255`;
+export const sdmTileUrl = (cogUrl: string, classic = false) =>
+  `${TITILER_BASE}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(cogUrl)}&${classic ? 'colormap_name=viridis&rescale=0,99' : `colormap=${encodeURIComponent(SUIT_COLORMAP)}`}&nodata=255`;
 
 export const sdmPointUrl = (cogUrl: string, lon: number, lat: number) =>
   `${TITILER_BASE}/point/${lon},${lat}?url=${encodeURIComponent(cogUrl)}`;

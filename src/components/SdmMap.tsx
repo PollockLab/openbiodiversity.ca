@@ -25,6 +25,10 @@ const CAT_LABELS: Record<Category, [string, string]> = {
 };
 const UNSUITABLE = '#b9b0a0';
 // Soft hillshade from AWS Terrain Tiles (Terrarium encoding) between the plain basemap and the model, so ranges read against real mountains and valleys
+// Looks to compare for the proposal, picked with #sdm-explorer?look=: relief (default), 3d (tilted terrain) or classic (viridis, flat)
+const LOOK = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('look');
+const CLASSIC = LOOK === 'classic';
+const RELIEF_OVER = 'relief-over';
 const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpecification => ({
   ...style,
   projection: { type: 'mercator' },
@@ -157,13 +161,16 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     const isRetina = window.devicePixelRatio >= 2;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: withRelief(getGreyStyle(isRetina)),
+      style: CLASSIC ? { ...getGreyStyle(isRetina), projection: { type: 'mercator' } } : withRelief(getGreyStyle(isRetina)),
       ...(parseAt(atRef.current) ?? FULL_VIEW),
       attributionControl: false,
     });
     mapRef.current = map;
     map.setPadding(sidebarPadding(sidebarRef.current, containerRef.current.clientWidth));
     map.on('load', () => {
+      // Shadows only, above the model, so the terrain still reads through its darkest cells
+      if (!CLASSIC) map.addLayer({ id: RELIEF_OVER, type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.5, 'hillshade-shadow-color': 'rgba(30, 20, 40, 0.45)', 'hillshade-highlight-color': 'rgba(255, 255, 255, 0.12)', 'hillshade-accent-color': 'rgba(30, 20, 40, 0.2)', 'hillshade-illumination-direction': 315 } });
+      if (LOOK === '3d') { map.setTerrain({ source: 'relief', exaggeration: 1.6 }); map.easeTo({ pitch: 55, duration: 0 }); }
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#431407', 'line-width': 1.5, 'line-opacity': 0.9 } });
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
@@ -276,9 +283,9 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (cats) evidenceKey(slug, await fetchCells(sciName(slug)).catch(() => []), span);
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
-      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
+      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period), CLASSIC)], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
       // The suitability ramp carries its own alpha, so only the zones are dimmed to let the relief through
-      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 0.7 : 1, 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RANGE) ? RANGE : undefined);
+      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': CLASSIC ? (cats ? 0.75 : 0.85) : cats ? 0.7 : 1, 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RELIEF_OVER) ? RELIEF_OVER : map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply); // not isStyleLoaded(): it is false while any tile loads, and 'load' fires once
     return () => { live = false; map.off('load', apply); };
@@ -501,7 +508,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           : (lang === 'EN' ? `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (model only, not clipped)` : `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (modèle seul, non découpé)`)}</div>
         {slug && (
           <>
-            <div className="h-2 w-40 rounded-sm" style={{ background: `linear-gradient(to right, transparent 10%, ${SUIT_RAMP.map(([lo, r, g, b, a]) => `rgba(${r},${g},${b},${a / 255}) ${lo + 5}%`).join(', ')})` }} />
+            <div className="h-2 w-40 rounded-sm" style={{ background: CLASSIC ? 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' : `linear-gradient(to right, transparent 10%, ${SUIT_RAMP.map(([lo, r, g, b, a]) => `rgba(${r},${g},${b},${a / 255}) ${lo + 5}%`).join(', ')})` }} />
             <div className="flex justify-between w-40 mt-0.5 text-gray-500 text-xs">
               <span>0</span>
               <span>{lang === 'EN' ? 'Suitability (%)' : 'Convenance (%)'}</span>
