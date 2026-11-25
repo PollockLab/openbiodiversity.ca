@@ -1,11 +1,11 @@
 import maplibregl from 'maplibre-gl';
 import { TITILER_BASE, sdmCogUrl, sdmRangeUrl } from './sdmSource';
 
-// Zone map after Laura's evidence framework (meetings 2026-11-16 and 2026-11-19): each cell gets one zone from
+// Zone map after the lab's evidence framework: each cell gets one zone from
 // suitability now and in 2100 (binary, at the species' own threshold), the IUCN expert range and nearby records.
 export type Category = 'confirmed' | 'in-range' | 'range-gap' | 'frontier' | 'climate-risk' | 'newly-suitable';
 export const CATEGORIES: Category[] = ['confirmed', 'in-range', 'range-gap', 'frontier', 'climate-risk', 'newly-suitable'];
-// Colour-blind-safe variant of Laura's palette (paper Fig. 3); range-gap is a darker shade of frontier, its branch with records
+// Colour-blind-safe variant of the paper's palette (Fig. 3); range-gap is a darker shade of frontier, its branch with records
 export const CATEGORY_COLORS: Record<Category, [number, number, number]> = {
   confirmed: [28, 26, 59], 'in-range': [157, 169, 192], 'range-gap': [120, 128, 37], frontier: [170, 181, 36], 'climate-risk': [226, 125, 114], 'newly-suitable': [42, 136, 155],
 };

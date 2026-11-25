@@ -104,7 +104,7 @@ export async function zoneShares(slug: string, cells: Cell[], span: Span, box?: 
 }
 
 export type NewStats = { total: number; discovery: number; byCat: Record<string, [number, number]> };
-// New: cells recorded in `after` with no record in the evidence period (Laura's "new" is cell-based); discovery = ≥ 10 km from evidence
+// New: cells recorded in `after` with no record in the evidence period ("new" is cell-based); discovery = ≥ 10 km from evidence
 export async function classifyNew(slug: string, cells: Cell[], span: Span, after: Span) {
   const key = evidenceKey(slug, cells, span);
   const stats: NewStats = { total: 0, discovery: 0, byCat: {} };
