@@ -14,17 +14,18 @@ const SDM_FILES: Record<SdmPeriod, string> = {
 export const sdmCogUrl = (slug: string, period: SdmPeriod = 'current') =>
   `${ARBUTUS_BASE}/${slug}_${SDM_FILES[period]}_sett1.tif`;
 
-// Light-to-dark plum, fading to clear below 10% so the relief shows through where the species is not; [from %, r, g, b, alpha]
+// Light-to-dark acton, fading to clear below 10% so the relief shows through where the species is not; [from %, r, g, b, alpha]
 // Ramps to compare for the proposal, picked with #sdm-explorer?ramp=. Stops sampled from published perceptual maps (Crameri acton, cmocean dense, matplotlib magma), light to dark
 const RAMPS: Record<string, [number, number, number][]> = {
   plum: [[237, 231, 245], [218, 205, 235], [194, 174, 221], [167, 141, 204], [140, 108, 186], [113, 77, 166], [88, 50, 143], [66, 28, 118], [45, 12, 90]],
-  acton: [[234, 214, 235], [226, 180, 209], [215, 141, 176], [195, 107, 148], [152, 100, 142], [116, 98, 140], [84, 78, 123], [62, 47, 95], [38, 12, 63]],
+  // acton with its greyish mid stops pushed 35% further from grey so flat lowland reads as colour, not mud
+  acton: [[234, 214, 235], [226, 180, 209], [228, 128, 176], [211, 92, 147], [159, 89, 146], [115, 91, 148], [80, 72, 133], [62, 47, 95], [38, 12, 63]],
   dense: [[196, 224, 230], [152, 199, 226], [121, 170, 228], [115, 137, 225], [120, 101, 203], [119, 69, 168], [107, 41, 123], [86, 22, 76], [54, 14, 36]],
   magma: [[253, 216, 154], [253, 162, 111], [245, 106, 91], [212, 67, 109], [164, 48, 125], [118, 33, 129], [71, 15, 119], [24, 15, 63], [0, 0, 3]],
 };
-const RAMP = RAMPS[new URLSearchParams(window.location.hash.split('?')[1]).get('ramp') ?? ''] ?? RAMPS.plum;
+const RAMP = RAMPS[new URLSearchParams(window.location.hash.split('?')[1]).get('ramp') ?? ''] ?? RAMPS.acton;
 // Below 10% is clear, then alpha rises with suitability so weak cells fade into the relief
-const ALPHA = [60, 100, 130, 160, 175, 190, 200, 210, 220];
+const ALPHA = [90, 120, 140, 160, 175, 190, 200, 210, 220];
 export const SUIT_RAMP: [number, number, number, number, number][] = RAMP.map(([r, g, b], i) => [10 + 10 * i, r, g, b, ALPHA[i]]);
 const SUIT_COLORMAP = JSON.stringify(SUIT_RAMP.map(([lo, ...rgba], i) => [[lo, SUIT_RAMP[i + 1]?.[0] ?? 100], rgba]));
 // Byte 0..99 suitability %, nodata 255
