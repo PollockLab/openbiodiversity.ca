@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
-import { Maximize2, Minimize2, Plus, Minus, House } from 'lucide-react';
+import { Maximize2, Minimize2, Plus, Minus, House, Mountain } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
-import { sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
+import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
@@ -24,7 +24,38 @@ const CAT_LABELS: Record<Category, [string, string]> = {
   confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, avec mentions'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"],
 };
 const UNSUITABLE = '#b9b0a0';
-// Laura draws records outside the range as a branch of Frontier (Horizon), so it is listed under it, indented
+// Soft hillshade from AWS Terrain Tiles (Terrarium encoding) between the plain basemap and the model, so ranges read against real mountains and valleys
+// Looks to compare for the proposal, picked with #sdm-explorer?look=: relief (default), 3d (tilted terrain) or classic (viridis, flat)
+const LOOK = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('look');
+const CLASSIC = LOOK === 'classic';
+const RELIEF_OVER = 'relief-over';
+const TERRAIN = { source: 'terrain', exaggeration: 1.6 };
+// Steeper tilt only once zoomed in, so a continental view keeps its land in frame
+// MapLibre renders worse when hillshade and terrain share one source, so each gets its own copy.
+// The 3D mesh stops at z9 (the hillshade keeps full detail): fewer tiles to fetch, so the walls drawn while finer tiles load clear sooner
+const DEM: maplibregl.RasterDEMSourceSpecification = { type: 'raster-dem', tiles: ['land://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: 'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">AWS Terrain Tiles</a>' };
+const pitchFor = (z: number) => Math.min(60, 25 + 6 * z);
+// Terrarium carries the sea floor; in 3D the coast then drops into a cliff and the model's edge pixels smear down it. Clamp below sea level to 0
+maplibregl.addProtocol('land', async ({ url }) => {
+  const res = await fetch(url.replace('land://', 'https://'));
+  if (!res.ok) throw new Error(`terrain tile ${res.status}`);
+  const img = await createImageBitmap(await res.blob());
+  const ctx = new OffscreenCanvas(img.width, img.height).getContext('2d')!;
+  ctx.drawImage(img, 0, 0);
+  const px = ctx.getImageData(0, 0, img.width, img.height);
+  // Terrarium: metres = R * 256 + G + B / 256 - 32768, so R < 128 is below sea level; 128,0,0 is exactly 0 m
+  for (let i = 0; i < px.data.length; i += 4) if (px.data[i] < 128) { px.data[i] = 128; px.data[i + 1] = 0; px.data[i + 2] = 0; }
+  ctx.putImageData(px, 0, 0);
+  return { data: await (await ctx.canvas.convertToBlob()).arrayBuffer() };
+});
+const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpecification => ({
+  ...style,
+  projection: { type: 'mercator' },
+  sources: { ...style.sources, relief: DEM, terrain: { ...DEM, maxzoom: 9 } },
+  // In 3D a translucent raster shows the terrain's overlapping tiles and skirts as raised blocks and walls, so dim the basemap with an opaque fade to white instead (0.15 + 0.85 * colour = 85% opacity over white)
+  layers: [...style.layers.map((l) => ({ ...l, paint: { 'raster-brightness-min': 0.15 } })), { id: 'relief', type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.45, 'hillshade-shadow-color': '#5b5348', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#7d7468', 'hillshade-illumination-direction': 315 } }],
+});
+// Records outside the range are a branch of Frontier (Horizon), so it is listed under it, indented
 const LEGEND_ORDER: Category[] = ['confirmed', 'in-range', 'frontier', 'range-gap', 'climate-risk', 'newly-suitable'];
 // Dots take the colour of the zone they fall in
 const ZONE_COLOR = ['match', ['get', 'category'], ...CATEGORIES.flatMap((c) => [c, hex(c)]), UNSUITABLE] as unknown as maplibregl.ExpressionSpecification;
@@ -115,6 +146,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [tilted, setTilted] = useState(LOOK === '3d');
+  const compassRef = useRef<HTMLDivElement>(null);
   // Sections open by default, sized from the map box (not the window, the map is embedded): a narrow map gets a collapsed bottom sheet, a short one only the legend
   const [open, setOpen] = useState<{ layers: boolean; legend: boolean } | null>(null);
   const [zoneStats, setZoneStats] = useState<{ thr: number; cells: Awaited<ReturnType<typeof fetchCells>>; features: GeoJSON.Feature[] } | null>(null);
@@ -150,13 +183,26 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
     const isRetina = window.devicePixelRatio >= 2;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: { ...getGreyStyle(isRetina), projection: { type: 'mercator' } },
+      style: CLASSIC ? { ...getGreyStyle(isRetina), projection: { type: 'mercator' } } : withRelief(getGreyStyle(isRetina)),
       ...(parseAt(atRef.current) ?? FULL_VIEW),
       attributionControl: false,
     });
     mapRef.current = map;
     map.setPadding(sidebarPadding(sidebarRef.current, containerRef.current.clientWidth));
     map.on('load', () => {
+      // Shadows only, above the model, so the terrain still reads through its darkest cells
+      if (!CLASSIC) map.addLayer({ id: RELIEF_OVER, type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.5, 'hillshade-shadow-color': 'rgba(30, 20, 40, 0.45)', 'hillshade-highlight-color': 'rgba(255, 255, 255, 0.12)', 'hillshade-accent-color': 'rgba(30, 20, 40, 0.2)', 'hillshade-illumination-direction': 315 } });
+      if (LOOK === '3d') map.easeTo({ pitch: pitchFor(map.getZoom()), duration: 0 });
+      // Built-in compass: drag it to rotate or tilt, click to face north and flatten. Hosted in our button column, not a map corner
+      const compass = new maplibregl.NavigationControl({ showZoom: false, visualizePitch: true }).onAdd(map);
+      compassRef.current?.appendChild(compass);
+      map.once('remove', () => compass.remove());
+      // Terrain follows the tilt however it was reached (button, compass, ctrl-drag), so a flat map stays light.
+      // Below z4 relief is invisible and terrain only adds skirt walls at the world's edge, so it stays off there
+      const syncTerrain = () => { const t = map.getPitch() > 5; setTilted(t); const on = !CLASSIC && t && map.getZoom() >= 4; if (!!map.getTerrain() !== on) map.setTerrain(on ? TERRAIN : null); };
+      map.on('pitchend', syncTerrain);
+      map.on('zoomend', syncTerrain);
+      syncTerrain();
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#431407', 'line-width': 1.5, 'line-opacity': 0.9 } });
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
@@ -269,8 +315,9 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (cats) evidenceKey(slug, await fetchCells(sciName(slug)).catch(() => []), span);
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
-      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period))], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
-      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': cats ? 0.75 : 0.85, 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RANGE) ? RANGE : undefined);
+      map.addSource(SRC, { type: 'raster', tiles: [cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period), CLASSIC)], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
+      // The suitability ramp carries its own alpha; past its 1 km cells it also fades so the basemap shows when zoomed in
+      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': CLASSIC ? (cats ? 0.75 : 0.85) : cats ? 0.7 : ['interpolate', ['linear'], ['zoom'], 6, 1, 9, 0.55], 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RELIEF_OVER) ? RELIEF_OVER : map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply); // not isStyleLoaded(): it is false while any tile loads, and 'load' fires once
     return () => { live = false; map.off('load', apply); };
@@ -401,13 +448,16 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         </button>
         <div className="flex flex-col rounded-lg bg-white/95 shadow-md border border-gray-200 overflow-hidden divide-y divide-gray-200">
           {([[Plus, () => mapRef.current?.zoomIn({}, { user: true }), lang === 'EN' ? 'Zoom in' : 'Zoom avant'], [Minus, () => mapRef.current?.zoomOut({}, { user: true }), lang === 'EN' ? 'Zoom out' : 'Zoom arrière'],
-            [House, () => { onMovedRef.current(''); const b = rangeBox.current; if (b) mapRef.current?.fitBounds(b, { maxZoom: 7 }); else mapRef.current?.easeTo(FULL_VIEW); }, lang === 'EN' ? 'Reset view' : 'Réinitialiser la vue']] as const).map(([Icon, fn, label]) => (
-            <button key={label} type="button" onClick={fn} title={label} aria-label={label}
-              className="w-8 h-8 flex items-center justify-center text-gray-700 hover:bg-gray-50 cursor-pointer">
+            [House, () => { onMovedRef.current(''); const b = rangeBox.current; if (b) mapRef.current?.fitBounds(b, { maxZoom: 7 }); else mapRef.current?.easeTo(FULL_VIEW); }, lang === 'EN' ? 'Reset view' : 'Réinitialiser la vue'],
+            // Tilt drapes the model over the terrain in 3D; flat drops the terrain again so the map stays light
+            [Mountain, () => { const m = mapRef.current; if (!m) return; const up = !tilted; m.easeTo({ pitch: up ? pitchFor(m.getZoom()) : 0, duration: 600 }); }, tilted ? (lang === 'EN' ? 'Flat view' : 'Vue à plat') : (lang === 'EN' ? 'Tilt to 3D terrain' : 'Incliner en relief 3D'), tilted]] as const).map(([Icon, fn, label, pressed]) => (
+            <button key={label} type="button" onClick={fn} title={label} aria-label={label} {...(Icon === Mountain ? { 'aria-pressed': !!pressed } : {})}
+              className={`w-8 h-8 flex items-center justify-center hover:bg-gray-50 cursor-pointer ${pressed ? 'text-sage-700 bg-sage-50' : 'text-gray-700'}`}>
               <Icon className="w-4 h-4" />
             </button>
           ))}
         </div>
+        <div ref={compassRef} className="sdm-compass" />
       </div>
       {/* z-20 and after the zoom buttons in the DOM: the column must stay readable over them. Right column on desktop, bottom sheet on a phone (sections collapsed there) */}
       <div className="absolute z-20 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2.5 text-xs font-sans text-gray-700 shadow-lg border border-gray-200 overflow-y-auto overflow-x-hidden inset-x-3 bottom-16 max-h-[60%] @[600px]:inset-x-auto @[600px]:bottom-auto @[600px]:top-3 @[600px]:right-3 @[600px]:w-56 @[600px]:max-h-[calc(100%-1.5rem)]">
@@ -489,11 +539,11 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
           </div>
         ) : (<>
         <div className="mb-1 text-gray-600 font-semibold">{period === 'current'
-          ? (lang === 'EN' ? 'Ensemble (clipped to the known range), 1980-2010, 1 km' : 'Ensemble (découpé selon l\'aire connue), 1980-2010, 1 km')
+          ? (lang === 'EN' ? 'Ensemble, 1980-2010, 1 km, clipped to the IUCN range plus areas with records' : 'Ensemble, 1980-2010, 1 km, découpé selon l\'aire UICN et les zones avec observations')
           : (lang === 'EN' ? `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (model only, not clipped)` : `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (modèle seul, non découpé)`)}</div>
         {slug && (
           <>
-            <div className="h-2 w-40 rounded-sm" style={{ background: 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' }} />
+            <div className="h-2 w-40 rounded-sm" style={{ background: CLASSIC ? 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' : `linear-gradient(to right, transparent 10%, ${SUIT_RAMP.map(([lo, r, g, b, a]) => `rgba(${r},${g},${b},${a / 255}) ${lo + 5}%`).join(', ')})` }} />
             <div className="flex justify-between w-40 mt-0.5 text-gray-500 text-xs">
               <span>0</span>
               <span>{lang === 'EN' ? 'Suitability (%)' : 'Convenance (%)'}</span>

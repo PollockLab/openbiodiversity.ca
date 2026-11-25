@@ -37,6 +37,21 @@ export default function SdmSidebar({ lang, species, loading, selectedId, onSelec
     if (selected) setOpenClasses(p => (p[selected.taxonGroup] ? p : { ...p, [selected.taxonGroup]: true }));
   }, [selected?.taxonGroup]);
 
+  // Bring the selected row into view in its list and the sidebar, without scrolling the page
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      let el = document.querySelector<HTMLElement>('#sdm-species-lists button[aria-current="true"]');
+      for (let c = el?.parentElement; el && c; c = c.parentElement) {
+        if (c.scrollHeight <= c.clientHeight || getComputedStyle(c).overflowY !== 'auto') continue;
+        const d = el.getBoundingClientRect().top - c.getBoundingClientRect().top;
+        c.scrollTop += d - c.clientHeight / 3;
+        el = c;
+        if (c.id === 'sdm-species-lists') break;
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [selectedId, species.length, selected && openClasses[selected.taxonGroup]]);
+
   const counts = useMemo(() => {
     const c: Record<string, number> = { All: species.length };
     species.forEach(s => { c[s.taxonGroup] = (c[s.taxonGroup] || 0) + 1; });
@@ -157,7 +172,7 @@ export default function SdmSidebar({ lang, species, loading, selectedId, onSelec
         </div>
       </div>
 
-      <div className="overflow-y-auto flex-1 divide-y divide-gray-200/80">
+      <div id="sdm-species-lists" className="overflow-y-auto flex-1 divide-y divide-gray-200/80">
         {GROUPS.filter(g => taxon === 'All' || taxon === g).map(g => {
           const list = byGroup[g] ?? [];
           const isOpen = !!openClasses[g];
