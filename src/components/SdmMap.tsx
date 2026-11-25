@@ -30,10 +30,23 @@ const LOOK = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('
 const CLASSIC = LOOK === 'classic';
 const RELIEF_OVER = 'relief-over';
 const TERRAIN = { source: 'relief', exaggeration: 1.6 };
+// Terrarium carries the sea floor; in 3D the coast then drops into a cliff and the model's edge pixels smear down it. Clamp below sea level to 0
+maplibregl.addProtocol('land', async ({ url }) => {
+  const res = await fetch(url.replace('land://', 'https://'));
+  if (!res.ok) throw new Error(`terrain tile ${res.status}`);
+  const img = await createImageBitmap(await res.blob());
+  const ctx = new OffscreenCanvas(img.width, img.height).getContext('2d')!;
+  ctx.drawImage(img, 0, 0);
+  const px = ctx.getImageData(0, 0, img.width, img.height);
+  // Terrarium: metres = R * 256 + G + B / 256 - 32768, so R < 128 is below sea level; 128,0,0 is exactly 0 m
+  for (let i = 0; i < px.data.length; i += 4) if (px.data[i] < 128) { px.data[i] = 128; px.data[i + 1] = 0; px.data[i + 2] = 0; }
+  ctx.putImageData(px, 0, 0);
+  return { data: await (await ctx.canvas.convertToBlob()).arrayBuffer() };
+});
 const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpecification => ({
   ...style,
   projection: { type: 'mercator' },
-  sources: { ...style.sources, relief: { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: 'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">AWS Terrain Tiles</a>' } },
+  sources: { ...style.sources, relief: { type: 'raster-dem', tiles: ['land://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: 'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">AWS Terrain Tiles</a>' } },
   layers: [...style.layers, { id: 'relief', type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.45, 'hillshade-shadow-color': '#5b5348', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#7d7468', 'hillshade-illumination-direction': 315 } }],
 });
 // Laura draws records outside the range as a branch of Frontier (Horizon), so it is listed under it, indented
