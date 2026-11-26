@@ -8,6 +8,7 @@ import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey, zonesOf, zonesTileUrl } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
 import { ExpertLegend, ExpertToggles, addExpertLayers, useExpertRanges } from './SdmExpertRanges';
+import { ProtectedAreasLegend, ProtectedAreasToggle, addProtectedAreasLayer, useProtectedAreas } from './SdmProtectedAreas';
 import { bindRecordPopups, nearestDot } from './sdmPopup';
 import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
 
@@ -148,6 +149,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
   const [occBusy, setOccBusy] = useState(false);
   const [showGap, setShowGap] = useState(true);
   const [showEbar, setShowEbar] = useState(true);
+  const [showPa, setShowPa] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const [tilted, setTilted] = useState(LOOK === '3d');
   const compassRef = useRef<HTMLDivElement>(null);
@@ -207,6 +209,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, layout: { 'line-cap': 'round' }, paint: { 'line-color': RANGE_LINE, 'line-width': 1.5, 'line-dasharray': [0, 2.5] } });
       addExpertLayers(map);
+      addProtectedAreasLayer(map);
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
       map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}outside-ca-us.geojson` });
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
@@ -383,6 +386,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
   }, [slug]);
 
   const { entry, presences } = useExpertRanges(mapRef, slug, showGap, showEbar);
+  const paBusy = useProtectedAreas(mapRef, showPa);
 
   // The model's training records load only while the toggle is on
   useEffect(() => {
@@ -446,7 +450,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
   return (
     <div ref={(el) => { if (el && !open) setOpen({ layers: el.clientWidth >= 600 && el.clientHeight >= 520, legend: el.clientWidth >= 600 }); }} className="@container relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
       <div ref={containerRef} className="w-full h-full" />
-      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} extra={<ExpertToggles lang={lang} entry={entry} showGap={showGap} onToggleGap={() => setShowGap(!showGap)} showEbar={showEbar} onToggleEbar={() => setShowEbar(!showEbar)} />} />
+      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} extra={<><ExpertToggles lang={lang} entry={entry} showGap={showGap} onToggleGap={() => setShowGap(!showGap)} showEbar={showEbar} onToggleEbar={() => setShowEbar(!showEbar)} /><ProtectedAreasToggle lang={lang} show={showPa} onToggle={() => setShowPa(!showPa)} busy={paBusy} /></>} />
       <div className="absolute top-3 right-3 @[600px]:right-[15.25rem] z-20 flex flex-col gap-2 items-center">
         <button type="button" onClick={onToggleExpand} aria-pressed={isExpanded}
           title={isExpanded ? (lang === 'EN' ? 'Exit expanded view (Esc)' : 'Quitter le mode plein écran (Échap)') : (lang === 'EN' ? 'Expand viewer' : 'Agrandir le visualiseur')}
@@ -509,6 +513,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire UICN'}</span>
             </div>
             <ExpertLegend lang={lang} entry={entry} showGap={showGap} showEbar={showEbar} presences={presences} />
+            <ProtectedAreasLegend lang={lang} show={showPa} />
             {!(zoneStats && inView) && <div className="mt-1 text-xs text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
             {zoneStats && inView && (() => {
               const en = lang === 'EN', name = (c: Category) => CAT_LABELS[c][en ? 0 : 1];
@@ -565,6 +570,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
             <ExpertLegend lang={lang} entry={entry} showGap={showGap} showEbar={showEbar} presences={presences} />
+            <ProtectedAreasLegend lang={lang} show={showPa} />
             {([
               ...(showObs ? [[OCC_IN, lang === 'EN' ? `GBIF records ${from}–${to}` : `Observations GBIF ${from}–${to}`], ['#fde68a', lang === 'EN' ? `GBIF records since ${to + 1}` : `Observations GBIF depuis ${to + 1}`]] : []),
               ...(showOcc ? [[OCC_IN, lang === 'EN' ? 'Records inside IUCN range' : "Observations dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'Records outside IUCN range' : "Observations hors de l'aire UICN"]] : []),
