@@ -286,7 +286,8 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
     const licence = '<a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license">CC BY-NC 4.0</a>';
     const ctrl = new maplibregl.AttributionControl({ compact: true, customAttribution: (lang === 'EN' ? 'Models: Pollock Lab, ' : 'Modèles : Laboratoire Pollock, ') + licence + ' | EBAR © NatureServe Canada 2026 (CC BY 4.0) | USGS Gap Analysis Project 2018, <a href="https://doi.org/10.5066/F7D21WSG" target="_blank" rel="noopener noreferrer">doi:10.5066/F7D21WSG</a>' });
     map.addControl(ctrl);
-    return () => { map.removeControl(ctrl); };
+    // On unmount the map teardown above runs first and nulls mapRef
+    return () => { if (mapRef.current) map.removeControl(ctrl); };
   }, [lang]);
 
   // Resize with the container (expand mode) and re-center in the space the sidebar leaves free
