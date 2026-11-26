@@ -22,10 +22,10 @@ export const CAT_TIPS: Record<Category, L> = {
 interface Props {
   lang: string; left: string; slot: HTMLElement | null; view: View; onViewChange: (v: View) => void;
   showOcc: boolean; onToggleOcc: () => void; occBusy: boolean;
-  showObs: boolean; onToggleObs: () => void; span: Span; onSpanChange: (s: Span) => void;
+  showObs: boolean; onToggleObs: () => void; span: Span; onSpanChange: (s: Span) => void; extra?: React.ReactNode;
 }
 
-export default function SdmControls({ lang, left, slot, view, onViewChange, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange }: Props) {
+export default function SdmControls({ lang, left, slot, view, onViewChange, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange, extra }: Props) {
   // Read once per mount: the explorer remounts when a new link is opened, and switching views must not hide the button
   const [PROTO] = useState(() => window.location.hash.includes('view=categories'));
   const i = lang === 'EN' ? 0 : 1, t = (a: string, b: string) => (i ? b : a);
@@ -53,6 +53,7 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, show
         {(showObs || cats) && <Timeline from={span[0]} to={span[1]} onChange={onSpanChange} lang={lang} />}
         {/* A different set from the dated observations above: fixed, undated, and not moved by the slider */}
         {checkbox(onToggleOcc, showOcc, t('Model training records', "Mentions d'entraînement du modèle"), tip('train', t('The GBIF records the model was trained on, mapped where they fall', "Les mentions GBIF utilisées pour entraîner le modèle, là où elles se trouvent")), occBusy)}
+        {extra}
         <details className="min-w-0 text-xs leading-snug text-gray-600">
           <summary className="cursor-pointer text-sage-700">{t('How does this work?', 'Comment ça marche?')}</summary>
           <p className="mt-1">{t('Pick the baseline years with the two handles. Observations from those years are what is taken as already known about where the species lives.', 'Choisissez les années de référence avec les deux poignées. Les observations de ces années représentent ce que l\'on sait déjà de la répartition de l\'espèce.')}</p>
@@ -66,7 +67,7 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, show
   );
 }
 
-const checkbox = (onChange: () => void, checked: boolean, label: string, props: object, busy = false) => (
+export const checkbox = (onChange: () => void, checked: boolean, label: string, props: object, busy = false) => (
   <label className={`flex min-h-6 items-center gap-1.5 cursor-pointer ${busy ? 'animate-pulse' : ''}`} {...props}>
     <input type="checkbox" className="accent-sage-500" checked={checked} onChange={onChange} aria-busy={busy} />
     {label}

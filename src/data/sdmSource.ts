@@ -40,6 +40,10 @@ export const sdmPointUrl = (cogUrl: string, lon: number, lat: number) =>
 // Expert range, one file per species; the bucket rejects Range preflights, so fetch it whole
 export const sdmRangeUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_iucn-range_NA_na_NA_NA.fgb`;
 
+// Other expert ranges drawn beside it for comparison: USGS GAP 2018 (contiguous US) and NatureServe Canada EBAR; only slugs listed in public/sdm-expert-ranges.json have a file
+export const sdmGapUrl = (slug: string) => `${ARBUTUS_BASE}/expert-ranges/${slug}_usgs-gap-range_NA_NA_2018-08.fgb`;
+export const sdmEbarUrl = (slug: string) => `${ARBUTUS_BASE}/expert-ranges/${slug}_ebar-range_NA_NA_2026-03.fgb`;
+
 // GBIF records used to fit and clip the model, snapped to the 1 km grid; no date or other attributes
 export const sdmOccurrenceUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_gbif-occurrence-points-filtered_NA_na_NA_NA.fgb`;
 
