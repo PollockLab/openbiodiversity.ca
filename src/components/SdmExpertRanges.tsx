@@ -10,9 +10,8 @@ const EBAR = 'ebar-range';
 export const GAP_LINE = '#a0703c';
 export const EBAR_LINE = '#2f5d8a';
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
-// Presence class to line pattern; blank or unknown counts as expected
-const PRESENCE: [string, string, number[] | undefined, [string, string]][] = [['P', 'solid', undefined, ['Present', 'Présent']], ['X', 'dashed', [4, 3], ['Expected', 'Attendu']], ['H', 'dotted', [1, 2], ['Historical', 'Historique']]];
-const presenceOf = (f: GeoJSON.Feature) => (f.properties?.presence === 'P' || f.properties?.presence === 'H' ? f.properties.presence : 'X');
+// EBAR presence class to line pattern; blank rows are ecoshapes removed by expert review, so they are not drawn
+const PRESENCE: [string, string, number[] | undefined, [string, string]][] = [['P', 'solid', undefined, ['Present', 'Présente']], ['X', 'dashed', [4, 3], ['Presence expected', 'Présence attendue']], ['H', 'dotted', [1, 2], ['Historical', 'Historique']]];
 
 let index: Promise<Record<string, Entry>> | undefined;
 const loadIndex = () => (index ??= fetch(`${import.meta.env.BASE_URL}sdm-expert-ranges.json`).then((r) => r.json()).catch((e) => { index = undefined; console.warn('Expert range index unavailable', e); return {}; }));
@@ -43,7 +42,7 @@ export function useExpertRanges(mapRef: React.RefObject<maplibregl.Map | null>, 
       if (e.gap) fetchLaeaFgb(sdmGapUrl(slug)).then((fc) => { if (live) (map.getSource(GAP) as maplibregl.GeoJSONSource).setData(fc); }).catch((x) => console.warn('GAP range unavailable', x));
       if (e.ebar) fetchLaeaFgb(sdmEbarUrl(slug)).then((fc) => {
         if (!live) return;
-        const features = fc.features.map((f) => ({ ...f, properties: { ...f.properties, p: presenceOf(f) } }));
+        const features = fc.features.filter((f) => ['P', 'X', 'H'].includes(f.properties?.presence)).map((f) => ({ ...f, properties: { ...f.properties, p: f.properties!.presence } }));
         (map.getSource(EBAR) as maplibregl.GeoJSONSource).setData({ ...fc, features });
         setPresences([...new Set(features.map((f) => f.properties.p))]);
       }).catch((x) => console.warn('EBAR range unavailable', x));
