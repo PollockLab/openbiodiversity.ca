@@ -40,7 +40,7 @@ const URL = 'https://object-arbutus.alliancecan.ca/swift/v1/4903c6264e0c4191a74a
 const OUT = new globalThis.URL('../public/sdm-species.json', import.meta.url);
 // Species with no GBIF record in Canada or the US (from find-non-ca-us-species.py) are not listed
 const NON_CA_US = new globalThis.URL('./non-ca-us-species.json', import.meta.url);
-// Hand-checked: marine species, and species whose range lies outside Canada and the US despite a few GBIF records there
+// Hand-checked: marine species, species whose range lies outside Canada and the US despite a few GBIF records there, and species with taxonomy or range issues held back until fixed
 const OUT_OF_SCOPE = new globalThis.URL('./out-of-scope-species.json', import.meta.url);
 const first = (v) => (Array.isArray(v) ? v[0] : v);
 const clean = (v) => { const s = String(first(v) ?? '').trim(); return s === '' || s === 'NA' ? undefined : s; };
