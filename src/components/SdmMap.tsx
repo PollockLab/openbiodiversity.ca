@@ -7,7 +7,7 @@ import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurren
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey, zonesOf, zonesTileUrl } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
-import { ExpertLegend, ExpertToggles, addExpertLayers, useExpertRanges } from './SdmExpertRanges';
+import { ExpertLegend, ExpertToggles, addExpertLayers, rangeLinePaint, swatch, useExpertRanges } from './SdmExpertRanges';
 import { ProtectedAreasLegend, ProtectedAreasToggle, addProtectedAreasLayer, useProtectedAreas } from './SdmProtectedAreas';
 import { bindRecordPopups, nearestDot } from './sdmPopup';
 import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
@@ -207,7 +207,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
       map.on('zoomend', syncTerrain);
       syncTerrain();
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
-      map.addLayer({ id: RANGE, type: 'line', source: RANGE, layout: { 'line-cap': 'round' }, paint: { 'line-color': RANGE_LINE, 'line-width': 1.5, 'line-dasharray': [0, 2.5] } });
+      map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: rangeLinePaint(RANGE_LINE) });
       addExpertLayers(map);
       addProtectedAreasLayer(map);
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
@@ -385,7 +385,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
     return () => { map.off('load', apply); };
   }, [slug]);
 
-  const { entry, presences } = useExpertRanges(mapRef, slug, showGap, showEbar);
+  const { entry } = useExpertRanges(mapRef, slug, showGap, showEbar);
   const paBusy = useProtectedAreas(mapRef, showPa);
 
   // The model's training records load only while the toggle is on
@@ -509,10 +509,10 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
               <span>{lang === 'EN' ? 'Out of reach (no colour)' : "Hors d'atteinte (sans couleur)"}</span>
             </div>
             <div className="flex items-center gap-2 mt-0.5 text-xs">
-              <span className="inline-block w-3 border-t-2 border-dotted" style={{ borderColor: RANGE_LINE }} />
+              {swatch(RANGE_LINE)}
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire UICN'}</span>
             </div>
-            <ExpertLegend lang={lang} entry={entry} showGap={showGap} showEbar={showEbar} presences={presences} />
+            <ExpertLegend lang={lang} entry={entry} showGap={showGap} showEbar={showEbar} />
             <ProtectedAreasLegend lang={lang} show={showPa} />
             {!(zoneStats && inView) && <div className="mt-1 text-xs text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
             {zoneStats && inView && (() => {
@@ -565,10 +565,10 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
               <span>100</span>
             </div>
             <div className="flex items-center gap-2 mt-1.5 pt-1 border-t border-gray-100 text-xs">
-              <span className="inline-block w-5 border-t-2 border-dotted" style={{ borderColor: RANGE_LINE }} />
+              {swatch(RANGE_LINE)}
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
-            <ExpertLegend lang={lang} entry={entry} showGap={showGap} showEbar={showEbar} presences={presences} />
+            <ExpertLegend lang={lang} entry={entry} showGap={showGap} showEbar={showEbar} />
             <ProtectedAreasLegend lang={lang} show={showPa} />
             {([
               ...(showObs ? [[OCC_IN, lang === 'EN' ? `GBIF records ${from}–${to}` : `Observations GBIF ${from}–${to}`], ['#fde68a', lang === 'EN' ? `GBIF records since ${to + 1}` : `Observations GBIF depuis ${to + 1}`]] : []),
