@@ -4,7 +4,7 @@ import { sdmGapUrl, sdmEbarUrl } from '../data/sdmSource';
 import { checkbox } from './SdmControls';
 
 // Display only: the zones and the records-inside-range test keep using the IUCN range
-type Entry = { gap?: { name?: string; shared?: true; agree?: [number, number] }; ebar?: { scope: 'N' | 'G'; name?: string; agree?: [number, number] } };
+type Entry = { gap?: { name?: string; shared?: true; agree?: [number, number] }; ebar?: { scope: 'N' | 'G'; name?: string; low?: true; agree?: [number, number] } };
 const GAP = 'gap-range';
 const EBAR = 'ebar-range';
 export const GAP_LINE = '#a0703c';
@@ -86,7 +86,7 @@ export function ExpertLegend({ lang, entry, showGap, showEbar }: Omit<Props, 'on
           <span className="block text-gray-500">{t('Elsewhere: not mapped, not absent', 'Ailleurs : non cartographié, pas absent')}</span></span>
       </div>}
       {ebar && <div className="mt-1">
-        <div className="flex items-center gap-2">{swatch(EBAR_LINE)}<span>{t('EBAR range (NatureServe Canada)', 'Aire EBAR (NatureServe Canada)')}{entry.ebar!.scope === 'N' && t(', Canada only, not mapped elsewhere', ', Canada seulement, non cartographié ailleurs')}</span></div>
+        <div className="flex items-center gap-2">{swatch(EBAR_LINE)}<span>{t('EBAR range (NatureServe Canada)', 'Aire EBAR (NatureServe Canada)')}{entry.ebar!.scope === 'N' && t(', Canada only, not mapped elsewhere', ', Canada seulement, non cartographié ailleurs')}{entry.ebar!.low && <details className="inline"><summary className="inline cursor-pointer text-gray-500 list-none" title={t('Low-confidence map', 'Carte à faible confiance')}>*</summary><span className="block text-gray-500">{t('Low-confidence map (NatureServe rating)', 'Carte à faible confiance (cote NatureServe)')}</span></details>}</span></div>
       </div>}
     </div>
   );
