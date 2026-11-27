@@ -7,6 +7,7 @@ import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurren
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey, zonesOf, zonesTileUrl } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
+import { ExpertLegend, ExpertToggles, addExpertLayers, useExpertRanges } from './SdmExpertRanges';
 import { bindRecordPopups, nearestDot } from './sdmPopup';
 import { fetchCells, evidenceCells, evidenceKey, classifyNew, zoneShares, spanSet, Span, LAST_YEAR } from '../data/sdmTemporal';
 
@@ -145,6 +146,8 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
+  const [showGap, setShowGap] = useState(true);
+  const [showEbar, setShowEbar] = useState(true);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const [tilted, setTilted] = useState(LOOK === '3d');
   const compassRef = useRef<HTMLDivElement>(null);
@@ -203,6 +206,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
       syncTerrain();
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
       map.addLayer({ id: RANGE, type: 'line', source: RANGE, layout: { 'line-cap': 'round' }, paint: { 'line-color': RANGE_LINE, 'line-width': 1.5, 'line-dasharray': [0, 2.5] } });
+      addExpertLayers(map);
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
       map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}outside-ca-us.geojson` });
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
@@ -280,9 +284,10 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
     const map = mapRef.current;
     if (!map) return;
     const licence = '<a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer license">CC BY-NC 4.0</a>';
-    const ctrl = new maplibregl.AttributionControl({ compact: true, customAttribution: (lang === 'EN' ? 'Models: Pollock Lab, ' : 'Modèles : Laboratoire Pollock, ') + licence });
+    const ctrl = new maplibregl.AttributionControl({ compact: true, customAttribution: (lang === 'EN' ? 'Models: Pollock Lab, ' : 'Modèles : Laboratoire Pollock, ') + licence + ' | EBAR © NatureServe Canada 2026 (CC BY 4.0) | USGS Gap Analysis Project 2018, <a href="https://doi.org/10.5066/F7D21WSG" target="_blank" rel="noopener noreferrer">doi:10.5066/F7D21WSG</a>' });
     map.addControl(ctrl);
-    return () => { map.removeControl(ctrl); };
+    // On unmount the map teardown above runs first and nulls mapRef
+    return () => { if (mapRef.current) map.removeControl(ctrl); };
   }, [lang]);
 
   // Resize with the container (expand mode) and re-center in the space the sidebar leaves free
@@ -377,6 +382,8 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
     return () => { map.off('load', apply); };
   }, [slug]);
 
+  const { entry, presences } = useExpertRanges(mapRef, slug, showGap, showEbar);
+
   // The model's training records load only while the toggle is on
   useEffect(() => {
     const map = mapRef.current;
@@ -439,7 +446,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
   return (
     <div ref={(el) => { if (el && !open) setOpen({ layers: el.clientWidth >= 600 && el.clientHeight >= 520, legend: el.clientWidth >= 600 }); }} className="@container relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
       <div ref={containerRef} className="w-full h-full" />
-      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
+      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} extra={<ExpertToggles lang={lang} entry={entry} showGap={showGap} onToggleGap={() => setShowGap(!showGap)} showEbar={showEbar} onToggleEbar={() => setShowEbar(!showEbar)} />} />
       <div className="absolute top-3 right-3 @[600px]:right-[15.25rem] z-20 flex flex-col gap-2 items-center">
         <button type="button" onClick={onToggleExpand} aria-pressed={isExpanded}
           title={isExpanded ? (lang === 'EN' ? 'Exit expanded view (Esc)' : 'Quitter le mode plein écran (Échap)') : (lang === 'EN' ? 'Expand viewer' : 'Agrandir le visualiseur')}
@@ -501,6 +508,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
               <span className="inline-block w-3 border-t-2 border-dotted" style={{ borderColor: RANGE_LINE }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire UICN'}</span>
             </div>
+            <ExpertLegend lang={lang} entry={entry} showGap={showGap} showEbar={showEbar} presences={presences} />
             {!(zoneStats && inView) && <div className="mt-1 text-xs text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
             {zoneStats && inView && (() => {
               const en = lang === 'EN', name = (c: Category) => CAT_LABELS[c][en ? 0 : 1];
@@ -556,6 +564,7 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
               <span className="inline-block w-5 border-t-2 border-dotted" style={{ borderColor: RANGE_LINE }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
+            <ExpertLegend lang={lang} entry={entry} showGap={showGap} showEbar={showEbar} presences={presences} />
             {([
               ...(showObs ? [[OCC_IN, lang === 'EN' ? `GBIF records ${from}–${to}` : `Observations GBIF ${from}–${to}`], ['#fde68a', lang === 'EN' ? `GBIF records since ${to + 1}` : `Observations GBIF depuis ${to + 1}`]] : []),
               ...(showOcc ? [[OCC_IN, lang === 'EN' ? 'Records inside IUCN range' : "Observations dans l'aire UICN"], [OCC_OUT, lang === 'EN' ? 'Records outside IUCN range' : "Observations hors de l'aire UICN"]] : []),
