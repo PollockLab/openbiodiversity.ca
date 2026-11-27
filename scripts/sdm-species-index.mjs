@@ -40,6 +40,8 @@ const URL = 'https://object-arbutus.alliancecan.ca/swift/v1/4903c6264e0c4191a74a
 const OUT = new globalThis.URL('../public/sdm-species.json', import.meta.url);
 // Species with no GBIF record in Canada or the US (from find-non-ca-us-species.py) are not listed
 const NON_CA_US = new globalThis.URL('./non-ca-us-species.json', import.meta.url);
+// Hand-checked: marine species, and species whose range lies outside Canada and the US despite a few GBIF records there
+const OUT_OF_SCOPE = new globalThis.URL('./out-of-scope-species.json', import.meta.url);
 const first = (v) => (Array.isArray(v) ? v[0] : v);
 const clean = (v) => { const s = String(first(v) ?? '').trim(); return s === '' || s === 'NA' ? undefined : s; };
 
@@ -86,7 +88,8 @@ try {
   if (failed.size) console.error(`GBIF fetch failed for ${failed.size} keys (${failSpecies} species): ${[...new Set(failed.values())].join('; ')}`);
   if (failSpecies > rows.length * 0.05) throw new Error(`${failSpecies}/${rows.length} species failed GBIF fetch (>5%)`);
   const nonCaUs = new Set(JSON.parse(await readFile(NON_CA_US, 'utf8')));
-  const listed = rows.filter((r) => !nonCaUs.has(r.slug));
+  const outOfScope = JSON.parse(await readFile(OUT_OF_SCOPE, 'utf8'));
+  const listed = rows.filter((r) => !nonCaUs.has(r.slug) && !(r.slug in outOfScope));
   await writeFile(OUT, JSON.stringify(listed));
   console.log(`wrote ${listed.length} species to public/sdm-species.json (en ${rows.filter((r) => r.common).length}, fr ${rows.filter((r) => r.fr).length}, kept manifest name ${kept}, fetch failures ${failSpecies})`);
 } catch (err) {
