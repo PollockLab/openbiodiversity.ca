@@ -1,8 +1,10 @@
 """Write the viewer's index of expert range files: slug -> sources that have a built file, with the labels the legend needs.
-Usage: sdm-expert-index.py WORKDIR public/sdm-expert-ranges.json, with the outputs of sdm-expert-gap.py and sdm-expert-ebar.py in WORKDIR.
+Usage: sdm-expert-index.py WORKDIR public/sdm-expert-ranges.json [--agreement pairs.csv], with the outputs of sdm-expert-gap.py and sdm-expert-ebar.py in WORKDIR.
+--agreement adds gap.agree = [IUCN-GAP, model-IUCN] overlap in percent (1 - Jaccard distance, contiguous US, season-matched GAP). EBAR is left out: pairs.csv has no field for the share of the range in Canada.
 """
-import json, os, sys, collections
+import csv, json, os, sys, collections
 S, out = sys.argv[1], sys.argv[2]
+agree = sys.argv[sys.argv.index("--agreement") + 1] if "--agreement" in sys.argv else None
 RENAMES = {"charadrius-montanus", "passerculus-bairdii", "passerculus-henslowii"}
 idx = collections.defaultdict(dict)
 gap = collections.defaultdict(list)
@@ -31,7 +33,15 @@ for slug, rs in ebar.items():
     if r["ebar_name"] != r["sci"]:
         e["name"] = r["ebar_name"]
     idx[slug]["ebar"] = e
+if agree:
+    d = collections.defaultdict(dict)
+    for r in csv.DictReader(open(agree)):
+        if r["domain"] == "us" and r["skipped"] == "0" and (r["pair"], r["variant"]) in {("iucn_gap", "YS"), ("model_iucn", "")}:
+            d[r["slug"]][r["pair"]] = round(100 * (1 - float(r["jaccard_dist"])))
+    for slug, v in d.items():
+        if "gap" in idx.get(slug, {}) and len(v) == 2:
+            idx[slug]["gap"]["agree"] = [v["iucn_gap"], v["model_iucn"]]
 assert idx, "no range files found"
 json.dump(dict(sorted(idx.items())), open(out, "w"), separators=(",", ":"))
 n = lambda k: sum(k in v for v in idx.values())
-print("species", len(idx), "gap", n("gap"), "ebar", n("ebar"), "shared", sum(v.get("gap", {}).get("shared", False) for v in idx.values()))
+print("species", len(idx), "agree", sum("agree" in v.get("gap", {}) for v in idx.values()), "gap", n("gap"), "ebar", n("ebar"), "shared", sum(v.get("gap", {}).get("shared", False) for v in idx.values()))

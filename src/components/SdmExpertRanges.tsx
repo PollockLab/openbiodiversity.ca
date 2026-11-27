@@ -4,7 +4,7 @@ import { sdmGapUrl, sdmEbarUrl } from '../data/sdmSource';
 import { checkbox } from './SdmControls';
 
 // Display only: the zones and the records-inside-range test keep using the IUCN range
-type Entry = { gap?: { name?: string; shared?: true }; ebar?: { scope: 'N' | 'G'; name?: string } };
+type Entry = { gap?: { name?: string; shared?: true; agree?: [number, number] }; ebar?: { scope: 'N' | 'G'; name?: string } };
 const GAP = 'gap-range';
 const EBAR = 'ebar-range';
 export const GAP_LINE = '#a0703c';
@@ -78,6 +78,7 @@ export function ExpertLegend({ lang, entry, showGap, showEbar, presences }: Omit
   return (
     <div className="mt-1.5 pt-1 border-t border-gray-100 text-xs">
       <div className="text-gray-500 italic">{t('Expert range comparison, prototype', 'Comparaison des aires d\'experts, prototype')}</div>
+      {entry.gap?.agree && <div className="mt-1 text-gray-600" title={t('Share of the combined area that both maps cover (1 minus Jaccard distance), contiguous US, USGS GAP matched to the season', 'Part de la surface combinée couverte par les deux cartes (1 moins la distance de Jaccard), États-Unis contigus, USGS GAP selon la saison')}>{t(`Expert maps overlap: IUCN–GAP ${entry.gap.agree[0]}%, model–IUCN ${entry.gap.agree[1]}% (US)`, `Chevauchement des cartes d'experts : UICN–GAP ${entry.gap.agree[0]} %, modèle–UICN ${entry.gap.agree[1]} % (É.-U.)`)}</div>}
       {gap && <div className="flex items-start gap-2 mt-1" title={t('Outside the contiguous US this means not mapped, never absent', 'Hors des États-Unis contigus, cela veut dire non cartographié, jamais absent')}>
         <span className="mt-1.5">{swatch(GAP_LINE, 'dashed')}</span>
         <span>{t('USGS GAP range (2018), contiguous US only', 'Aire USGS GAP (2018), États-Unis contigus seulement')}
