@@ -1,10 +1,11 @@
 """Write the viewer's index of expert range files: slug -> sources that have a built file, with the labels the legend needs.
-Usage: sdm-expert-index.py WORKDIR public/sdm-expert-ranges.json [--agreement pairs.csv], with the outputs of sdm-expert-gap.py and sdm-expert-ebar.py in WORKDIR.
---agreement adds gap.agree = [IUCN-GAP, model-IUCN] overlap in percent (1 - Jaccard distance, contiguous US, season-matched GAP). EBAR is left out: pairs.csv has no field for the share of the range in Canada.
+Usage: sdm-expert-index.py WORKDIR public/sdm-expert-ranges.json [--agreement pairs.csv [--ca-species species.csv]], with the outputs of sdm-expert-gap.py and sdm-expert-ebar.py in WORKDIR.
+--agreement adds gap.agree = [IUCN-GAP, model-IUCN] overlap in percent (1 - Jaccard distance, contiguous US, season-matched GAP). --ca-species (slug column, the species with at least 10% of the IUCN range in Canada) adds ebar.agree = [IUCN-EBAR, model-IUCN] in Canada, EBAR presence variant P.
 """
 import csv, json, os, sys, collections
 S, out = sys.argv[1], sys.argv[2]
 agree = sys.argv[sys.argv.index("--agreement") + 1] if "--agreement" in sys.argv else None
+ca = {r["slug"] for r in csv.DictReader(open(sys.argv[sys.argv.index("--ca-species") + 1]))} if "--ca-species" in sys.argv else set()
 RENAMES = {"charadrius-montanus", "passerculus-bairdii", "passerculus-henslowii"}
 idx = collections.defaultdict(dict)
 gap = collections.defaultdict(list)
@@ -41,7 +42,14 @@ if agree:
     for slug, v in d.items():
         if "gap" in idx.get(slug, {}) and len(v) == 2:
             idx[slug]["gap"]["agree"] = [v["iucn_gap"], v["model_iucn"]]
+    c = collections.defaultdict(dict)
+    for r in csv.DictReader(open(agree)):
+        if r["domain"] == "ca" and r["skipped"] == "0" and r["slug"] in ca and (r["pair"], r["variant"]) in {("iucn_ebar", "P"), ("model_iucn", "")}:
+            c[r["slug"]][r["pair"]] = round(100 * (1 - float(r["jaccard_dist"])))
+    for slug, v in c.items():
+        if "ebar" in idx.get(slug, {}) and len(v) == 2:
+            idx[slug]["ebar"]["agree"] = [v["iucn_ebar"], v["model_iucn"]]
 assert idx, "no range files found"
 json.dump(dict(sorted(idx.items())), open(out, "w"), separators=(",", ":"))
 n = lambda k: sum(k in v for v in idx.values())
-print("species", len(idx), "agree", sum("agree" in v.get("gap", {}) for v in idx.values()), "gap", n("gap"), "ebar", n("ebar"), "shared", sum(v.get("gap", {}).get("shared", False) for v in idx.values()))
+print("species", len(idx), "agree", sum("agree" in v.get("gap", {}) for v in idx.values()), "ca-agree", sum("agree" in v.get("ebar", {}) for v in idx.values()), "gap", n("gap"), "ebar", n("ebar"), "shared", sum(v.get("gap", {}).get("shared", False) for v in idx.values()))
