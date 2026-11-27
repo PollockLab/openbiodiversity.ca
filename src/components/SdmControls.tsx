@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Category } from '../data/sdmCategories';
-import { SdmPeriod } from '../data/sdmSource';
 import { Span } from '../data/sdmTemporal';
 import Timeline from './SdmTimeline';
 import type { View } from './SdmMap';
@@ -15,16 +14,18 @@ export const CAT_TIPS: Record<Category, L> = {
   'range-gap': ['Horizon with records: suitable and observed outside the known range. The range map may need redrawing. Recorded outside range.', "Horizon avec mentions : favorable et observé hors de l'aire connue. La carte de l'aire est peut-être à revoir. Observé hors de l'aire."],
   frontier: ['Suitable now and in 2100, outside the known range, no observation within 40 km. Survey here. Suitable outside range.', "Favorable aujourd'hui et en 2100, hors de l'aire connue, sans observation à moins de 40 km. À inventorier. Favorable hors de l'aire."],
   'climate-risk': ['Suitable now, not in 2100. Watch. Projected loss of suitable climate.', "Favorable aujourd'hui, pas en 2100. À surveiller. Perte projetée de climat favorable."],
+  'climate-risk-recorded': ['Losing ground with records: suitable now, not in 2100, observed within 40 km. Act first. Documented populations at risk.', "En recul avec mentions : favorable aujourd'hui, pas en 2100, observé à moins de 40 km. Agir d'abord. Populations documentées à risque."],
   'newly-suitable': ['Not suitable now, suitable in 2100. Prepare. Projected gain of suitable climate.', "Non favorable aujourd'hui, favorable en 2100. À préparer. Gain projeté de climat favorable."],
+  'newly-suitable-recorded': ['Arrival zone with records: not suitable now, suitable in 2100, observed within 40 km. Likely first arrivals. Track here.', "Terre d'accueil avec mentions : non favorable aujourd'hui, favorable en 2100, observé à moins de 40 km. Arrivées probables. À suivre."],
 };
 
 interface Props {
-  lang: string; left: string; slot: HTMLElement | null; view: View; onViewChange: (v: View) => void; period: SdmPeriod; onPeriodChange: (p: SdmPeriod) => void;
+  lang: string; left: string; slot: HTMLElement | null; view: View; onViewChange: (v: View) => void;
   showOcc: boolean; onToggleOcc: () => void; occBusy: boolean;
   showObs: boolean; onToggleObs: () => void; span: Span; onSpanChange: (s: Span) => void;
 }
 
-export default function SdmControls({ lang, left, slot, view, onViewChange, period, onPeriodChange, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange }: Props) {
+export default function SdmControls({ lang, left, slot, view, onViewChange, showOcc, onToggleOcc, occBusy, showObs, onToggleObs, span, onSpanChange }: Props) {
   // Read once per mount: the explorer remounts when a new link is opened, and switching views must not hide the button
   const [PROTO] = useState(() => window.location.hash.includes('view=categories'));
   const i = lang === 'EN' ? 0 : 1, t = (a: string, b: string) => (i ? b : a);
@@ -34,8 +35,7 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, peri
   const seg = (on: boolean) => `px-3 py-1.5 cursor-pointer ${on ? 'bg-sage-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`;
   const cats = view === 'categories';
   const views = [
-    { k: 'current', on: view === 'suitability' && period !== '2100', label: t('Current (1980-2010)', 'Actuel (1980-2010)'), tip: t('Where conditions are suitable today, from 1980-2010 climate', "Où les conditions sont favorables aujourd'hui, selon le climat 1980-2010"), go: () => { onViewChange('suitability'); if (period === '2100') onPeriodChange('current-model'); } },
-    { k: '2100', on: view === 'suitability' && period === '2100', label: t('Future (2071-2100)', 'Futur (2071-2100)'), tip: t('Where conditions are predicted to be suitable at the end of the century', 'Où les conditions devraient être favorables à la fin du siècle'), go: () => { onViewChange('suitability'); onPeriodChange('2100'); } },
+    { k: 'current', on: view === 'suitability', label: t('Current (1980-2010)', 'Actuel (1980-2010)'), tip: t('Where conditions are suitable today, from 1980-2010 climate', "Où les conditions sont favorables aujourd'hui, selon le climat 1980-2010"), go: () => onViewChange('suitability') },
   ];
   return (
     <div className={`absolute top-3 ${left} right-16 @[600px]:right-[18.5rem] flex flex-wrap items-start gap-2 text-xs font-sans z-10 transition-all duration-300 pointer-events-none [&>*]:pointer-events-auto`}>
@@ -45,14 +45,6 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, peri
           {t('Zones, current to future', 'Zones, actuel à futur')} <span className="ml-1 text-xs uppercase opacity-70">{t('prototype', 'prototype')}</span>
         </button>}
       </div>
-      {view === 'suitability' && (
-        <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 bg-white ${period === '2100' ? 'text-gray-400' : 'text-gray-600 cursor-pointer'}`}>
-          <input type="checkbox" className="accent-sage-500" checked={period === 'current'} disabled={period === '2100'}
-            onChange={e => onPeriodChange(e.target.checked ? 'current' : 'current-model')} />
-          {t('Clip to known range', "Découper selon l'aire connue")}
-          {period === '2100' && t(' (no clipped version for 2100)', ' (pas de version découpée pour 2100)')}
-        </label>
-      )}
       {/* The layers live in the right-hand column that SdmMap owns */}
       {slot && createPortal(<fieldset className="min-w-0 text-gray-700 flex flex-col gap-1.5">
         <legend className="sr-only">{t('Dots on the map', 'Points sur la carte')}</legend>

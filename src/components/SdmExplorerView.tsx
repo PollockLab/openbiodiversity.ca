@@ -4,12 +4,11 @@ import { loadSdmSpecies } from '../data/sdmModels';
 import { SDMModel } from '../types';
 import SdmMap, { parseAt, View } from './SdmMap';
 import SdmSidebar from './SdmSidebar';
-import { SdmPeriod } from '../data/sdmSource';
 import { Span, DEFAULT_SPAN, LAST_YEAR, TIMELINE_START } from '../data/sdmTemporal';
 import { useLanguage } from '../lib/LanguageContext';
 
 const DEFAULT_SPECIES = 'rangifer-tarandus';
-// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=<2100|model|categories>&ev=<none|high>&span=<2016-2020>&train=1&obs=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
+// Species, view, GBIF records, map position and language live in the hash as #sdm-explorer?sp=<id>&view=categories&ev=<none|high>&span=<2016-2020>&train=1&obs=1&at=<zoom/lat/lng>&lang=fr; App.tsx routes on the part before "?"
 const hashParam = (key: string) => new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(key);
 const speciesFromHash = () => hashParam('sp') || DEFAULT_SPECIES;
 // No view, or an unknown one, is the default clipped current map, so links from before the view existed still work
@@ -21,10 +20,6 @@ const spanFromHash = (): Span => {
   if (!m || +m[1] > +m[2]) return DEFAULT_SPAN;
   const clamp = (y: number) => Math.min(Math.max(y, TIMELINE_START), LAST_YEAR - 1);
   return [clamp(+m[1]), clamp(+m[2])];
-};
-const periodFromHash = (): SdmPeriod => {
-  const view = hashParam('view');
-  return view === '2100' ? '2100' : view === 'model' ? 'current-model' : 'current';
 };
 
 const IUCN_LABELS: Record<string, [string, string]> = {
@@ -42,7 +37,6 @@ export default function SdmExplorerView() {
   const [species, setSpecies] = useState<SDMModel[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<SdmPeriod>(periodFromHash);
   const [view, setView] = useState<View>(viewFromHash);
   const [span, setSpan] = useState<Span>(spanFromHash);
   const [showOcc, setShowOcc] = useState(() => hashParam('train') === '1');
@@ -67,10 +61,10 @@ export default function SdmExplorerView() {
 
   useEffect(() => {
     const cats = view === 'categories';
-    const v = cats ? '&view=categories' : period === '2100' ? '&view=2100' : period === 'current-model' ? '&view=model' : '';
+    const v = cats ? '&view=categories' : '';
     const sp = (cats || showObs) && span.join() !== DEFAULT_SPAN.join() ? `&span=${span.join('-')}` : '';
     window.history.replaceState(null, '', `#sdm-explorer?sp=${encodeURIComponent(selectedSdmId)}${v}${sp}${showOcc ? '&train=1' : ''}${showObs === (view === 'categories') ? '' : `&obs=${+showObs}`}${at ? `&at=${at}` : ''}${lang === 'FR' ? '&lang=fr' : ''}`);
-  }, [selectedSdmId, period, view, span, showOcc, showObs, at, lang]);
+  }, [selectedSdmId, view, span, showOcc, showObs, at, lang]);
 
   // Esc leaves expanded mode (the sidebar search consumes Esc while its list is open)
   useEffect(() => {
@@ -92,8 +86,8 @@ export default function SdmExplorerView() {
   const intro = (
     <p className="text-sm text-gray-500 mt-1 leading-relaxed font-sans">
             {lang === 'EN' 
-              ? "Explore species distribution models at 1 km resolution across Canada and the United States. Each map is the mean of three models (boosted regression trees, MaxEnt and random forest). Current maps (1980-2010) are clipped to each species' known range; 2100 projections are not (see Methodology)."
-              : "Explorez des modèles de distribution d'espèces à une résolution de 1 km pour le Canada et les États-Unis. Chaque carte est la moyenne de trois modèles (arbres de régression boostés, MaxEnt et forêt aléatoire). Les cartes actuelles (1980-2010) sont découpées selon l'aire connue de chaque espèce; les projections pour 2100 ne le sont pas (voir Méthodologie)."}
+              ? "Explore species distribution models at 1 km resolution across Canada and the United States. Each map is the mean of three models (boosted regression trees, MaxEnt and random forest). Maps (1980-2010) are clipped to each species' known range (see Methodology)."
+              : "Explorez des modèles de distribution d'espèces à une résolution de 1 km pour le Canada et les États-Unis. Chaque carte est la moyenne de trois modèles (arbres de régression boostés, MaxEnt et forêt aléatoire). Les cartes (1980-2010) sont découpées selon l'aire connue de chaque espèce (voir Méthodologie)."}
           </p>
   );
 
@@ -137,8 +131,6 @@ export default function SdmExplorerView() {
         </div>
         <SdmMap
           slug={selectedSpecies?.ecccSlug ?? selectedSdmId}
-          period={period}
-          onPeriodChange={setPeriod}
           showOcc={showOcc}
           onToggleOcc={() => setShowOcc(v => !v)}
           showObs={showObs}
@@ -212,7 +204,7 @@ export default function SdmExplorerView() {
 
         {isMethodologyOpen && (
           <div className="p-6 border-t border-gray-100 bg-white space-y-5 animate-fadeIn font-sans text-xs">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-gray-500 leading-relaxed font-sans">
+            <div className="grid grid-cols-1 gap-6 text-xs text-gray-500 leading-relaxed font-sans">
               <div className="space-y-2">
                 <h5 className="font-semibold text-wood-900 flex items-center gap-1.5 font-display text-xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-sage-500" /> {lang === 'EN' ? "Clipping to the known range" : "Découpage selon l'aire connue"}
@@ -221,17 +213,6 @@ export default function SdmExplorerView() {
                   {lang === 'EN' 
                     ? "Models predict suitable habitat wherever the climate and landscape fit, including places the species has never been recorded. For the current period, predictions are turned down with distance from the species' known range, built from expert range maps (IUCN) and occurrence records. How fast predictions fade is fitted for each species from how far its records fall outside the expert range, and predictions far beyond that are set to zero."
                     : "Les modèles prédisent un habitat favorable partout où le climat et le paysage conviennent, y compris là où l'espèce n'a jamais été observée. Pour la période actuelle, les prédictions sont atténuées en fonction de la distance à l'aire connue de l'espèce, établie à partir des cartes d'aires d'experts (UICN) et des mentions d'occurrence. La vitesse de cette atténuation est ajustée pour chaque espèce selon la distance de ses mentions à l'aire d'experts, et les prédictions bien au-delà sont mises à zéro."}
-                </p>
-              </div>
-              
-              <div className="space-y-2 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                <h5 className="font-semibold text-wood-900 flex items-center gap-1.5 font-display text-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sage-500" /> {lang === 'EN' ? "2100 projections are not clipped" : "Les projections pour 2100 ne sont pas découpées"}
-                </h5>
-                <p>
-                  {lang === 'EN'
-                    ? "Expert ranges and observations describe where a species lives today, so they cannot be projected into the future. The 2071-2100 maps therefore show unclipped model output. When comparing them with the clipped current maps, suitability outside today's range in 2100 can come from the missing clip rather than a predicted range expansion. Turn off \"Clip to known range\" to see the unclipped current map for a like-for-like comparison."
-                    : "Les aires d'experts et les observations décrivent où vit une espèce aujourd'hui; elles ne peuvent donc pas être projetées dans le futur. Les cartes 2071-2100 montrent ainsi les sorties brutes des modèles, sans découpage. Lorsqu'on les compare aux cartes actuelles découpées, la convenance hors de l'aire actuelle en 2100 peut venir de l'absence de découpage plutôt que d'une expansion prévue de l'aire. Désactivez « Découper selon l'aire connue » pour voir la carte actuelle non découpée et comparer à périmètre égal."}
                 </p>
               </div>
             </div>

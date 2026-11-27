@@ -105,7 +105,7 @@ export async function zoneShares(slug: string, cells: Cell[], span: Span, box?: 
   const px = (40075.017 / (T * 2 ** Z)) ** 2;
   const km2 = (v: number[]) => v.map((a) => a * px);
   const sum = (v: number[]) => v.reduce((a, b) => a + b, 0), all = sum(pre ? pre.km2 : km2(whole));
-  return { area: km2(area), whole: pre ? pre.km2 : km2(whole), share: all ? Math.min(1, sum(km2(area)) / all) : 0 };
+  return { area: km2(area), whole: pre ? CATEGORIES.map((_, i) => pre.km2[i] ?? 0) : km2(whole), share: all ? Math.min(1, sum(km2(area)) / all) : 0 };
 }
 
 export type NewStats = { total: number; discovery: number; byCat: Record<string, [number, number]> };

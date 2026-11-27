@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl';
 import { Maximize2, Minimize2, Plus, Minus, House, Mountain } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getGreyStyle } from './BaseMap';
-import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl, SdmPeriod } from '../data/sdmSource';
+import { SUIT_RAMP, sdmCogUrl, sdmTileUrl, sdmPointUrl, sdmRangeUrl, sdmOccurrenceUrl } from '../data/sdmSource';
 import { useLanguage } from '../lib/LanguageContext';
 import { CATEGORIES, Category, categoryAt, hex, registerCategoryProtocol, thresholdOf, USES, shownKey, zonesOf, zonesTileUrl } from '../data/sdmCategories';
 import SdmControls, { CAT_TIPS } from './SdmControls';
@@ -21,7 +21,7 @@ const NEW = 'new-records';
 const OCC_IN = '#ffffff';
 const OCC_OUT = '#991b1b';
 const CAT_LABELS: Record<Category, [string, string]> = {
-  confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, avec mentions'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"],
+  confirmed: ['Stronghold', 'Bastion'], 'in-range': ['Blind spot', 'Angle mort'], 'range-gap': ['Horizon, recorded', 'Horizon, avec mentions'], frontier: ['Horizon', 'Horizon'], 'climate-risk': ['Losing ground', 'En recul'], 'newly-suitable': ['Arrival zone', "Terre d'accueil"], 'climate-risk-recorded': ['Losing ground, recorded', 'En recul, avec mentions'], 'newly-suitable-recorded': ['Arrival zone, recorded', "Terre d'accueil, avec mentions"],
 };
 const UNSUITABLE = '#b9b0a0';
 // Soft hillshade from AWS Terrain Tiles (Terrarium encoding) between the plain basemap and the model, so ranges read against real mountains and valleys
@@ -56,7 +56,9 @@ const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpe
   layers: [...style.layers.map((l) => ({ ...l, paint: { 'raster-brightness-min': 0.15 } })), { id: 'relief', type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.45, 'hillshade-shadow-color': '#5b5348', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#7d7468', 'hillshade-illumination-direction': 315 } }],
 });
 // Records outside the range are a branch of Frontier (Horizon), so it is listed under it, indented
-const LEGEND_ORDER: Category[] = ['confirmed', 'in-range', 'frontier', 'range-gap', 'climate-risk', 'newly-suitable'];
+// Grouped by family, the shade without records nearby first
+const LEGEND_ROWS: Category[][] = [['in-range', 'confirmed'], ['frontier', 'range-gap'], ['climate-risk', 'climate-risk-recorded'], ['newly-suitable', 'newly-suitable-recorded']];
+const RANGE_LINE = '#747c7b';
 // Dots take the colour of the zone they fall in
 const ZONE_COLOR = ['match', ['get', 'category'], ...CATEGORIES.flatMap((c) => [c, hex(c)]), UNSUITABLE] as unknown as maplibregl.ExpressionSpecification;
 // One thin stacked bar: how something (area, new cells) splits across the zones
@@ -115,8 +117,6 @@ const LEFT_CLOSED = 'left-13 sm:left-14';
 
 interface SdmMapProps {
   slug?: string;
-  period: SdmPeriod;
-  onPeriodChange: (p: SdmPeriod) => void;
   showOcc: boolean;
   onToggleOcc: () => void;
   // GBIF records by year: the dated GBIF cells in the timeline's span (and, in categories, the new records)
@@ -135,13 +135,13 @@ interface SdmMapProps {
   isSidebarOpen: boolean;
 }
 
-export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
+export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleObs, view, onViewChange, span, onSpanChange, at, onMoved, isExpanded, onToggleExpand, isSidebarOpen }: SdmMapProps) {
   const { lang } = useLanguage();
   const [from, to] = span;
   const spanKey = spanSet(span);
   // A popup describes the species, view, years and language it was opened in: close it when any of them changes
   const closePopups = useRef(() => {});
-  useEffect(() => closePopups.current(), [slug, view, period, spanKey, lang]);
+  useEffect(() => closePopups.current(), [slug, view, spanKey, lang]);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [occBusy, setOccBusy] = useState(false);
@@ -158,10 +158,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   const shown = shownKey(use.zones);
   const [inView, setInView] = useState<{ area: number[]; whole: number[]; share: number } | null>(null);
   const slugRef = useRef(slug);
-  const periodRef = useRef(period);
   const langRef = useRef(lang);
   slugRef.current = slug;
-  periodRef.current = period;
   const zoneRef = useRef<Span | null>(null);
   zoneRef.current = view === 'categories' ? span : null;
   langRef.current = lang;
@@ -204,7 +202,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       map.on('zoomend', syncTerrain);
       syncTerrain();
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
-      map.addLayer({ id: RANGE, type: 'line', source: RANGE, paint: { 'line-color': '#431407', 'line-width': 1.5, 'line-opacity': 0.9 } });
+      map.addLayer({ id: RANGE, type: 'line', source: RANGE, layout: { 'line-cap': 'round' }, paint: { 'line-color': RANGE_LINE, 'line-width': 1.5, 'line-dasharray': [0, 2.5] } });
       // Mask over the range outline so it stops at the border like the raster; records sit on top and are filtered instead, since the mask would cut circles in half
       map.addSource(MASK, { type: 'geojson', data: `${import.meta.env.BASE_URL}outside-ca-us.geojson` });
       map.addLayer({ id: MASK, type: 'fill', source: MASK, paint: { 'fill-color': ['match', ['get', 'id'], 'sea', '#d2d7d9', '#fbfaf8'] } });
@@ -219,7 +217,8 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         'circle-stroke-color': ['case', ['==', ['get', 'category'], 'unsuitable'], '#6b7280', ['get', 'discovery'], '#111827', '#ffffff'],
         'circle-stroke-width': ['case', ['==', ['get', 'category'], 'unsuitable'], 1, ['get', 'discovery'], 1.5, 0.8] } });
       map.addLayer({ id: OCC, type: 'circle', source: OCC, paint: { 'circle-radius': ['case', ['has', 'evidence'], 2, 2.5], 'circle-color': ['case', ['==', ['get', 'inside'], false], OCC_OUT, OCC_IN], 'circle-stroke-color': '#374151', 'circle-stroke-width': 0.5, 'circle-stroke-opacity': ['case', ['has', 'evidence'], 0.35, 1] } });
-      map.addLayer({ id: OBS, type: 'circle', source: OBS, paint: { 'circle-radius': 2.5, 'circle-color': ['case', ['has', 'test'], '#fde68a', ['has', 'category'], ZONE_COLOR, OCC_IN], 'circle-stroke-color': ['case', ['has', 'category'], '#ffffff', '#374151'], 'circle-stroke-width': ['case', ['has', 'category'], 0.8, 0.5] } });
+      // Baseline records shrink at country scale so the zones under them stay readable
+      map.addLayer({ id: OBS, type: 'circle', source: OBS, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 1.2, 7, 2.5], 'circle-color': ['case', ['has', 'test'], '#fde68a', ['has', 'category'], ZONE_COLOR, OCC_IN], 'circle-stroke-color': ['case', ['has', 'category'], '#ffffff', '#374151'], 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 3, 0.3, 7, ['case', ['has', 'category'], 0.8, 0.5]] } });
       map.moveLayer(OBS, NEW); // dated records under the new ones
     });
 
@@ -254,7 +253,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
         text = c ? CAT_LABELS[c][fr ? 1 : 0] : c === undefined ? (fr ? 'Aucune prédiction ici' : 'No prediction here') : fr ? "Hors d'atteinte : non favorable aux deux périodes" : 'Out of reach: unsuitable in both periods';
         if (c) { tip = CAT_TIPS[c][fr ? 1 : 0]; colour = hex(c); }
       } else if (!map.queryRenderedFeatures(e.point, { layers: [MASK] }).length) try {
-        const res = await fetch(sdmPointUrl(sdmCogUrl(s, periodRef.current), e.lngLat.lng, e.lngLat.lat));
+        const res = await fetch(sdmPointUrl(sdmCogUrl(s), e.lngLat.lng, e.lngLat.lat));
         if (res.ok) {
           const v = (await res.json()).values?.[0];
           if (typeof v === 'number' && v >= 0 && v <= 99) text = `${fr ? 'Convenance' : 'Suitability'}: ${v}%`;
@@ -317,13 +316,13 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
       if (cats && !pre) evidenceKey(slug, await fetchCells(sciName(slug)).catch(() => []), span);
       if (!live || map.getSource(SRC)) return;
       // Category tiles are composed client-side from two COGs, so cap their zoom (512 px z7 ≈ 600 m pixels at 45°N) and let MapLibre overzoom
-      map.addSource(SRC, { type: 'raster', tiles: [pre ? zonesTileUrl(slug, spanKey, shown) : cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug, period), CLASSIC)], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
+      map.addSource(SRC, { type: 'raster', tiles: [pre ? zonesTileUrl(slug, spanKey, shown) : cats ? `sdmcat://${slug}/${spanKey}/${shown}/{z}/{x}/{y}` : sdmTileUrl(sdmCogUrl(slug), CLASSIC)], tileSize: cats ? 512 : 256, bounds: DATA_BOUNDS, ...(cats ? { maxzoom: 7 } : {}) });
       // The suitability ramp carries its own alpha; past its 1 km cells it also fades so the basemap shows when zoomed in
-      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': CLASSIC ? (cats ? 0.75 : 0.85) : cats ? 0.7 : ['interpolate', ['linear'], ['zoom'], 6, 1, 9, 0.55], 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RELIEF_OVER) ? RELIEF_OVER : map.getLayer(RANGE) ? RANGE : undefined);
+      map.addLayer({ id: LAYER, type: 'raster', source: SRC, paint: { 'raster-opacity': CLASSIC ? (cats ? 0.75 : 0.85) : cats ? 0.85 : ['interpolate', ['linear'], ['zoom'], 6, 1, 9, 0.55], 'raster-resampling': cats ? 'nearest' : 'linear' } }, map.getLayer(RELIEF_OVER) ? RELIEF_OVER : map.getLayer(RANGE) ? RANGE : undefined);
     };
     if (map.getSource(RANGE)) apply(); else map.once('load', apply); // not isStyleLoaded(): it is false while any tile loads, and 'load' fires once
     return () => { live = false; map.off('load', apply); };
-  }, [slug, period, view, spanKey, shown]);
+  }, [slug, view, spanKey, shown]);
 
   // Records added after the evidence period, coloured by the zone they land in, and the zone shares for the legend bars
   useEffect(() => {
@@ -440,7 +439,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
   return (
     <div ref={(el) => { if (el && !open) setOpen({ layers: el.clientWidth >= 600 && el.clientHeight >= 520, legend: el.clientWidth >= 600 }); }} className="@container relative w-full h-full min-h-[480px] overflow-hidden bg-[#e8eae8]">
       <div ref={containerRef} className="w-full h-full" />
-      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} period={period} onPeriodChange={onPeriodChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
+      <SdmControls slot={slot} lang={lang} left={isSidebarOpen ? LEFT_OPEN : LEFT_CLOSED} view={view} onViewChange={onViewChange} showOcc={showOcc} onToggleOcc={onToggleOcc} occBusy={occBusy} showObs={showObs} onToggleObs={onToggleObs} span={span} onSpanChange={onSpanChange} />
       <div className="absolute top-3 right-3 @[600px]:right-[15.25rem] z-20 flex flex-col gap-2 items-center">
         <button type="button" onClick={onToggleExpand} aria-pressed={isExpanded}
           title={isExpanded ? (lang === 'EN' ? 'Exit expanded view (Esc)' : 'Quitter le mode plein écran (Échap)') : (lang === 'EN' ? 'Expand viewer' : 'Agrandir le visualiseur')}
@@ -477,25 +476,29 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               </select>
             </label>
             {/* A row is a button so touch and keyboard users can read the definition that hover gives on desktop; the number is the zone's share of suitable area in view */}
-            {LEGEND_ORDER.map((c) => {
-              const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
-              return (
-                <div key={c}>
-                  <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full min-h-6 items-center gap-2 text-xs text-left pointer-events-auto cursor-help ${c === 'range-gap' ? 'pl-3' : ''} ${use.zones.includes(c) ? '' : 'opacity-40'}`}>
-                    <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
-                    <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
-                    {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}
-                  </button>
-                  {tipOf === c && <div className="ml-5 text-xs text-gray-600">{CAT_TIPS[c][lang === 'EN' ? 0 : 1]}</div>}
-                </div>
-              );
-            })}
+            {LEGEND_ROWS.map((row) => (
+              <div key={row[0]} className="mb-1">
+                {row.map((c) => {
+                  const i = CATEGORIES.indexOf(c), sum = inView ? inView.area.reduce((a, b) => a + b, 0) : 0, share = sum ? inView!.area[i] / sum : null;
+                  return (
+                    <div key={c}>
+                      <button type="button" onClick={() => setTipOf(tipOf === c ? null : c)} aria-expanded={tipOf === c} title={CAT_TIPS[c][lang === 'EN' ? 0 : 1]} className={`flex w-full min-h-6 items-center gap-2 text-xs text-left pointer-events-auto cursor-help ${use.zones.includes(c) ? '' : 'opacity-40'}`}>
+                        <span className="inline-block w-3 h-3 rounded-sm" style={{ background: hex(c) }} />
+                        <span className="flex-1">{CAT_LABELS[c][lang === 'EN' ? 0 : 1]}</span>
+                        {share !== null && <span className="tabular-nums text-gray-600">{share > 0 && share < 0.01 ? '<1' : Math.round(100 * share)}%</span>}
+                      </button>
+                      {tipOf === c && <div className="ml-5 text-xs text-gray-600">{CAT_TIPS[c][lang === 'EN' ? 0 : 1]}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
             <div className="flex items-center gap-2 mt-0.5 text-xs" title={lang === 'EN' ? 'Unsuitable now and in 2100' : "Non favorable aujourd'hui et en 2100"}>
               <span className="inline-block w-3 h-3 rounded-sm border border-gray-400" />
               <span>{lang === 'EN' ? 'Out of reach (no colour)' : "Hors d'atteinte (sans couleur)"}</span>
             </div>
             <div className="flex items-center gap-2 mt-0.5 text-xs">
-              <span className="inline-block w-3 border-t-2" style={{ borderColor: '#431407' }} />
+              <span className="inline-block w-3 border-t-2 border-dotted" style={{ borderColor: RANGE_LINE }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire UICN'}</span>
             </div>
             {!(zoneStats && inView) && <div className="mt-1 text-xs text-gray-600" role="status">{lang === 'EN' ? 'Loading zones…' : 'Chargement des zones…'}</div>}
@@ -540,9 +543,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
             </div>
           </div>
         ) : (<>
-        <div className="mb-1 text-gray-600 font-semibold">{period === 'current'
-          ? (lang === 'EN' ? 'Ensemble, 1980-2010, 1 km, clipped to the IUCN range plus areas with records' : 'Ensemble, 1980-2010, 1 km, découpé selon l\'aire UICN et les zones avec observations')
-          : (lang === 'EN' ? `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (model only, not clipped)` : `Ensemble, ${period === '2100' ? '2071-2100' : '1980-2010'}, 1 km (modèle seul, non découpé)`)}</div>
+        <div className="mb-1 text-gray-600 font-semibold">{lang === 'EN' ? 'Ensemble, 1980-2010, 1 km, clipped to the IUCN range plus areas with records' : 'Ensemble, 1980-2010, 1 km, découpé selon l\'aire UICN et les zones avec observations'}</div>
         {slug && (
           <>
             <div className="h-2 w-40 rounded-sm" style={{ background: CLASSIC ? 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' : `linear-gradient(to right, transparent 10%, ${SUIT_RAMP.map(([lo, r, g, b, a]) => `rgba(${r},${g},${b},${a / 255}) ${lo + 5}%`).join(', ')})` }} />
@@ -552,7 +553,7 @@ export default function SdmMap({ slug, period, onPeriodChange, showOcc, onToggle
               <span>100</span>
             </div>
             <div className="flex items-center gap-2 mt-1.5 pt-1 border-t border-gray-100 text-xs">
-              <span className="inline-block w-5 border-t-2" style={{ borderColor: '#431407' }} />
+              <span className="inline-block w-5 border-t-2 border-dotted" style={{ borderColor: RANGE_LINE }} />
               <span>{lang === 'EN' ? 'IUCN range' : 'Aire de répartition UICN'}</span>
             </div>
             {([

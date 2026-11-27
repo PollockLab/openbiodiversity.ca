@@ -15,7 +15,7 @@ suitable = suitability >= the species threshold (public/sdm-thresholds.json, els
 (no range file: everywhere); near = cell centre within 40 km of a GBIF density cell (z3 map tiles, same filters as sdmTemporal.ts)
 with a record in the span.
 
-Codes (uint8): 0 unsuitable in both periods, 1 confirmed, 2 in-range, 3 range-gap, 4 frontier, 5 climate-risk, 6 newly-suitable
+Codes (uint8): 0 unsuitable in both periods, 1 confirmed, 2 in-range, 3 range-gap, 4 frontier, 5 climate-risk, 6 newly-suitable, 7 climate-risk-recorded, 8 newly-suitable-recorded (5 to 8: suitable in one period, 7 and 8 with a record near)
 (index into CATEGORIES + 1), 255 no prediction (nodata in either period).
 """
 import argparse, datetime, email.utils, json, sys
@@ -33,10 +33,10 @@ from scipy.spatial import cKDTree
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = "https://object-arbutus.alliancecan.ca/swift/v1/4903c6264e0c4191a74a54c93b6fe1d9/def-pollock-eckert/vertebrates_NA/ECCC_2026"
-CATEGORIES = ["confirmed", "in-range", "range-gap", "frontier", "climate-risk", "newly-suitable"]
+CATEGORIES = ["confirmed", "in-range", "range-gap", "frontier", "climate-risk", "newly-suitable", "climate-risk-recorded", "newly-suitable-recorded"]
 SUITABLE, NEAR_KM, NODATA, R = 50, 40, 255, 6371.0088
 BASIS = ["HUMAN_OBSERVATION", "MACHINE_OBSERVATION", "OBSERVATION", "OCCURRENCE", "PRESERVED_SPECIMEN", "MATERIAL_SAMPLE"]
-VERSION = 1  # bump when the zone rules change, so --stale regenerates every species
+VERSION = 2  # bump when the zone rules change, so --stale regenerates every species
 Z, EXTENT, TILES = 3, 512, [(x, y) for x in range(3) for y in range(4)]  # z3 tiles covering Canada and the US
 
 
@@ -49,15 +49,15 @@ def categorize(u, f, thr, in_range, near):
     out[both & in_range & ~near] = 2
     out[both & ~in_range & near] = 3
     out[both & ~in_range & ~near] = 4
-    out[now & ~later] = 5
-    out[~now & later] = 6
+    out[now & ~later] = np.where(near, 7, 5)[now & ~later]
+    out[~now & later] = np.where(near, 8, 6)[~now & later]
     out[(u == NODATA) | (f == NODATA)] = NODATA
     return out
 
 
 _t = lambda *a: categorize(*(np.array([v]) for v in a))[0]
 assert [_t(70, 70, 60, r, n) for r in (True, False) for n in (True, False)] == [1, 2, 3, 4]
-assert _t(70, 10, 60, True, True) == 5 and _t(10, 70, 60, False, False) == 6 and _t(10, 10, 60, True, True) == 0 and _t(60, 59, 60, True, True) == 5
+assert _t(70, 10, 60, True, False) == 5 and _t(70, 10, 60, True, True) == 7 and _t(10, 70, 60, False, False) == 6 and _t(10, 70, 60, False, True) == 8 and _t(10, 10, 60, True, True) == 0 and _t(60, 59, 60, True, False) == 5
 assert _t(255, 70, 60, True, True) == NODATA
 
 
@@ -122,7 +122,7 @@ def run(slug, sci, thr, span, out):
         in_range = np.ones(u.shape, bool)
     pts = records(sci, span)
     near = np.zeros(u.shape, bool)
-    stable = (u >= thr) & (f >= thr) & (u != NODATA) & (f != NODATA)  # range and records only matter here
+    stable = ((u >= thr) | (f >= thr)) & (u != NODATA) & (f != NODATA)  # records matter wherever either period is suitable
     if len(pts) and stable.any():
         rows, cols = np.nonzero(stable)
         xs, ys = rasterio.transform.xy(transform, rows, cols)
