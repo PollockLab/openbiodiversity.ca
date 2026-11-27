@@ -34,11 +34,69 @@ const RELIEF_OVER = 'relief-over';
 const TERRAIN = { source: 'terrain', exaggeration: 1.6 };
 // Steeper tilt only once zoomed in, so a continental view keeps its land in frame
 // MapLibre renders worse when hillshade and terrain share one source, so each gets its own copy.
-// The 3D mesh stops at z9 (the hillshade keeps full detail): fewer tiles to fetch, so the walls drawn while finer tiles load clear sooner
+// The 3D mesh stops at z7 (the hillshade keeps full detail): few, large tiles load fast and stay cached as fallbacks, so no wall stands while a neighbour loads
 const DEM: maplibregl.RasterDEMSourceSpecification = { type: 'raster-dem', tiles: ['land://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: 'Terrain: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">AWS Terrain Tiles</a>' };
+// Warms the terrain tiles under and around the camera's footprint, half a screen beyond each edge, at every zoom the tilted mesh draws (z5 fallback up to the near z7 detail).
+// Sampled from screen points, not getBounds: a tilted view's bounds reach the horizon and would ask for hundreds of tiles, which queue behind S3's 6 connections and delay the ones on screen
+const prefetchTerrain = (map: maplibregl.Map) => {
+  const { clientWidth: w, clientHeight: h } = map.getContainer();
+  const top = Math.min(7, Math.floor(map.getZoom()) - 1);
+  const urls = new Set<string>();
+  for (const fy of [-0.5, 0, 0.5, 1, 1.5]) for (const fx of [-0.5, 0, 0.5, 1, 1.5]) {
+    const { lng, lat } = map.unproject([fx * w, fy * h]);
+    if (!Number.isFinite(lat) || Math.abs(lat) > 85) continue;
+    for (let z = Math.min(5, top); z <= top; z++) {
+      const n = 2 ** z, x = Math.floor((lng + 180) / 360 * n), y = Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * n);
+      if (y >= 0 && y < n) urls.add(`land://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${(x % n + n) % n}/${y}.png`);
+    }
+  }
+  for (const url of urls) landTile(url).catch(() => {});
+};
+// Two MapLibre terrain defaults turn a fast pan into walls, so both are trimmed per terrain instance:
+// - a tile whose elevation has not arrived is drawn at 0 m, standing its loaded neighbours up as cliffs. It is left undrawn instead, showing the frame's background as the flat map does, and rises in place once its elevation (or a coarser ancestor's) is in
+// - each tile hangs a skirt a fifth of its width deep (about 15 km at z9) to hide cracks between zoom levels, and wherever a neighbour is not drawn yet that skirt shows as a streaked curtain. 500 m still covers the cracks
+// Both hooks are MapLibre 5 internals; if they go away this is a no-op and the walls come back, nothing breaks
+const SKIRT_M = 500;
+const tidyTerrainEdges = (map: maplibregl.Map) => {
+  const terrain = map.terrain;
+  const tiles = terrain?.tileManager;
+  if (!terrain || !tiles?.getRenderableTiles || !terrain.getMeshFrameDelta) return;
+  const all = tiles.getRenderableTiles.bind(tiles), skirt = terrain.getMeshFrameDelta.bind(terrain);
+  tiles.getRenderableTiles = () => all().filter((t) => tiles.getSourceTile(t.tileID, true)?.dem);
+  terrain.getMeshFrameDelta = (zoom) => Math.min(SKIRT_M, skirt(zoom));
+  // Imagery draped on the terrain (hillshade, basemap) has no coarse tile to fall back on for ground a fast pan uncovers, so that ground shows bare until the full-zoom tiles arrive.
+  // Each raster source also requests and keeps the ancestors 2 and 4 levels up of what it shows (1/16 and 1/256 as many tiles), so new ground starts soft and sharpens, anywhere in the world
+  for (const source of Object.values(map.style.tileManagers)) {
+    const type = source.getSource().type;
+    if (!source._updateRetainedTiles || source.usedForTerrain || (type !== 'raster' && type !== 'raster-dem') || (source as { _coarse?: true })._coarse) continue;
+    (source as { _coarse?: true })._coarse = true;
+    const retain = source._updateRetainedTiles.bind(source);
+    source._updateRetainedTiles = (ids, zoom) => {
+      const keys = new Set(ids.map((id) => id.key));
+      const more = ids.flatMap((id) => [2, 4].map((up) => id.scaledTo(Math.max(source.getSource().minzoom, id.overscaledZ - up))))
+        .filter((id) => !keys.has(id.key) && keys.add(id.key));
+      return retain([...ids, ...more], zoom);
+    };
+  }
+};
 const pitchFor = (z: number) => Math.min(60, 25 + 6 * z);
 // Terrarium carries the sea floor; in 3D the coast then drops into a cliff and the model's edge pixels smear down it. Clamp below sea level to 0
-maplibregl.addProtocol('land', async ({ url }) => {
+// Processed tiles by URL, shared by both DEM sources and the prefetch, so ground scrolled into view is already decoded instead of a 100-250 ms S3 trip away
+const landTiles = new Map<string, Promise<ArrayBuffer>>();
+const landTile = (url: string) => {
+  let tile = landTiles.get(url);
+  if (!tile) {
+    tile = clampSeaFloor(url);
+    tile.catch(() => landTiles.delete(url));
+    landTiles.set(url, tile);
+    // shortcut: oldest-first eviction, not true LRU; fine at this size
+    if (landTiles.size > 1500) landTiles.delete(landTiles.keys().next().value!);
+  }
+  return tile;
+};
+// MapLibre transfers the buffer to a worker, so each caller gets its own copy
+maplibregl.addProtocol('land', async ({ url }) => ({ data: (await landTile(url)).slice(0) }));
+const clampSeaFloor = async (url: string) => {
   const res = await fetch(url.replace('land://', 'https://'));
   if (!res.ok) throw new Error(`terrain tile ${res.status}`);
   const img = await createImageBitmap(await res.blob());
@@ -48,12 +106,14 @@ maplibregl.addProtocol('land', async ({ url }) => {
   // Terrarium: metres = R * 256 + G + B / 256 - 32768, so R < 128 is below sea level; 128,0,0 is exactly 0 m
   for (let i = 0; i < px.data.length; i += 4) if (px.data[i] < 128) { px.data[i] = 128; px.data[i + 1] = 0; px.data[i + 2] = 0; }
   ctx.putImageData(px, 0, 0);
-  return { data: await (await ctx.canvas.convertToBlob()).arrayBuffer() };
-});
+  return (await ctx.canvas.convertToBlob()).arrayBuffer();
+};
 const withRelief = (style: ReturnType<typeof getGreyStyle>): maplibregl.StyleSpecification => ({
   ...style,
   projection: { type: 'mercator' },
-  sources: { ...style.sources, relief: DEM, terrain: { ...DEM, maxzoom: 9 } },
+  sources: { ...style.sources, relief: DEM, terrain: { ...DEM, maxzoom: 7 } },
+  // Haze toward the horizon in the frame's own grey, so the far edge of loaded terrain dissolves instead of ending in a seam
+  sky: { 'sky-color': '#e8eae8', 'horizon-color': '#f4f5f3', 'fog-color': '#eef0ee', 'fog-ground-blend': 0.35, 'horizon-fog-blend': 0.6, 'sky-horizon-blend': 0.6, 'atmosphere-blend': 0 },
   // In 3D a translucent raster shows the terrain's overlapping tiles and skirts as raised blocks and walls, so dim the basemap with an opaque fade to white instead (0.15 + 0.85 * colour = 85% opacity over white)
   layers: [...style.layers.map((l) => ({ ...l, paint: { 'raster-brightness-min': 0.15 } })), { id: 'relief', type: 'hillshade', source: 'relief', paint: { 'hillshade-exaggeration': 0.45, 'hillshade-shadow-color': '#5b5348', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': '#7d7468', 'hillshade-illumination-direction': 315 } }],
 });
@@ -202,8 +262,14 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
       map.once('remove', () => compass.remove());
       // Terrain follows the tilt however it was reached (button, compass, ctrl-drag), so a flat map stays light.
       // Below z4 relief is invisible and terrain only adds skirt walls at the world's edge, so it stays off there
-      const syncTerrain = () => { const t = map.getPitch() > 5; setTilted(t); const on = !CLASSIC && t && map.getZoom() >= 4; if (!!map.getTerrain() !== on) map.setTerrain(on ? TERRAIN : null); };
+      // Unloaded terrain tiles sit at 0 m, so loaded neighbours stand up as walls: start flat and raise the relief once the first tiles are in
+      // Eased over 700 ms on the live mesh rather than a jump, so the relief grows out of the flat map
+      const raise = () => { const t0 = performance.now(); const step = (now: number) => { const terrain = map.terrain; if (!terrain) return; const k = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : Math.min(1, (now - t0) / 700); terrain.exaggeration = TERRAIN.exaggeration * (1 - (1 - k) ** 3); map.triggerRepaint(); if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); };
+      const syncTerrain = () => { const t = map.getPitch() > 5; setTilted(t); const on = !CLASSIC && t && map.getZoom() >= 4; if (!!map.getTerrain() === on) return; map.off('idle', raise); map.setTerrain(on ? { ...TERRAIN, exaggeration: 0 } : null); if (on) { tidyTerrainEdges(map); prefetchTerrain(map); map.once('idle', raise); } };
       map.on('pitchend', syncTerrain);
+      // During the drag, not after it: ground the camera backs onto needs its DEM before it is drawn. Cached tiles make repeats free
+      let lastPrefetch = 0;
+      map.on('move', () => { const now = performance.now(); if (map.getTerrain() && now - lastPrefetch > 150) { lastPrefetch = now; prefetchTerrain(map); } });
       map.on('zoomend', syncTerrain);
       syncTerrain();
       map.addSource(RANGE, { type: 'geojson', data: EMPTY });
