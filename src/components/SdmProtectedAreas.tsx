@@ -4,13 +4,13 @@ import { protectedAreasUrl } from '../data/sdmSource';
 import { checkbox } from './SdmControls';
 
 const PA = 'protected-areas';
-const PA_LINE = '#15803d';
+const PA_FILL = '#15803d';
 const CREDIT = '<a href="https://www.cec.org/north-american-environmental-atlas/north-american-protected-areas-2025/" target="_blank" rel="noopener noreferrer">Protected areas: CEC 2025</a>, CC BY 4.0';
 
 // Called once from the map's load handler, before the CA/US mask goes in; the source stays empty until the toggle is first switched on
 export function addProtectedAreasLayer(map: maplibregl.Map) {
   map.addSource(PA, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, attribution: CREDIT });
-  map.addLayer({ id: PA, type: 'line', source: PA, layout: { visibility: 'none' }, paint: { 'line-color': PA_LINE, 'line-width': 1, 'line-dasharray': [1, 2] } });
+  map.addLayer({ id: PA, type: 'fill', source: PA, layout: { visibility: 'none' }, paint: { 'fill-color': PA_FILL, 'fill-opacity': 0.25 } });
 }
 
 export function useProtectedAreas(mapRef: React.RefObject<maplibregl.Map | null>, show: boolean) {
@@ -38,11 +38,11 @@ export function useProtectedAreas(mapRef: React.RefObject<maplibregl.Map | null>
 const t = (lang: string, a: string, b: string) => (lang === 'EN' ? a : b);
 
 export const ProtectedAreasToggle = ({ lang, show, onToggle, busy }: { lang: string; show: boolean; onToggle: () => void; busy: boolean }) =>
-  checkbox(onToggle, show, t(lang, 'Protected areas', 'Aires protégées'), { title: t(lang, 'Outlines of protected areas of 10 km² or more in Canada and the US, from the CEC North American Environmental Atlas, 2025', 'Contours des aires protégées de 10 km² ou plus au Canada et aux États-Unis, selon l\'Atlas environnemental de l\'Amérique du Nord de la CCE, 2025') }, busy);
+  checkbox(onToggle, show, t(lang, 'Protected areas', 'Aires protégées'), { title: t(lang, 'Protected areas of 10 km² or more in Canada and the US, from the CEC North American Environmental Atlas, 2025', 'Aires protégées de 10 km² ou plus au Canada et aux États-Unis, selon l\'Atlas environnemental de l\'Amérique du Nord de la CCE, 2025') }, busy);
 
 export const ProtectedAreasLegend = ({ lang, show }: { lang: string; show: boolean }) => !show ? null : (
   <div className="flex items-center gap-2 mt-1 text-xs">
-    <span className="inline-block w-5 border-t-2 border-dotted" style={{ borderColor: PA_LINE }} />
+    <span className="inline-block w-5 h-3" style={{ background: PA_FILL, opacity: 0.25 }} />
     <span>{t(lang, 'Protected areas of 10 km² or more (CEC 2025)', 'Aires protégées de 10 km² ou plus (CCE 2025)')}</span>
   </div>
 );
