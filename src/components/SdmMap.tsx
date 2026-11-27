@@ -556,7 +556,6 @@ export default function SdmMap({ slug, showOcc, onToggleOcc, showObs, onToggleOb
             </div>
           </div>
         ) : (<>
-        <div className="mb-1 text-gray-600 font-semibold">{lang === 'EN' ? 'Ensemble, 1980-2010, 1 km, clipped to the IUCN range plus areas with records' : 'Ensemble, 1980-2010, 1 km, découpé selon l\'aire UICN et les zones avec observations'}</div>
         {slug && (
           <>
             <div className="h-2 w-40 rounded-sm" style={{ background: CLASSIC ? 'linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725)' : `linear-gradient(to right, transparent 10%, ${SUIT_RAMP.map(([lo, r, g, b, a]) => `rgba(${r},${g},${b},${a / 255}) ${lo + 5}%`).join(', ')})` }} />

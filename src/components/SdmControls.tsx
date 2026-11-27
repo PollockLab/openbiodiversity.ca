@@ -56,6 +56,7 @@ export default function SdmControls({ lang, left, slot, view, onViewChange, show
         {extra}
         <details className="min-w-0 text-xs leading-snug text-gray-600">
           <summary className="cursor-pointer text-sage-700">{t('How does this work?', 'Comment ça marche?')}</summary>
+          <p className="mt-1">{t('The map is a model ensemble for 1980-2010 at 1 km, clipped to the IUCN range plus areas with records.', "La carte est un ensemble de modèles pour 1980-2010 à 1 km, découpé selon l'aire UICN et les zones avec observations.")}</p>
           <p className="mt-1">{t('Pick the baseline years with the two handles. Observations from those years are what is taken as already known about where the species lives.', 'Choisissez les années de référence avec les deux poignées. Les observations de ces années représentent ce que l\'on sait déjà de la répartition de l\'espèce.')}</p>
             {cats && <p className="mt-1">{t('A place counts as a Stronghold when a baseline observation lies within 40 km.', 'Un lieu est un Bastion si une observation de référence se trouve à moins de 40 km.')}</p>}
             <p className="mt-1">{t('Observations made after the baseline are new. They show as larger dots and test the map: did the species turn up where the model said it could?', 'Les observations faites après la référence sont nouvelles. Elles apparaissent en plus gros points et mettent la carte à l\'épreuve : l\'espèce est-elle apparue là où le modèle le prévoyait?')}</p>
