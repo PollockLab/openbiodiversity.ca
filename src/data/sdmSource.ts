@@ -44,6 +44,9 @@ export const sdmRangeUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_iucn-range
 export const sdmGapUrl = (slug: string) => `${ARBUTUS_BASE}/expert-ranges/${slug}_usgs-gap-range_NA_NA_2018-08.fgb`;
 export const sdmEbarUrl = (slug: string) => `${ARBUTUS_BASE}/expert-ranges/${slug}_ebar-range_NA_NA_2026-03.fgb`;
 
+// Protected area outlines for Canada and the US (CEC North American Protected Areas 2025), one LAEA file built by scripts/sdm-protected-areas.py
+export const protectedAreasUrl = `${ARBUTUS_BASE}/protected-areas/cec-protected-areas_CA-US_2025.fgb`;
+
 // GBIF records used to fit and clip the model, snapped to the 1 km grid; no date or other attributes
 export const sdmOccurrenceUrl = (slug: string) => `${ARBUTUS_BASE}/${slug}_gbif-occurrence-points-filtered_NA_na_NA_NA.fgb`;
 

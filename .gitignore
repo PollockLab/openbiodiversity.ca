@@ -33,3 +33,6 @@ scripts/.gbif-cache.json
 
 # Precomputed SDM zone rasters (scripts/sdm-zones.py)
 sdm-zones-out/
+
+# Protected area outlines (scripts/sdm-protected-areas.py)
+sdm-protected-areas-out/
